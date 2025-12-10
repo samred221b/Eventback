@@ -36,12 +36,16 @@ app.use(limiter);
 // CORS configuration
 app.use(cors({
   origin: [
-    'http://localhost:3000', 
-    'http://localhost:19006', 
-    'http://localhost:8081',
-    'exp://localhost:19000',
-    'exp://127.0.0.1:19000',
-    '*' // Allow all origins for development (remove in production)
+    'http://localhost:3000',
+    'http://localhost:19006',
+    'https://eventback-78o6.onrender.com',
+    'https://eventback-78o6.onrender.com/api'
+
+    // Add your production frontend URL here, e.g. 'https://your-frontend-domain.com'
+    // Remove all unnecessary origins for production
+    // 'exp://localhost:19000',
+    // 'exp://127.0.0.1:19000'
+    // '*' // Wildcard removed for production security
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
