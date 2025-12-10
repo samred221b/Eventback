@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Eventopia – Vendor & Organization Pitch Deck</title>
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --paper: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --accent: #6366f1;
+      --accent-2: #1a1a2e;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --border: #e5e7eb;
+    }
+    html, body { background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif; }
+    body { margin: 0; }
+    .deck { width: 900px; margin: 24px auto; }
+    .page { background: var(--paper); box-shadow: 0 8px 24px rgba(0,0,0,.06); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin: 24px 0; }
+    .section { padding: 40px 48px; }
+
+    /* Cover */
+    .cover { padding: 0; background: linear-gradient(180deg, #ffffff 0%, #eef2ff 45%, #fafbfc 100%); position: relative; }
+    .cover-inner { padding: 56px 56px 48px; }
+    .brand { display: flex; align-items: center; gap: 16px; }
+    .brand img { width: 56px; height: 56px; object-fit: contain; border-radius: 12px; background: #1a1a2e; padding: 8px; }
+    .brand-title { font-size: 28px; font-weight: 900; letter-spacing: -0.02em; color: var(--accent-2); }
+    .subtitle { color: var(--muted); font-size: 16px; margin-top: 6px; }
+    .hero { margin-top: 36px; }
+    .hero h1 { font-size: 44px; line-height: 1.1; margin: 0; color: var(--accent-2); }
+    .hero p { margin: 14px 0 0; color: var(--muted); font-size: 18px; }
+    .highlights { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
+    .chip { background: #ffffff; border: 1px solid var(--border); padding: 10px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; color: var(--accent-2); box-shadow: 0 6px 16px rgba(99,102,241,.08); }
+
+    /* Two-column */
+    .cols { display: grid; grid-template-columns: 1.2fr .8fr; gap: 28px; }
+
+    /* Cards & lists */
+    .card { border: 1px solid var(--border); border-radius: 14px; padding: 18px; background: #fff; box-shadow: 0 8px 20px rgba(0,0,0,.04); }
+    .card h3 { margin: 0 0 8px; font-size: 18px; }
+    .list { margin: 10px 0 0; padding: 0 0 0 18px; color: var(--muted); }
+    .list li { margin: 6px 0; }
+
+    /* Feature grid */
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .feature { border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,.04); }
+    .feature .icon { font-size: 22px; margin-bottom: 8px; }
+    .feature h4 { margin: 0 0 6px; font-size: 16px; }
+    .feature p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    /* Image blocks */
+    .img { width: 100%; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #f8fafc; }
+    .img img { width: 100%; height: auto; display: block; }
+    .caption { text-align: center; color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+    /* KPI row */
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 10px; }
+    .kpi { border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; background: #fff; }
+    .kpi .label { color: var(--muted); font-size: 12px; }
+    .kpi .value { font-size: 22px; font-weight: 900; color: var(--accent-2); }
+
+    /* CTAs */
+    .cta { background: var(--accent-2); color: #fff; padding: 22px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .cta h3 { margin: 0; font-size: 18px; }
+    .cta p { margin: 6px 0 0; color: rgba(255,255,255,.85); }
+    .cta .btn { background: var(--accent); color: #fff; padding: 12px 16px; border-radius: 10px; font-weight: 800; border: 1px solid rgba(255,255,255,.2); box-shadow: 0 8px 18px rgba(99,102,241,.35); text-decoration: none; }
+
+    /* Titles */
+    h2.section-title { margin: 0 0 14px; font-size: 22px; letter-spacing: -.01em; }
+    p.lead { color: var(--muted); margin: 0 0 14px; }
+
+    /* Page breaks for PDF */
+    .break { page-break-before: always; }
+
+    /* Print refinement */
+    @media print {
+      body { background: #fff; }
+      .deck { width: auto; margin: 0; }
+      .page { box-shadow: none; border: none; border-radius: 0; margin: 0 0 16px; }
+      .cta .btn { border: 1px solid #e5e7eb; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <!-- Cover -->
+    <section class="page cover">
+      <div class="cover-inner">
+        <div class="brand">
+          <img src="../../assets/Logo.png" alt="Eventopia Logo" />
+          <div>
+            <div class="brand-title">Eventopia</div>
+            <div class="subtitle">Premium Event Platform for Ethiopia & Beyond</div>
+          </div>
+        </div>
+        <div class="hero">
+          <h1>Vendor & Organization Pitch Deck</h1>
+          <p>Drive attendance, showcase culture, and monetize events with a modern, secure, and fast platform.</p>
+          <div class="highlights">
+            <div class="chip">✨ Beautiful Native App (iOS/Android)</div>
+            <div class="chip">📊 Real Organizer Insights</div>
+            <div class="chip">💳 Monetization-Ready</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Executive Summary -->
+    <section class="page section">
+      <h2 class="section-title">Executive Summary</h2>
+      <p class="lead">Eventopia connects audiences with unforgettable events and equips organizers with powerful tools to create, promote, and measure success.</p>
+      <div class="cols" style="margin-top: 10px;">
+        <div class="card">
+          <h3>Attendee Experience</h3>
+          <ul class="list">
+            <li>Browse curated events across 17+ categories (Music, Culture, Sports, Business, Tech, and more)</li>
+            <li>Fast discovery, clean UI, city-based filtering, and featured highlights</li>
+            <li>Trusted details with organizer identity, pricing, and location maps</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Organizer Value</h3>
+          <ul class="list">
+            <li>Create events in minutes with images, details, pricing, and featured status</li>
+            <li>Real insights: views, favorites, growth rate, and top categories</li>
+            <li>Ready for ticketing & partnerships; brand-safe and vendor-friendly</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Product Screens -->
+    <section class="page section">
+      <h2 class="section-title">Product Screens</h2>
+      <p class="lead">A glimpse of the current UI. Replace placeholders with your actual screenshots before export.</p>
+      <div class="feature-grid" style="margin-top: 8px;">
+        <div>
+          <div class="img"><img src="images/welcome.png" alt="Welcome Screen (placeholder)" /></div>
+          <div class="caption">Welcome & Value Proposition</div>
+        </div>
+        <div>
+          <div class="img"><img src="images/events.png" alt="Events Discovery (placeholder)" /></div>
+          <div class="caption">Discover Events & Categories</div>
+        </div>
+        <div>
+          <div class="img"><img src="images/details.png" alt="Event Details (placeholder)" /></div>
+          <div class="caption">Event Details & Featured</div>
+        </div>
+        <div>
+          <div class="img"><img src="images/organizer_dashboard.png" alt="Organizer Dashboard (placeholder)" /></div>
+          <div class="caption">Organizer Dashboard & Insights</div>
+        </div>
+        <div>
+          <div class="img"><img src="images/create_event.png" alt="Create Event (placeholder)" /></div>
+          <div class="caption">Create Event – Fast & Simple</div>
+        </div>
+        <div>
+          <div class="img"><img src="images/verification.png" alt="Verification (placeholder)" /></div>
+          <div class="caption">Secure Organizer Onboarding</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Features -->
+    <section class="page section">
+      <h2 class="section-title">Key Features</h2>
+      <div class="feature-grid">
+        <div class="feature">
+          <div class="icon">🎯</div>
+          <h4>Discovery Engine</h4>
+          <p>Fast, category-driven discovery with stats and highlights that boost conversions.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🧭</div>
+          <h4>Trustworthy Details</h4>
+          <p>Event date, time, location, organizer identity, pricing, and "Featured" signal.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🖼️</div>
+          <h4>Rich Media</h4>
+          <p>High-quality banners and images to present events professionally.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🛠️</div>
+          <h4>Organizer Tools</h4>
+          <p>Create events, set pricing, mark featured, add important info – in minutes.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">📊</div>
+          <h4>Real Insights</h4>
+          <p>Live totals for views, favorites, growth rate, and top-performing category.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🔒</div>
+          <h4>Secure & Scalable</h4>
+          <p>Modern stack with best practices and a robust API backend.</p>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi">
+          <div class="label">Categories</div>
+          <div class="value">17+</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Organizer Setup</div>
+          <div class="value">&lt; 5 min</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Avg. Load Time</div>
+          <div class="value">Fast ⚡</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Platform</div>
+          <div class="value">iOS · Android</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Value Proposition -->
+    <section class="page section">
+      <h2 class="section-title">Value for Vendors & Organizations</h2>
+      <div class="cols">
+        <div class="card">
+          <h3>Grow Attendance</h3>
+          <ul class="list">
+            <li>Feature placements increase visibility for priority events</li>
+            <li>Clean, conversion-ready event pages with CTA focus</li>
+            <li>Targeted categories and location relevance</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Monetize with Confidence</h3>
+          <ul class="list">
+            <li>Pricing, sponsorships, and ticketing-ready UX</li>
+            <li>Analytics that inform content and timing decisions</li>
+            <li>Professional brand presence with organizer profiles</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Technology -->
+    <section class="page section">
+      <h2 class="section-title">Technology & Security</h2>
+      <div class="cols">
+        <div class="card">
+          <h3>Modern Stack</h3>
+          <ul class="list">
+            <li>React Native (Expo) app – fast, beautiful, cross-platform</li>
+            <li>Node.js/Express backend API – scalable and secure</li>
+            <li>Clean component design and performance best practices</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Reliability & Privacy</h3>
+          <ul class="list">
+            <li>Validated inputs and safe type conversions prevent crashes</li>
+            <li>Organizer identity and content integrity prioritized</li>
+            <li>Clear data boundaries and secure communications</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Roadmap & Opportunities -->
+    <section class="page section">
+      <h2 class="section-title">Partnership Opportunities & Roadmap</h2>
+      <div class="cols">
+        <div class="card">
+          <h3>Partnership Models</h3>
+          <ul class="list">
+            <li>Sponsored placements & brand showcases</li>
+            <li>Exclusive category partnerships</li>
+            <li>Co-branded events and campaigns</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Roadmap</h3>
+          <ul class="list">
+            <li>Ticketing & payments integrations</li>
+            <li>Advanced segmentation & promotion tools</li>
+            <li>Organizer CRM and campaign automation</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="page section">
+      <div class="cta">
+        <div>
+          <h3>Let’s build unforgettable experiences together</h3>
+          <p>Request a live demo or pilot your next event on Eventopia.</p>
+        </div>
+        <a class="btn" href="#">Request a Demo</a>
+      </div>
+      <div style="margin-top: 14px; color: var(--muted); font-size: 13px;">
+        Contact: your.name@example.com · +251-9XX-XXX-XXX · Addis Ababa, Ethiopia
+      </div>
+    </section>
+  </main>
+</body>
+</html>

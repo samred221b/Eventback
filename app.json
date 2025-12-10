@@ -4,9 +4,8 @@
     "slug": "EventopiaNew",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/adaptive-icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -16,6 +15,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.yourcompany.eventopianew",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -24,6 +24,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "dca1c3fb-f27c-4620-8f56-28b256d44d32"
+      }
+    },
+    "packagerOpts": {
+      "host": "localhost"
     }
   }
 }

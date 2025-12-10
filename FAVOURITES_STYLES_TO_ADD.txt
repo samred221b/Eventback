@@ -1,0 +1,311 @@
+// NEW FAVOURITES SCREEN STYLES TO ADD TO App.js StyleSheet
+// Add these styles to the existing StyleSheet.create() in App.js
+
+// Container
+newFavoritesContainer: {
+  flex: 1,
+  backgroundColor: '#FFFFFF',
+},
+
+// Header
+newFavoritesHeader: {
+  paddingTop: 60,
+  paddingBottom: 20,
+  paddingHorizontal: 24,
+},
+newFavoritesHeaderContent: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
+newFavoritesHeaderLeft: {
+  flex: 1,
+},
+newFavoritesTitle: {
+  fontSize: 32,
+  fontWeight: '900',
+  color: '#FFFFFF',
+  letterSpacing: -0.5,
+},
+newFavoritesHeaderIcons: {
+  flexDirection: 'row',
+  gap: 12,
+},
+newFavoritesHeaderIconButton: {
+  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  borderRadius: 12,
+  width: 44,
+  height: 44,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+// Category Section
+newFavoritesCategorySection: {
+  backgroundColor: '#FFFFFF',
+  paddingVertical: 16,
+},
+newFavoritesCategoryScrollView: {
+  flexGrow: 0,
+},
+newFavoritesCategoryScrollContent: {
+  paddingHorizontal: 24,
+  gap: 10,
+},
+newFavoritesCategoryTab: {
+  alignItems: 'center',
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRadius: 10,
+  backgroundColor: '#F8F9FA',
+  borderWidth: 1.5,
+  borderColor: '#E9ECEF',
+  minWidth: 60,
+},
+newFavoritesCategoryTabActive: {
+  backgroundColor: '#0277BD',
+  borderColor: '#0277BD',
+},
+newFavoritesCategoryTabIcon: {
+  marginBottom: 2,
+},
+newFavoritesCategoryTabText: {
+  fontSize: 10,
+  fontWeight: '600',
+  color: '#6C757D',
+},
+newFavoritesCategoryTabTextActive: {
+  fontSize: 10,
+  fontWeight: '700',
+  color: '#FFFFFF',
+},
+
+// Filter Row
+newFavoritesFilterRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingHorizontal: 24,
+  paddingVertical: 16,
+  backgroundColor: '#FFFFFF',
+  borderBottomWidth: 1,
+  borderBottomColor: '#F3F4F6',
+},
+newFavoritesToggleOptions: {
+  flexDirection: 'row',
+  backgroundColor: '#F8F9FA',
+  borderRadius: 12,
+  padding: 4,
+  flex: 1,
+  marginRight: 12,
+},
+newFavoritesToggleTab: {
+  flex: 1,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 8,
+  alignItems: 'center',
+},
+newFavoritesToggleTabActive: {
+  backgroundColor: '#0277BD',
+},
+newFavoritesToggleText: {
+  fontSize: 12,
+  fontWeight: '600',
+  color: '#6C757D',
+},
+newFavoritesToggleTextActive: {
+  fontSize: 12,
+  fontWeight: '700',
+  color: '#FFFFFF',
+},
+newFavoritesSortButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 8,
+  borderWidth: 1.5,
+  borderColor: '#0277BD',
+  backgroundColor: '#FFFFFF',
+},
+newFavoritesSortButtonText: {
+  fontSize: 12,
+  fontWeight: '600',
+  color: '#0277BD',
+},
+
+// Content
+newFavoritesContent: {
+  backgroundColor: '#F8F9FA',
+  paddingTop: 16,
+},
+newFavoritesList: {
+  paddingHorizontal: 20,
+  paddingBottom: 24,
+},
+
+// Event Card
+newFavoriteCard: {
+  backgroundColor: '#FFFFFF',
+  borderRadius: 20,
+  marginBottom: 14,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.1,
+  shadowRadius: 8,
+  elevation: 4,
+  overflow: 'hidden',
+},
+favoriteImageContainer: {
+  width: '100%',
+  height: 200,
+  position: 'relative',
+},
+favoriteEventImage: {
+  width: '100%',
+  height: '100%',
+},
+favoriteImagePlaceholder: {
+  width: '100%',
+  height: '100%',
+  backgroundColor: '#E9ECEF',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+favoriteOverlayLabel: {
+  position: 'absolute',
+  top: 12,
+  left: 12,
+  backgroundColor: 'rgba(2, 119, 189, 0.9)',
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 8,
+},
+favoriteOverlayText: {
+  color: '#FFFFFF',
+  fontSize: 12,
+  fontWeight: '700',
+},
+favoriteHeartButton: {
+  position: 'absolute',
+  top: 12,
+  right: 12,
+  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  borderRadius: 20,
+  width: 40,
+  height: 40,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+favoriteEventInfoSection: {
+  padding: 16,
+},
+newFavoriteTitle: {
+  fontSize: 18,
+  fontWeight: '700',
+  color: '#1F2937',
+  marginBottom: 8,
+  lineHeight: 24,
+},
+newFavoriteDescription: {
+  fontSize: 14,
+  color: '#6B7280',
+  lineHeight: 20,
+  marginBottom: 12,
+},
+favoriteDetailsRow: {
+  flexDirection: 'row',
+  gap: 16,
+  marginBottom: 16,
+},
+favoriteDetailItem: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+  flex: 1,
+},
+favoriteDetailText: {
+  fontSize: 13,
+  color: '#6B7280',
+  fontWeight: '500',
+  flex: 1,
+},
+favoriteButtonsRow: {
+  flexDirection: 'row',
+  gap: 12,
+},
+favoriteViewButton: {
+  flex: 1,
+  backgroundColor: '#0277BD',
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 12,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+favoriteViewButtonText: {
+  color: '#FFFFFF',
+  fontSize: 14,
+  fontWeight: '700',
+},
+favoriteRemoveButton: {
+  flex: 1,
+  backgroundColor: '#FFFFFF',
+  borderWidth: 2,
+  borderColor: '#E9ECEF',
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 12,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+favoriteRemoveButtonText: {
+  color: '#6B7280',
+  fontSize: 14,
+  fontWeight: '700',
+},
+
+// Empty State
+newFavoritesEmptyContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: 40,
+  paddingVertical: 60,
+},
+newFavoritesEmptyIcon: {
+  fontSize: 80,
+  marginBottom: 24,
+},
+newFavoritesEmptyTitle: {
+  fontSize: 20,
+  fontWeight: '700',
+  color: '#1F2937',
+  textAlign: 'center',
+  marginBottom: 12,
+},
+newFavoritesEmptyText: {
+  fontSize: 15,
+  color: '#6B7280',
+  textAlign: 'center',
+  lineHeight: 22,
+  marginBottom: 32,
+},
+newFavoritesEmptyButton: {
+  backgroundColor: '#0277BD',
+  paddingVertical: 14,
+  paddingHorizontal: 32,
+  borderRadius: 12,
+  shadowColor: '#0277BD',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 8,
+  elevation: 4,
+},
+newFavoritesEmptyButtonText: {
+  color: '#FFFFFF',
+  fontSize: 16,
+  fontWeight: '700',
+},
