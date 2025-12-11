@@ -4,11 +4,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFavorites } from '../providers/FavoritesProvider';
 import apiService from '../services/api';
 import EnhancedSearch from '../components/EnhancedSearch';
 import homeStyles from '../styles/homeStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function CalendarScreen({ navigation }) {
   const { favorites, toggleFavorite } = useFavorites();
@@ -20,6 +20,7 @@ export default function CalendarScreen({ navigation }) {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(false); // Add this line
 
   const insets = useSafeAreaInsets();
 
@@ -47,6 +48,17 @@ export default function CalendarScreen({ navigation }) {
         console.log('📅 CalendarScreen focused - skipping refresh (cooldown active)');
       }
     }, [hasInitialLoad])
+  );
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Reset overlay state when the screen gains focus
+      setShowOverlay(false);
+
+      return () => {
+        // Cleanup if necessary when the screen loses focus
+      };
+    }, [])
   );
 
   const loadEvents = async () => {
@@ -213,8 +225,13 @@ export default function CalendarScreen({ navigation }) {
   const thisWeekEnd = new Date(thisWeekStart);
   thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
   
+  console.log('Today:', today);
+  console.log('This Week Start:', thisWeekStart);
+  console.log('This Week End:', thisWeekEnd);
+
   const thisWeekEvents = events.filter(event => {
     const eventDate = new Date(event.date);
+    console.log('Event Date:', eventDate, 'Event Title:', event.title);
     return eventDate >= thisWeekStart && eventDate <= thisWeekEnd;
   });
 
@@ -227,39 +244,19 @@ export default function CalendarScreen({ navigation }) {
   const selectedDayEvents = getEventsForDate(selectedDate);
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent', flex: 1 }]} edges={['top', 'bottom']}>
       <StatusBar style="light" backgroundColor="#000000" />
-      <LinearGradient
-        colors={['#ffffffff', '#e4e2e1ff']}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-      <View style={homeStyles.creativeBlobBlue} />
-      <View style={homeStyles.creativeBlobGreen} />
-      <View style={homeStyles.creativeBlobYellow} />
-      <View style={homeStyles.decorativeShape1} />
-      <View style={homeStyles.decorativeShape2} />
-      <View style={homeStyles.decorativeShape3} />
-      <View style={homeStyles.decorativeShape4} />
-      <View style={homeStyles.decorativeShape6} />
-      <View style={homeStyles.decorativeShape7} />
-      <View style={homeStyles.decorativeShape8} />
-      <View style={homeStyles.decorativeShape9} />
-      <View style={homeStyles.decorativeShape10} />
-      <View style={homeStyles.largeCurvedWave} />
-      <View style={homeStyles.vibrantAccentRing1} />
-      <View style={homeStyles.vibrantAccentRing2} />
-      <View style={homeStyles.headerAura} />
       <ScrollView 
+        contentContainerStyle={{ flexGrow: 1 ,  zIndex: 5, elevation:4}}
         style={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
       >
-        {/* Home-style Header */}
-        <View style={[homeStyles.homeHeaderContainer, { marginTop: insets.top }]}> 
+        <View style={[homeStyles.homeHeaderContainer, {  zIndex: 1 }]}> 
           <LinearGradient
             colors={['#0277BD', '#01579B']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={homeStyles.homeHeaderCard}
+            style={[homeStyles.homeHeaderCard, { zIndex: 1, elevation: 1 }]}
           >
             <View style={homeStyles.homeHeaderTopRow}>
               <Text style={homeStyles.homeHeaderNameText}>Calendar</Text>
@@ -289,7 +286,6 @@ export default function CalendarScreen({ navigation }) {
             </View>
           </LinearGradient>
         </View>
-
         {/* Enhanced Search Bar */}
         {showSearch && (
           <View style={styles.searchSection}>
@@ -307,7 +303,7 @@ export default function CalendarScreen({ navigation }) {
         )}
 
         {/* Stats Section */}
-        <View style={styles.statsSection}>
+        <View style={[styles.statsSection, { zIndex: 1, elevation: 3 }]} > 
           <LinearGradient
             colors={['#10B981', '#059669']}
             style={styles.statCard}
@@ -366,11 +362,9 @@ export default function CalendarScreen({ navigation }) {
         {/* Calendar Grid */}
         <LinearGradient
           colors={['#0277BD', '#01579B']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.calendarBackground}
+          style={styles.calendarContainer}
         >
-          <View style={styles.calendarContainer}>
+          //<View style={styles.calendarContainer}>
             {/* Days of Week */}
             <View style={styles.weekDaysRow}>
               {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
@@ -432,10 +426,7 @@ export default function CalendarScreen({ navigation }) {
                 onPress={() => handleEventPress(event)}
                 activeOpacity={0.8}
               >
-                <LinearGradient
-                  colors={['#E3F2FD', '#BBDEFB']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                <View
                   style={styles.upcomingEventGradient}
                 >
                   {/* Days Left Badge */}
@@ -481,7 +472,7 @@ export default function CalendarScreen({ navigation }) {
 
                   {/* Arrow Icon */}
                   <Feather name="chevron-right" size={20} color="#0277BD" />
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
             ))}
         </View>
@@ -495,15 +486,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  scrollContainer: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
   // Search Section
   searchSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
     zIndex: 100,
@@ -514,9 +501,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
     paddingVertical: 20,
     paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   monthChevron: {
     padding: 8,
@@ -526,19 +514,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   monthText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
   },
   // Calendar
-  calendarBackground: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    padding: 12,
-  },
   calendarContainer: {
-    backgroundColor: 'transparent',
+    marginHorizontal: 10,
+    marginVertical: 10, // Reduced from -10 // Reduced from 20
+    borderRadius: 16,
+    padding: 5, 
   },
   weekDaysRow: {
     flexDirection: 'row',
@@ -549,34 +534,38 @@ const styles = StyleSheet.create({
   weekDayText: {
     fontSize: 11,
     fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#ffffff',
     width: 36,
     textAlign: 'center',
   },
   daysGrid: {
+    width: '100%',
+    marginVertical: 3,
+    borderRadius: 8,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 3,
+    columnGap: 9,
+    paddingHorizontal: 0,
+    rowGap: 8,  // Controls vertical spacing between rows
   },
   dayCell: {
-    width: '13.2%',
+    width: '14.28%', // 100% / 7 days = ~14.28%
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    marginBottom: 3,
+    marginVertical: 0,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
   },
   selectedDayCell: {
     backgroundColor: '#0277BD',
   },
   todayCell: {
-    backgroundColor: '#E3F2FD',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    backgroundColor: '#059669',
   },
   dayText: {
-    fontSize: 14,
+    fontSize: 15,
+    bottom: 'center',
     color: '#374151',
     fontWeight: '600',
   },
@@ -585,17 +574,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   eventDot: {
-    position: 'absolute',
-    bottom: 3,
     width: 4,
     height: 4,
+    backgroundColor: '#DC2626',
     borderRadius: 2,
-    backgroundColor: '#F59E0B',
+    marginTop: 2,
   },
   // Upcoming Events Section
   upcomingEventsSection: {
     paddingHorizontal: 20,
     paddingBottom: 24,
+    backgroundColor: 'transparent',
   },
   upcomingEventsTitle: {
     fontSize: 20,
@@ -607,17 +596,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#0277BD',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
   },
   upcomingEventGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     gap: 12,
+    backgroundColor: '#E3F2FD',
   },
   daysLeftBadge: {
     backgroundColor: '#0277BD',
@@ -626,11 +611,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minWidth: 70,
     alignItems: 'center',
-    shadowColor: '#0277BD',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
   },
   daysLeftText: {
     fontSize: 11,
@@ -670,25 +650,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     gap: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   statCard: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 18,
     paddingVertical: 18,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  statCardGradient: {
-    flex: 1,
-    width: '100%',
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderRadius: 16,
   },
   statLabel: {
     fontSize: 12,

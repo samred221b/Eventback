@@ -38,8 +38,8 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:19006',
-    'https://eventback-78o6.onrender.com',
-    'https://eventback-78o6.onrender.com/api'
+    'https://eventoback-1.onrender.com',
+    'https://eventoback-1.onrender.com/api'
 
     // Add your production frontend URL here, e.g. 'https://your-frontend-domain.com'
     // Remove all unnecessary origins for production

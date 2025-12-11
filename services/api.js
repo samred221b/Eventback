@@ -6,16 +6,16 @@ import { Platform } from 'react-native';
 // Use localhost for web/simulator, but your IP for physical device
 const getApiBaseUrl = () => {
   if (!__DEV__) {
-    return 'https://your-production-api.com/api'; // Production URL
+    return 'https://eventoback-1.onrender.com/api'; // Production URL
   }
   
   // For development
   if (Platform.OS === 'web') {
-    return 'http://localhost:3000/api'; // Web can use localhost
+    return 'https://eventoback-1.onrender.com/api'; // Web can use production backend
   }
   
   // For mobile (Expo Go), use your computer's IP (confirmed working)
-  return 'http://192.168.0.153:3000/api';
+  return 'https://eventoback-1.onrender.com/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();

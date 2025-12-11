@@ -277,7 +277,7 @@ const FavoritesScreen = ({ navigation }) => {
     : { paddingTop: 0, paddingBottom: insets.bottom + 40 };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F4F8FF' }}>
+    <View style={{ flex: 1, backgroundColor: '#F7EFEA' }}>
       <StatusBar barStyle="light-content" />
       <FlatList
         data={filteredEvents}

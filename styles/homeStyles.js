@@ -416,7 +416,7 @@ const homeStyles = StyleSheet.create({
   featuredEventsTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: 'rgba(31, 41, 55, 1)',
+    color: 'rgb(1, 33, 78)',
   },
   seeAllLink: {
     fontSize: 14,
@@ -434,11 +434,11 @@ const homeStyles = StyleSheet.create({
     marginBottom: 18,
     marginHorizontal: -10,
     overflow: 'hidden',
-    elevation: 1,           // less shadow
-    shadowColor: '#000',
+    elevation: 5,           // less shadow
+    shadowColor: '#00',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: 10,
   },
   premiumFeaturedBadge: {
     position: 'absolute',
@@ -466,7 +466,7 @@ const homeStyles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.24)',
     top:0,
     left:10,
-    borderRightWidth: 1,
+    borderRightWidth: 11,
     borderRightColor: 'rgba(255, 255, 255, 0.15)',
   },
   horizontalEventImage: {

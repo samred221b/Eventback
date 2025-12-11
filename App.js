@@ -25,6 +25,10 @@ import VerificationScreen from './screens/VerificationScreen';
 import HelpSupportScreen from './screens/HelpSupportScreen';
 import TermsPrivacyScreen from './screens/TermsPrivacyScreen';
 
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from './store';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -145,6 +149,10 @@ function App() {
 
   return (
     <View style={{ flex: 1 }}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="#000000"
+      />
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Welcome">
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
@@ -174,14 +182,18 @@ function App() {
 // Final Wrapper with Providers
 export default function AppWrapper() {
   return (
-    <SafeAreaProvider>
-      <QueryProvider>
-        <AuthProvider>
-          <FavoritesProvider>
-            <App />
-          </FavoritesProvider>
-        </AuthProvider>
-      </QueryProvider>
-    </SafeAreaProvider>
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <SafeAreaProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <FavoritesProvider>
+                <App />
+              </FavoritesProvider>
+            </AuthProvider>
+          </QueryProvider>
+        </SafeAreaProvider>
+      </PersistGate>
+    </Provider>
   );
 }

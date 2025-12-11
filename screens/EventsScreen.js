@@ -373,7 +373,7 @@ const EventsScreen = ({ navigation }) => {
 
   if (isLoading && !isRefreshing) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: '#F7EFEA', flex: 1 }]} edges={['top', 'bottom']}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3b82f6" />
@@ -384,29 +384,10 @@ const EventsScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <StatusBar style="light" backgroundColor='#000000' />
-      <LinearGradient
-        colors={['#ffffffff', '#e4e2e1ff']}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-      <View style={homeStyles.creativeBlobBlue} />
-      <View style={homeStyles.creativeBlobGreen} />
-      <View style={homeStyles.creativeBlobYellow} />
-      <View style={homeStyles.decorativeShape1} />
-      <View style={homeStyles.decorativeShape2} />
-      <View style={homeStyles.decorativeShape3} />
-      <View style={homeStyles.decorativeShape4} />
-      <View style={homeStyles.decorativeShape6} />
-      <View style={homeStyles.decorativeShape7} />
-      <View style={homeStyles.decorativeShape8} />
-      <View style={homeStyles.decorativeShape9} />
-      <View style={homeStyles.decorativeShape10} />
-      <View style={homeStyles.largeCurvedWave} />
-      <View style={homeStyles.vibrantAccentRing1} />
-      <View style={homeStyles.vibrantAccentRing2} />
-      <View style={homeStyles.headerAura} />
+    <SafeAreaView style={[styles.container, { backgroundColor: '#F7EFEA', flex: 1 }]} edges={['top', 'bottom']}>
+      <StatusBar style="light" backgroundColor='#000' />
       <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -414,7 +395,7 @@ const EventsScreen = ({ navigation }) => {
         }
       >
         {/* Home-style Header */}
-        <View style={[homeStyles.homeHeaderContainer, { marginTop: insets.top }]}> 
+        <View style={[homeStyles.homeHeaderContainer, { marginTop: 0 }]} > 
           <LinearGradient
             colors={['#0277BD', '#01579B']}
             start={{ x: 0, y: 0 }}

@@ -108,7 +108,10 @@ export default function EventDetailsScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style="dark" backgroundColor="#F4F8FF" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="#000000"
+      />
       
       <View style={styles.heroContainer}>
         {event.imageUrl ? (

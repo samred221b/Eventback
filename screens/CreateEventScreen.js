@@ -246,9 +246,11 @@ const CreateEventScreen = ({ navigation }) => {
 
       console.log('Creating event with data:', eventData);
 
+      console.log('Sending request to create event with data:', JSON.stringify(eventData, null, 2));
       const response = await apiService.createEvent(eventData);
+      console.log('Server response:', JSON.stringify(response, null, 2));
 
-      if (response.success) {
+      if (response && response.success) {
         console.log('✅ Event created successfully:', response.data);
         Alert.alert(
           'Success!',
@@ -288,8 +290,24 @@ const CreateEventScreen = ({ navigation }) => {
         Alert.alert('Error', response.message || 'Failed to create event');
       }
     } catch (error) {
-      console.error('Create event error:', error);
-      Alert.alert('Error', error.message || 'Failed to create event. Please try again.');
+      console.error('Create event error:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        headers: error.response?.headers,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers,
+          data: error.config?.data
+        }
+      });
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create event. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -313,7 +331,7 @@ const CreateEventScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={createEventStyles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0277BD" />
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
 
       {/* Home-style Header */}
       <View style={homeStyles.homeHeaderContainer}>
@@ -755,7 +773,5 @@ const CreateEventScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
-
- 
 
 export default CreateEventScreen;

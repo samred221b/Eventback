@@ -150,29 +150,13 @@ export default function HomeScreen({ navigation }) {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#F7EFEA' }}>
       <StatusBar style="light" backgroundColor="#000000" />
-      <LinearGradient
-        colors={['#ffffffff', '#e4e2e1ff']}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
       {/* <View style={homeStyles.creativeBlobBlue} />
       <View style={homeStyles.creativeBlobGreen} />
       <View style={homeStyles.creativeBlobYellow} /> */}
 
-      <View style={homeStyles.decorativeShape1} />
-      <View style={homeStyles.decorativeShape2} />
-      <View style={homeStyles.decorativeShape3} />
-      <View style={homeStyles.decorativeShape4} />
-      <View style={homeStyles.decorativeShape6} />
-      <View style={homeStyles.decorativeShape7} />
-      <View style={homeStyles.decorativeShape8} />
-      <View style={homeStyles.decorativeShape9} />
-      <View style={homeStyles.decorativeShape10} />
-      <View style={homeStyles.largeCurvedWave} />
-      <View style={homeStyles.vibrantAccentRing1} />
-      <View style={homeStyles.vibrantAccentRing2} />
-      <View style={homeStyles.headerAura} />
+      
       
 
       <SafeScrollView
@@ -519,8 +503,8 @@ function AutoScrollingPromoCarousel({ navigation }) {
     },
     {
       id: 'premium',
-      title: 'Level Up to Premium!',
-      subtitle: 'Unlock perks and win exclusive rewards.',
+      title: 'Advertize Here!',
+      subtitle: 'Unlock perks and Advert your Products here.',
       buttonText: 'Go Premium',
       action: () => {},
     },
@@ -542,7 +526,7 @@ function AutoScrollingPromoCarousel({ navigation }) {
       id: 'tickets',
       title: 'Save your Favourite Events',
       subtitle: 'Keep track of events you love and never miss out.',
-      buttonText: 'View Tickets',
+      buttonText: 'View Favourites',
       action: () => {},
     },
   ];

@@ -301,7 +301,8 @@ export default function OrganizerDashboard({ navigation }) {
       keyboardShouldPersistTaps="handled"
     >
       <StatusBar 
-        style="light" 
+        style="dark" 
+        backgroundColor="#000"
         hidden={false}
         translucent={false}
       />
