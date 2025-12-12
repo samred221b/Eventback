@@ -6,7 +6,6 @@ import {
   Text,
   FlatList,
   ActivityIndicator,
-  StatusBar,
   Image,
   ScrollView,
   TouchableOpacity,
@@ -15,6 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import globalStyles from '../styles';
+import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
 
 import { SafeTouchableOpacity } from '../components/SafeComponents';
 import { useFavorites } from '../providers/FavoritesProvider';
@@ -39,6 +39,7 @@ const FavoritesScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
 
   // Fetch full event details for the user's favorite IDs
   const cacheEvents = async (events) => {
@@ -64,41 +65,77 @@ const FavoritesScreen = ({ navigation }) => {
   const loadFavoriteEvents = async () => {
     if (favorites.length === 0) {
       setFavoriteEvents([]);
+      setFilteredEvents([]);
       setLoading(false);
+      setHasInitialLoad(true);
       return;
     }
 
     try {
-      setLoading(true);
+      const shouldShowLoader = hasInitialLoad;
+      setLoading(shouldShowLoader);
       let allEvents = [];
       let matched = [];
       let fetched = false;
-      try {
-        const response = await apiService.getEvents();
-        if (response.success && response.data) {
-          allEvents = response.data
-            .filter(e => e._id && e.title && e.date)
-            .map(e => ({
-              id: e._id,
-              title: e.title,
-              description: e.description,
-              date: e.date,
-              time: e.time,
-              location: e.location,
-              price: e.price || 0,
-              currency: e.currency || 'ETB',
-              category: e.category,
-              featured: e.featured || false,
-              imageUrl: e.imageUrl || e.image || null,
-              organizerName: e.organizerName || e.organizer || '',
-              importantInfo: e.importantInfo || '',
-            }));
-          // Cache all events locally
-          await cacheEvents(response.data);
-          fetched = true;
-        }
-      } catch (error) {
-        // If fetch fails, try to load from cache
+
+      // Immediately show cached favorites for perceived performance
+      const initialCached = await loadEventsFromCache();
+      if (initialCached.length > 0) {
+        const mappedCached = initialCached
+          .filter(e => e._id && e.title && e.date)
+          .map(e => ({
+            id: e._id,
+            title: e.title,
+            description: e.description,
+            date: e.date,
+            time: e.time,
+            location: e.location,
+            price: e.price || 0,
+            currency: e.currency || 'ETB',
+            category: e.category,
+            featured: e.featured || false,
+            imageUrl: e.imageUrl || e.image || null,
+            organizerName: e.organizerName || e.organizer || '',
+            importantInfo: e.importantInfo || '',
+          }));
+        const preMatched = mappedCached.filter(event => favorites.includes(event.id));
+        setFavoriteEvents(preMatched);
+        setFilteredEvents(preMatched);
+      }
+
+      // Check network status
+      const netInfo = await NetInfo.fetch();
+      if (!netInfo.isConnected) {
+        setLoading(false);
+        setHasInitialLoad(true);
+        return;
+      }
+
+      const response = await apiService.getEvents();
+      if (response.success && response.data) {
+        allEvents = response.data
+          .filter(e => e._id && e.title && e.date)
+          .map(e => ({
+            id: e._id,
+            title: e.title,
+            description: e.description,
+            date: e.date,
+            time: e.time,
+            location: e.location,
+            price: e.price || 0,
+            currency: e.currency || 'ETB',
+            category: e.category,
+            featured: e.featured || false,
+            imageUrl: e.imageUrl || e.image || null,
+            organizerName: e.organizerName || e.organizer || '',
+            importantInfo: e.importantInfo || '',
+          }));
+        // Cache all events locally
+        await cacheEvents(response.data);
+        fetched = true;
+      }
+
+      if (!fetched) {
         const cached = await loadEventsFromCache();
         if (cached.length > 0) {
           allEvents = cached
@@ -120,7 +157,7 @@ const FavoritesScreen = ({ navigation }) => {
             }));
         }
       }
-      // Keep only events that are in the user's favorites list
+
       matched = allEvents.filter(event => favorites.includes(event.id));
       setFavoriteEvents(matched);
       setFilteredEvents(matched);
@@ -128,6 +165,7 @@ const FavoritesScreen = ({ navigation }) => {
       console.error('FavoritesScreen: Failed to load events', error);
     } finally {
       setLoading(false);
+      setHasInitialLoad(true);
     }
   };
 
@@ -262,10 +300,9 @@ const FavoritesScreen = ({ navigation }) => {
     </View>
   );
 
-  if (loading) {
+  if (loading && hasInitialLoad) {
     return (
       <View style={styles.loadingContainer}>
-        <StatusBar barStyle="dark-content" />
         <ActivityIndicator size="large" color="#0277BD" />
         <Text style={styles.loadingText}>Loading your favorites...</Text>
       </View>
@@ -277,8 +314,7 @@ const FavoritesScreen = ({ navigation }) => {
     : { paddingTop: 0, paddingBottom: insets.bottom + 40 };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7EFEA' }}>
-      <StatusBar barStyle="light-content" />
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <FlatList
         data={filteredEvents}
         keyExtractor={item => item.id}
@@ -288,13 +324,17 @@ const FavoritesScreen = ({ navigation }) => {
         ListHeaderComponent={renderHeader}
         ListHeaderComponentStyle={{ marginBottom: 16 }}
         ListEmptyComponent={
-          <View style={styles.emptyFavoritesContainer}>
-            <Feather name="award" size={80} color="#93C5FD" />
-            <Text style={styles.emptyFavoritesTitle}>No Favorites Yet</Text>
-            <Text style={styles.emptyFavoritesText}>
-              Your favorite events will appear here. Start exploring and save what you love!
-            </Text>
-          </View>
+          hasInitialLoad ? (
+            <View style={styles.emptyFavoritesContainer}>
+              <Feather name="award" size={80} color="#93C5FD" />
+              <Text style={styles.emptyFavoritesTitle}>No Favorites Yet</Text>
+              <Text style={styles.emptyFavoritesText}>
+                Your favorite events will appear here. Start exploring and save what you love!
+              </Text>
+            </View>
+          ) : (
+            <View style={{ paddingVertical: 16 }} />
+          )
         }
       />
     </View>

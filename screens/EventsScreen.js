@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../providers/AuthProvider';
@@ -22,6 +21,63 @@ import { LinearGradient } from 'expo-linear-gradient';
 import apiService from '../services/api';
 import EnhancedSearch from '../components/EnhancedSearch';
 import homeStyles from '../styles/homeStyles';
+import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
+
+const EVENTS_CACHE_KEY = '@eventopia_events';
+
+// Utility function for logging in development mode
+const log = (...args) => {
+  if (__DEV__) {
+    console.log(...args);
+  }
+};
+
+const cacheEvents = async (events) => {
+  try {
+    log('Caching Events:', events);
+    await AsyncStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(events));
+  } catch (e) {
+    console.error('Failed to cache events:', e);
+  }
+};
+
+const loadEventsFromCache = async () => {
+  try {
+    const cached = await AsyncStorage.getItem(EVENTS_CACHE_KEY);
+    log('Retrieved Cached Events:', cached);
+    const parsedEvents = cached ? JSON.parse(cached) : [];
+    log('Parsed Cached Events:', parsedEvents);
+    return parsedEvents;
+  } catch (e) {
+    console.error('Failed to load cached events:', e);
+    return [];
+  }
+};
+
+const cacheFirstPageEvents = async (events) => {
+  try {
+    const cacheData = {
+      timestamp: new Date().toISOString(),
+      events: events.slice(0, 20), // Cache only the first 20 events
+    };
+    await AsyncStorage.setItem('@events_cache', JSON.stringify(cacheData));
+  } catch (e) {
+    console.error('Failed to cache events:', e);
+  }
+};
+
+const loadCachedFirstPageEvents = async () => {
+  try {
+    const cached = await AsyncStorage.getItem('@events_cache');
+    if (cached) {
+      const { events } = JSON.parse(cached);
+      return events;
+    }
+  } catch (e) {
+    console.error('Failed to load cached events:', e);
+  }
+  return [];
+};
 
 const EventsScreen = ({ navigation }) => {
   const { backendConnected } = useAuth();
@@ -101,46 +157,58 @@ const EventsScreen = ({ navigation }) => {
     loadEvents();
   }, [selectedCategory, selectedEventType]);
 
-  // Utility: Save events to AsyncStorage
-  const saveEventsToCache = async (events) => {
-    try {
-      await AsyncStorage.setItem('cachedEvents', JSON.stringify(events));
-    } catch (e) {
-      console.warn('Failed to cache events:', e);
-    }
-  };
-
-  // Utility: Load events from AsyncStorage
-  const loadEventsFromCache = async () => {
-    try {
-      const cached = await AsyncStorage.getItem('cachedEvents');
-      return cached ? JSON.parse(cached) : [];
-    } catch (e) {
-      console.warn('Failed to load cached events:', e);
-      return [];
-    }
+  const handleRefresh = () => {
+    if (isLoadingRef.current) return; // Prevent multiple refreshes
+    loadEvents(true);
   };
 
   const loadEvents = async (isRefresh = false) => {
     isLoadingRef.current = true;
-    setIsLoading(!isRefresh);
+    const shouldShowLoader = isRefresh || hasInitialLoad;
+    setIsLoading(shouldShowLoader);
     setIsRefreshing(isRefresh);
     setError(null);
 
-    // Load all events from API
     const params = {};
     if (searchQuery.trim()) {
       params.search = searchQuery.trim();
     }
 
+    // Load cached events first
+    const cachedEvents = await loadCachedFirstPageEvents();
+    if (cachedEvents.length > 0) {
+      setEvents(cachedEvents); // Render cached events immediately
+    }
+
     let fetchedEvents = [];
     let backendFailed = false;
+
+    // Check network status
+    const netInfo = await NetInfo.fetch();
+    if (!netInfo.isConnected) {
+      log('Offline: Using cached events');
+      fetchedEvents = await loadEventsFromCache();
+      if (fetchedEvents.length > 0) {
+        setError('Offline: Showing cached events');
+      } else {
+        setError('Failed to load events. Please check your connection.');
+      }
+      setEvents(fetchedEvents);
+      isLoadingRef.current = false;
+      setIsLoading(false);
+      setIsRefreshing(false);
+      setHasInitialLoad(true);
+      return;
+    }
+
     try {
       const response = await apiService.getEvents(params);
       if (response.success) {
         fetchedEvents = response.data || [];
-        setAllEvents(fetchedEvents); // Store all events for statistics
-        saveEventsToCache(fetchedEvents); // Cache events after successful fetch
+        log('Fetched Events:', fetchedEvents);
+        setAllEvents(fetchedEvents);
+        await cacheEvents(fetchedEvents);
+        await cacheFirstPageEvents(fetchedEvents); // Cache first page events
       } else {
         backendFailed = true;
       }
@@ -148,30 +216,32 @@ const EventsScreen = ({ navigation }) => {
       backendFailed = true;
     }
 
-    // If backend failed, load from cache
     if (backendFailed) {
       fetchedEvents = await loadEventsFromCache();
-      setError('Offline: Showing cached events');
+      log('Using Cached Events:', fetchedEvents);
+      if (fetchedEvents.length > 0) {
+        setError('Offline: Showing cached events');
+      } else {
+        setError('Failed to load events. Please check your connection.');
+      }
+      setEvents(fetchedEvents);
     }
 
-    // Apply local filtering
-    let filteredEvents = fetchedEvents;
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filteredEvents = filteredEvents.filter(event => event.category === selectedCategory);
+    if (!backendFailed) {
+      let filteredEvents = fetchedEvents;
+      if (selectedCategory !== 'all') {
+        filteredEvents = filteredEvents.filter(event => event.category === selectedCategory);
+      }
+      if (selectedEventType === 'featured') {
+        filteredEvents = filteredEvents.filter(event => event.featured === true);
+      } else if (selectedEventType === 'upcoming') {
+        const now = new Date();
+        filteredEvents = filteredEvents.filter(event => new Date(event.date) >= now);
+      }
+      log('Final Events to Display:', filteredEvents);
+      setEvents(filteredEvents);
     }
-    // Filter by event type
-    if (selectedEventType === 'featured') {
-      filteredEvents = filteredEvents.filter(event => event.featured === true);
-    } else if (selectedEventType === 'upcoming') {
-      const now = new Date();
-      filteredEvents = filteredEvents.filter(event => new Date(event.date) >= now);
-    } else if (selectedEventType === 'nearby') {
-      // For nearby, we can sort by a distance field if available, or just show all for now
-      // You can enhance this with actual geolocation logic later
-      filteredEvents = filteredEvents; // Keep all events for now
-    }
-    setEvents(filteredEvents);
+
     isLoadingRef.current = false;
     setIsLoading(false);
     setIsRefreshing(false);
@@ -186,10 +256,6 @@ const EventsScreen = ({ navigation }) => {
       const filtered = allEvents.filter(event => event.category === category);
       setEvents(filtered);
     }
-  };
-
-  const handleRefresh = () => {
-    loadEvents(true);
   };
 
   // Apply sorting to events
@@ -325,6 +391,19 @@ const EventsScreen = ({ navigation }) => {
             <Feather name="image" size={48} color="#9ca3af" />
           </View>
         )}
+        {event.featured && (
+          <View style={styles.featuredBadgeContainer}>
+            <LinearGradient
+              colors={['#FFD700', '#FFA500']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.featuredBadge}
+            >
+              <Feather name="star" size={10} color="#FFFFFF" />
+              <Text style={styles.featuredBadgeText}>FEATURED</Text>
+            </LinearGradient>
+          </View>
+        )}
         {/* Top Right Days Left Badge */}
         <View style={styles.eventOverlay}>
           <View style={[
@@ -371,10 +450,30 @@ const EventsScreen = ({ navigation }) => {
     </View>
   );
 
-  if (isLoading && !isRefreshing) {
+  const renderEventList = () => {
+    if (events.length === 0) {
+      if (!hasInitialLoad) {
+        // Avoid showing empty-state message on first app open
+        // Render a minimal placeholder while background fetch completes
+        return <View style={{ padding: 16 }} />;
+      }
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No events available</Text>
+          <Text style={styles.emptySubtext}>Please check your connection or try again later.</Text>
+        </View>
+      );
+    }
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: '#F7EFEA', flex: 1 }]} edges={['top', 'bottom']}>
-        <StatusBar style="light" />
+      <View style={styles.eventsContainer}>
+        {events.map(renderEventCard)}
+      </View>
+    );
+  };
+
+  if (isLoading && !isRefreshing && hasInitialLoad) {
+    return (
+      <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['top', 'bottom']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3b82f6" />
           <Text style={styles.loadingText}>Loading events...</Text>
@@ -384,8 +483,7 @@ const EventsScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#F7EFEA', flex: 1 }]} edges={['top', 'bottom']}>
-      <StatusBar style="light" backgroundColor='#000' />
+    <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         style={styles.scrollContainer}
@@ -531,30 +629,23 @@ const EventsScreen = ({ navigation }) => {
 
         {/* Events Content */}
         <View style={styles.eventsContent}>
-          {error ? (
+          {/* Offline banner */}
+          {error === 'Offline: Showing cached events' && (
+            <View style={styles.offlineBanner}>
+              <Text style={styles.offlineText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Fatal error */}
+          {error && error !== 'Offline: Showing cached events' ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>⚠️ {error}</Text>
               <TouchableOpacity style={styles.retryButton} onPress={() => loadEvents()}>
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
-          ) : events.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {searchQuery || selectedCategory !== 'all' 
-                  ? 'No events found matching your criteria' 
-                  : 'No events available'}
-              </Text>
-              <Text style={styles.emptySubtext}>
-                {backendConnected 
-                  ? 'Check back later for new events!' 
-                  : 'Please check your connection'}
-              </Text>
-            </View>
           ) : (
-            <View style={styles.eventsContainer}>
-              {events.map(renderEventCard)}
-            </View>
+            renderEventList()
           )}
         </View>
       </ScrollView>
@@ -580,6 +671,7 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     backgroundColor: 'transparent',
+    maxHeight: 60, // Added maxHeight to ensure consistent vertical size
   },
   categoriesContent: {
     paddingHorizontal: 16,
@@ -589,11 +681,11 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 10, // Reduced from 16
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#fff',
-    marginRight: 10,
+    marginRight: 8, // Reduced from 10
     gap: 6,
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -602,6 +694,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
+    maxWidth: 120, // Added maxWidth to ensure consistency
   },
   categoryChipActive: {
     backgroundColor: '#0277BD',
@@ -633,6 +726,16 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   // Events Content
+  offlineBanner: {
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  offlineText: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   eventsContent: {
     backgroundColor: 'transparent',
   },
@@ -681,6 +784,26 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     zIndex: 2,
+  },
+  featuredBadgeContainer: {
+    position: 'absolute',
+    top: 0,
+    left: -17,
+    zIndex: 3,
+  },
+  featuredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius:3,
+  },
+  featuredBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    marginLeft: 4,
+    letterSpacing: 0.5,
   },
   eventStatusBadge: {
     backgroundColor: 'rgba(2, 119, 189, 0.9)',

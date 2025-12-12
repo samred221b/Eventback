@@ -28,6 +28,7 @@ import TermsPrivacyScreen from './screens/TermsPrivacyScreen';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './store';
+import ScreenBackground from './components/ScreenBackground';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -149,6 +150,7 @@ function App() {
 
   return (
     <View style={{ flex: 1 }}>
+      <ScreenBackground />
       <StatusBar
         barStyle="light-content"
         backgroundColor="#000000"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,6 +9,28 @@ import apiService from '../services/api';
 import EnhancedSearch from '../components/EnhancedSearch';
 import homeStyles from '../styles/homeStyles';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
+
+const CALENDAR_EVENTS_CACHE_KEY = '@eventopia_calendar_events';
+
+const cacheCalendarEvents = async (events) => {
+  try {
+    await AsyncStorage.setItem(CALENDAR_EVENTS_CACHE_KEY, JSON.stringify(events));
+  } catch (e) {
+    console.error('Failed to cache calendar events:', e);
+  }
+};
+
+const loadCalendarEventsFromCache = async () => {
+  try {
+    const cached = await AsyncStorage.getItem(CALENDAR_EVENTS_CACHE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch (e) {
+    console.error('Failed to load cached calendar events:', e);
+    return [];
+  }
+};
 
 export default function CalendarScreen({ navigation }) {
   const { favorites, toggleFavorite } = useFavorites();
@@ -21,8 +43,67 @@ export default function CalendarScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false); // Add this line
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   const insets = useSafeAreaInsets();
+
+  const loadEvents = async (isRefresh = false) => {
+    setIsLoading(!isRefresh);
+    setIsRefreshing(isRefresh);
+    setError(null);
+
+    let fetchedEvents = [];
+    let backendFailed = false;
+
+    // Check network status
+    const netInfo = await NetInfo.fetch();
+    if (!netInfo.isConnected) {
+      console.log('Offline: Using cached events');
+      fetchedEvents = await loadCalendarEventsFromCache();
+      if (fetchedEvents.length > 0) {
+        setError('Offline: Showing cached calendar events');
+      } else {
+        setError('Failed to load calendar events. Please check your connection.');
+      }
+      setAllEvents(fetchedEvents);
+      filterEvents(fetchedEvents, searchQuery);
+      setIsLoading(false);
+      setIsRefreshing(false);
+      return;
+    }
+
+    try {
+      const response = await apiService.getEvents();
+      if (response.success) {
+        fetchedEvents = response.data || [];
+        await cacheCalendarEvents(fetchedEvents);
+      } else {
+        backendFailed = true;
+      }
+    } catch (error) {
+      console.error('Error fetching calendar events:', error);
+      backendFailed = true;
+    }
+
+    if (backendFailed) {
+      fetchedEvents = await loadCalendarEventsFromCache();
+      console.log('Using Cached Events:', fetchedEvents);
+      if (fetchedEvents.length > 0) {
+        setError('Offline: Showing cached calendar events');
+      } else {
+        setError('Failed to load calendar events. Please check your connection.');
+      }
+    }
+
+    const sortedEvents = fetchedEvents.sort((a, b) => {
+      return new Date(a.date) - new Date(b.date);
+    });
+    setAllEvents(sortedEvents);
+    filterEvents(sortedEvents, searchQuery);
+    setIsLoading(false);
+    setIsRefreshing(false);
+  };
 
   useEffect(() => {
     loadEvents();
@@ -60,29 +141,6 @@ export default function CalendarScreen({ navigation }) {
       };
     }, [])
   );
-
-  const loadEvents = async () => {
-    try {
-      isLoadingRef.current = true;
-      setIsLoading(true);
-      const response = await apiService.getEvents();
-      
-      if (response.success && response.data) {
-        // Sort events by date (nearest first)
-        const sortedEvents = response.data.sort((a, b) => {
-          return new Date(a.date) - new Date(b.date);
-        });
-        setAllEvents(sortedEvents); // Store all events
-        filterEvents(sortedEvents, searchQuery);
-      }
-    } catch (error) {
-      console.error('Error loading events:', error);
-    } finally {
-      isLoadingRef.current = false;
-      setIsLoading(false);
-      setHasInitialLoad(true);
-    }
-  };
 
   const filterEvents = (eventsList, query) => {
     if (!query.trim()) {
@@ -243,6 +301,10 @@ export default function CalendarScreen({ navigation }) {
 
   const selectedDayEvents = getEventsForDate(selectedDate);
 
+  const onRefresh = () => {
+    loadEvents(true);
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: 'transparent', flex: 1 }]} edges={['top', 'bottom']}>
       <StatusBar style="light" backgroundColor="#000000" />
@@ -250,7 +312,15 @@ export default function CalendarScreen({ navigation }) {
         contentContainerStyle={{ flexGrow: 1 ,  zIndex: 5, elevation:4}}
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={true}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }
       >
+        {error && (
+          <View style={styles.offlineBanner}>
+            <Text style={styles.offlineText}>{error}</Text>
+          </View>
+        )}
         <View style={[homeStyles.homeHeaderContainer, {  zIndex: 1 }]}> 
           <LinearGradient
             colors={['#0277BD', '#01579B']}
@@ -364,7 +434,7 @@ export default function CalendarScreen({ navigation }) {
           colors={['#0277BD', '#01579B']}
           style={styles.calendarContainer}
         >
-          //<View style={styles.calendarContainer}>
+          <View style={styles.calendarContainer}>
             {/* Days of Week */}
             <View style={styles.weekDaysRow}>
               {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
@@ -670,5 +740,15 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  offlineBanner: {
+    backgroundColor: '#FFD700',
+    padding: 10,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  offlineText: {
+    color: '#000',
+    fontWeight: '500',
   },
 });

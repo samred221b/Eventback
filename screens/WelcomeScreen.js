@@ -20,7 +20,6 @@ export default function WelcomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0277BD" />
       
       {/* Blue Gradient Background */}
       <LinearGradient
@@ -57,44 +56,12 @@ export default function WelcomeScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Features Grid */}
-          <View style={styles.featuresSection}>
-            <View style={styles.featureRow}>
-              <View style={styles.featureCard}>
-                <View style={styles.featureIconContainer}>
-                  <Feather name="search" size={28} color="#0277BD" />
-                </View>
-                <Text style={styles.featureTitle}>Discover</Text>
-                <Text style={styles.featureDescription}>Find amazing events</Text>
-              </View>
-              
-              <View style={styles.featureCard}>
-                <View style={styles.featureIconContainer}>
-                  <Feather name="calendar" size={28} color="#0277BD" />
-                </View>
-                <Text style={styles.featureTitle}>Plan</Text>
-                <Text style={styles.featureDescription}>Organize your schedule</Text>
-              </View>
-            </View>
-
-            <View style={styles.featureRow}>
-              <View style={styles.featureCard}>
-                <View style={styles.featureIconContainer}>
-                  <Feather name="heart" size={28} color="#0277BD" />
-                </View>
-                <Text style={styles.featureTitle}>Save</Text>
-                <Text style={styles.featureDescription}>Favorite your picks</Text>
-              </View>
-              
-              <View style={styles.featureCard}>
-                <View style={styles.featureIconContainer}>
-                  <Feather name="users" size={28} color="#0277BD" />
-                </View>
-                <Text style={styles.featureTitle}>Connect</Text>
-                <Text style={styles.featureDescription}>Meet new people</Text>
-              </View>
-            </View>
-          </View>
+          {/* VIP Highlight */}
+          <Image
+            source={require('../assets/vip.png')}
+            style={styles.vipImage}
+            resizeMode="contain"
+          />
 
           {/* Stats Section */}
           <View style={styles.statsSection}>
@@ -228,54 +195,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   
-  // Features Section
-  featuresSection: {
-    width: '100%',
-    marginBottom: 24,
-  },
-  
-  featureRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    gap: 10,
-  },
-  
-  featureCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  
-  featureIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#E3F2FD',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  
-  featureTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  
-  featureDescription: {
-    fontSize: 11,
-    color: '#6B7280',
-    textAlign: 'center',
-    fontWeight: '500',
+  // VIP Image
+  vipImage: {
+    width: width * 0.99,
+    height: height * 0.35,
+    marginBottom: -5,
   },
   
   // Stats Section
@@ -290,13 +214,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    padding: 12,
+    padding: 5,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 3,
   },
   
   statNumber: {

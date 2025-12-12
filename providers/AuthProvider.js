@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -19,6 +19,8 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [initializing, setInitializing] = useState(true);
   const [backendConnected, setBackendConnected] = useState(false);
+  const lastVerifiedUidRef = useRef(null);
+  const syncingRef = useRef(false);
 
   // Handle user state changes
   const handleAuthStateChange = async (firebaseUser) => {
@@ -49,6 +51,16 @@ export const AuthProvider = ({ children }) => {
 
   // Sync Firebase user with backend
   const syncWithBackend = async (firebaseUser) => {
+    // Guard: require a signed-in user
+    if (!firebaseUser) return;
+
+    // Guard: prevent overlapping calls
+    if (syncingRef.current) return;
+
+    // Guard: avoid re-verifying the same user repeatedly if we already have a profile
+    if (lastVerifiedUidRef.current === firebaseUser.uid && organizerProfile) return;
+
+    syncingRef.current = true;
     try {
       // Test backend connection
       const isConnected = await apiService.testConnection();
@@ -65,6 +77,8 @@ export const AuthProvider = ({ children }) => {
         
         if (response.success) {
           setOrganizerProfile(response.user);
+          // Mark this UID as verified to prevent duplicate calls on re-renders
+          lastVerifiedUidRef.current = firebaseUser.uid;
           // console.log('✅ Synced with backend:', response.user.name);
         }
       } catch (authError) {
@@ -75,13 +89,15 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Backend sync failed:', error);
       setBackendConnected(false);
+    } finally {
+      syncingRef.current = false;
     }
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, handleAuthStateChange);
     return unsubscribe;
-  }, [initializing]);
+  }, []);
 
   // Sign up with email and password
   const signUp = async (email, password, fullName) => {

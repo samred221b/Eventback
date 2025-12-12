@@ -266,7 +266,7 @@ const homeStyles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 125,
-    backgroundColor: 'rgba(0, 7, 73, 0.4)',
+    backgroundColor: 'rgba(5, 122, 231, 0.38)',
     opacity: 1
   },
   decorativeShape3: {
@@ -276,7 +276,7 @@ const homeStyles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: 'rgba(6, 122, 74, 0.34)',
+    backgroundColor: 'rgba(6, 122, 74, 0.86)',
     opacity: 0.8,
   
   },

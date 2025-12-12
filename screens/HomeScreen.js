@@ -7,7 +7,6 @@ import {
   Image,
   ImageBackground,
   Dimensions,
-  StatusBar,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
@@ -23,6 +22,28 @@ import EnhancedSearch from '../components/EnhancedSearch';
 import homeStyles from '../styles/homeStyles';
 import { makeEventSerializable, formatPrice } from '../utils/dataProcessor';
 import apiService from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+
+const HOME_EVENTS_CACHE_KEY = '@eventopia_home_events';
+
+const cacheHomeEvents = async (events) => {
+  try {
+    await AsyncStorage.setItem(HOME_EVENTS_CACHE_KEY, JSON.stringify(events));
+  } catch (e) {
+    console.error('Failed to cache home events:', e);
+  }
+};
+
+const loadHomeEventsFromCache = async () => {
+  try {
+    const cached = await AsyncStorage.getItem(HOME_EVENTS_CACHE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch (e) {
+    console.error('Failed to load cached home events:', e);
+    return [];
+  }
+};
 
 export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -47,19 +68,44 @@ export default function HomeScreen({ navigation }) {
 
       if (hasInitialLoad && !isLoadingRef.current && timeSinceLastRefresh > REFRESH_COOLDOWN) {
         lastRefreshTime.current = now;
-        loadEventsFromBackend();
+        // Background refresh on focus without blocking UI
+        loadEventsFromBackend({ background: true });
       }
     }, [hasInitialLoad])
   );
 
   useEffect(() => {
-    loadEventsFromBackend();
+    // Prefill from cache and refresh in background on first mount
+    loadEventsFromBackend({ background: true });
   }, []);
 
-  const loadEventsFromBackend = async () => {
+  const loadEventsFromBackend = async ({ isRefresh = false, background = false } = {}) => {
     try {
       isLoadingRef.current = true;
-      setIsLoading(true);
+      // Only show full-screen loader after first load and not during refresh/background
+      const shouldShowLoader = hasInitialLoad && !isRefresh && !background;
+      setIsLoading(shouldShowLoader);
+
+      // Prefill from cache for instant UI
+      const cachedEventsPrefill = await loadHomeEventsFromCache();
+      if (cachedEventsPrefill.length > 0) {
+        setProcessedEvents(cachedEventsPrefill);
+        setFeaturedEvents(cachedEventsPrefill.filter(e => e.featured).slice(0, 6));
+        const nowPrefill = new Date();
+        const upcomingPrefill = cachedEventsPrefill
+          .filter(event => new Date(event.date) >= nowPrefill)
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+          .slice(0, 3);
+        setUpcomingEvents(upcomingPrefill);
+      }
+
+      // Check network status: if offline, stop here (we already showed cache)
+      const netInfo = await NetInfo.fetch();
+      if (!netInfo.isConnected) {
+        return;
+      }
+
+      // Fetch fresh data
       const response = await apiService.getEvents();
       if (response.success && response.data) {
         const transformedEvents = response.data
@@ -89,11 +135,23 @@ export default function HomeScreen({ navigation }) {
           .sort((a, b) => new Date(a.date) - new Date(b.date))
           .slice(0, 3);
         setUpcomingEvents(upcoming);
-      } else {
-        console.error('Failed to load events from backend');
+
+        await cacheHomeEvents(transformedEvents); // Cache events after successful fetch
       }
     } catch (error) {
       console.error('Error loading events:', error);
+      // If prefill did not happen (no cache), try once more to read cache
+      const cachedEvents = await loadHomeEventsFromCache();
+      if (cachedEvents.length > 0) {
+        setProcessedEvents(cachedEvents);
+        setFeaturedEvents(cachedEvents.filter(e => e.featured).slice(0, 6));
+        const now = new Date();
+        const upcoming = cachedEvents
+          .filter(event => new Date(event.date) >= now)
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+          .slice(0, 3);
+        setUpcomingEvents(upcoming);
+      }
     } finally {
       isLoadingRef.current = false;
       setIsLoading(false);
@@ -112,7 +170,7 @@ export default function HomeScreen({ navigation }) {
     try {
       setIsRefreshing(true);
       lastRefreshTime.current = now;
-      await loadEventsFromBackend();
+      await loadEventsFromBackend({ isRefresh: true });
     } finally {
       setIsRefreshing(false);
     }
@@ -124,7 +182,6 @@ export default function HomeScreen({ navigation }) {
     serializable.importantInfo = event.importantInfo || '';
     navigation.navigate('EventDetails', { event: serializable });
   };
-
 
   const formatDateTimeShort = (dateString, timeString) => {
     if (!dateString) return 'Date TBA';
@@ -140,7 +197,7 @@ export default function HomeScreen({ navigation }) {
       )
     : processedEvents;
 
-  if (isLoading && !hasInitialLoad) {
+  if (isLoading && !isRefreshing && hasInitialLoad) {
     return (
       <View style={homeStyles.loadingContainer}>
         <ActivityIndicator size="large" color="#3b82f6" />
@@ -150,14 +207,7 @@ export default function HomeScreen({ navigation }) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7EFEA' }}>
-      <StatusBar style="light" backgroundColor="#000000" />
-      {/* <View style={homeStyles.creativeBlobBlue} />
-      <View style={homeStyles.creativeBlobGreen} />
-      <View style={homeStyles.creativeBlobYellow} /> */}
-
-      
-      
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
 
       <SafeScrollView
         style={{ flex: 1 }}
@@ -296,19 +346,6 @@ export default function HomeScreen({ navigation }) {
                     </Text>
 
                     <SafeTouchableOpacity
-                      style={homeStyles.horizontalEventHeartButton}
-                      onPress={() => toggleFavorite(event.id)}
-                      activeOpacity={0.8}
-                    >
-                      <Feather
-                        name="heart"
-                        size={14}
-                        color={isFavorite(event.id) ? '#EF4444' : 'rgba(255,255,255,0.9)'}
-                        fill={isFavorite(event.id) ? '#EF4444' : 'transparent'}
-                      />
-                    </SafeTouchableOpacity>
-
-                    <SafeTouchableOpacity
                       style={homeStyles.horizontalEventViewButton}
                       onPress={() => handleEventPress(event)}
                       activeOpacity={0.8}
@@ -338,17 +375,6 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => handleEventPress(event)}
                 activeOpacity={0.95}
               >
-                <View style={homeStyles.premiumFeaturedBadge}>
-                  <LinearGradient
-                    colors={['#10B981', '#059669']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={homeStyles.premiumBadgeGradient}
-                  >
-                    <Feather name="clock" size={10} color="#FFFFFF" />
-                    <Text style={homeStyles.premiumBadgeText}>UPCOMING</Text>
-                  </LinearGradient>
-                </View>
 
                 <View style={homeStyles.horizontalEventImageContainer}>
                   {event.imageUrl ? (

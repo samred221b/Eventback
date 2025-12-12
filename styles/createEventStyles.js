@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 const createEventStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,

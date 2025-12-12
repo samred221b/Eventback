@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, Share, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useFavorites } from '../providers/FavoritesProvider';
 import { formatPrice, formatDate, formatTime } from '../utils/dataProcessor';
+import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
 
 const { width } = Dimensions.get('window');
 
@@ -13,6 +14,15 @@ export default function EventDetailsScreen({ route, navigation }) {
   const { event } = route.params;
   const { isFavorite, toggleFavorite } = useFavorites();
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [offline, setOffline] = useState(false); // State to track offline status
+
+  useEffect(() => {
+    const checkNetworkStatus = async () => {
+      const netInfo = await NetInfo.fetch();
+      setOffline(!netInfo.isConnected);
+    };
+    checkNetworkStatus();
+  }, []);
 
   const handleShare = async () => {
     try {
@@ -112,6 +122,12 @@ export default function EventDetailsScreen({ route, navigation }) {
         barStyle="light-content"
         backgroundColor="#000000"
       />
+      
+      {offline && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineText}>You are offline: Some features may be limited</Text>
+        </View>
+      )}
       
       <View style={styles.heroContainer}>
         {event.imageUrl ? (
@@ -222,7 +238,7 @@ export default function EventDetailsScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F8FF',
+    backgroundColor: 'transparent',
   },
   scrollContainer: {
     flex: 1,
@@ -408,5 +424,15 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: 12,
+  },
+  offlineBanner: {
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  offlineText: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

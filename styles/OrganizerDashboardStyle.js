@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 const organizerDashboardStyles = StyleSheet.create({
   modernDashboardContainer: {
     flex: 1,
-    backgroundColor: '#F5F8FB',
+    backgroundColor: 'transparent',
     paddingBottom: 16,
   },
   modernDashboardHeader: {

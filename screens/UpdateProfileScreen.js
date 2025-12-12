@@ -315,7 +315,7 @@ export default function UpdateProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
