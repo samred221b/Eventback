@@ -14,6 +14,11 @@
     "ios": {
       "supportsTablet": true
     },
+    "androidStatusBar": {
+  "barStyle": "light-content",
+  "backgroundColor": "#000000",
+  "translucent": false
+},
     "android": {
       "package": "com.yourcompany.eventopianew",
       "adaptiveIcon": {

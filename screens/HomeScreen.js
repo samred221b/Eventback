@@ -18,6 +18,7 @@ import { Feather } from '@expo/vector-icons';
 import { useFavorites } from '../providers/FavoritesProvider';
 import { SafeScrollView, SafeTouchableOpacity } from '../components/SafeComponents';
 import EnhancedSearch from '../components/EnhancedSearch';
+import ConnectionErrorBanner from '../components/ConnectionErrorBanner';
 
 import homeStyles from '../styles/homeStyles';
 import { makeEventSerializable, formatPrice } from '../utils/dataProcessor';
@@ -59,6 +60,7 @@ export default function HomeScreen({ navigation }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isLoadingRef = useRef(false);
   const lastRefreshTime = useRef(Date.now());
+  const [backendError, setBackendError] = useState(null);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -102,6 +104,7 @@ export default function HomeScreen({ navigation }) {
       // Check network status: if offline, stop here (we already showed cache)
       const netInfo = await NetInfo.fetch();
       if (!netInfo.isConnected) {
+        setBackendError('You appear to be offline. Please check your internet connection.');
         return;
       }
 
@@ -137,9 +140,11 @@ export default function HomeScreen({ navigation }) {
         setUpcomingEvents(upcoming);
 
         await cacheHomeEvents(transformedEvents); // Cache events after successful fetch
+        setBackendError(null); // Clear any previous error on success
       }
     } catch (error) {
       console.error('Error loading events:', error);
+      setBackendError(error?.message || 'Failed to connect to the server.');
       // If prefill did not happen (no cache), try once more to read cache
       const cachedEvents = await loadHomeEventsFromCache();
       if (cachedEvents.length > 0) {
@@ -157,6 +162,11 @@ export default function HomeScreen({ navigation }) {
       setIsLoading(false);
       setHasInitialLoad(true);
     }
+  };
+
+  const handleRetry = () => {
+    if (isLoadingRef.current) return;
+    loadEventsFromBackend({ background: false });
   };
 
   const handleRefresh = async () => {
@@ -215,6 +225,15 @@ export default function HomeScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
       >
+        {backendError && (
+          <ConnectionErrorBanner
+            message={"We couldn't reach the server."}
+            details={backendError}
+            retryIn={10}
+            onRetry={handleRetry}
+            disabled={isLoadingRef.current}
+          />
+        )}
         <View style={homeStyles.homeHeaderContainer}>
           <LinearGradient
             colors={['#0277BD', '#01579B']}

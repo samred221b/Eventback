@@ -1,11 +1,15 @@
 // App.js - CLEAN VERSION (HomeScreen fully extracted)
-import { View, ActivityIndicator, StatusBar, StyleSheet } from 'react-native';
-import React from 'react';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as SplashScreen from 'expo-splash-screen';
+import { Asset } from 'expo-asset';
 
 import { QueryProvider } from './providers/QueryProvider';
 import { FavoritesProvider } from './providers/FavoritesProvider';
@@ -147,16 +151,52 @@ function MainTabs() {
 // Root App Component
 function App() {
   const { isLoading } = useAuth();
+  const [initialRoute, setInitialRoute] = useState('Welcome');
+  const [appReady, setAppReady] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const prepare = async () => {
+      try {
+        await SplashScreen.preventAutoHideAsync();
+
+        // Always start at Welcome on each app launch
+        if (isMounted) setInitialRoute('Welcome');
+
+        // Preload critical assets
+        await Asset.loadAsync([
+          require('./assets/Logo.png'),
+          require('./assets/vip.png'),
+        ]);
+      } catch (e) {
+        console.warn('App prepare error:', e);
+      } finally {
+        if (isMounted) setAppReady(true);
+        await SplashScreen.hideAsync();
+      }
+    };
+
+    prepare();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (!appReady || !initialRoute) {
+    // Keep native splash until ready
+    return null;
+  }
 
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
       <StatusBar
-        barStyle="light-content"
+        style="light"
         backgroundColor="#000000"
       />
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Welcome">
+        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Main" component={MainTabs} />
         </Stack.Navigator>
@@ -166,15 +206,65 @@ function App() {
       {isLoading && (
         <View
           pointerEvents="auto"
+          accessibilityRole="progressbar"
+          accessibilityLabel="Getting your events"
           style={{
             ...StyleSheet.absoluteFillObject,
-            backgroundColor: 'rgba(255,255,255,0.9)',
+            backgroundColor: 'rgba(0,0,0,0.35)',
             justifyContent: 'center',
             alignItems: 'center',
             zIndex: 999,
+            paddingHorizontal: 24,
           }}
         >
-          <ActivityIndicator size="large" color="#0277BD" />
+          <LinearGradient
+            colors={["#01579B", "#013B6B"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              width: '86%',
+              maxWidth: 420,
+              borderRadius: 18,
+              paddingVertical: 20,
+              paddingHorizontal: 18,
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOpacity: 0.25,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 8,
+            }}
+          >
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 12,
+              }}
+            >
+              <Feather name="cloud" size={28} color="#FFFFFF" />
+            </View>
+
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginBottom: 6 }}>
+              Getting your events
+            </Text>
+            <Text
+              style={{
+                color: 'rgba(255,255,255,0.95)',
+                fontSize: 13.5,
+                textAlign: 'center',
+                marginBottom: 14,
+              }}
+            >
+              Fetching the Latest Events and syncing with Eventopia…
+            </Text>
+
+            <ActivityIndicator size="small" color="#FBBF24" />
+          </LinearGradient>
         </View>
       )}
     </View>

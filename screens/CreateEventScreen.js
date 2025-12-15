@@ -6,7 +6,6 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
-  StatusBar,
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,7 +23,7 @@ import TimePickerModal from '../components/TimePickerModal';
 const CreateEventScreen = ({ navigation }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const { user, organizerProfile, backendConnected } = useAuth();
+  const { user, organizerProfile, backendConnected, verifyOrganizerIfNeeded } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -217,6 +216,18 @@ const CreateEventScreen = ({ navigation }) => {
       return;
     }
 
+    // Ensure organizer session is verified before privileged action
+    try {
+      const verify = await verifyOrganizerIfNeeded();
+      if (!verify?.success) {
+        Alert.alert('Verification required', 'Please sign in again to create events.');
+        return;
+      }
+    } catch (e) {
+      Alert.alert('Verification error', 'Could not verify your organizer session. Please try again.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -331,8 +342,6 @@ const CreateEventScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={createEventStyles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
-
       {/* Home-style Header */}
       <View style={homeStyles.homeHeaderContainer}>
         <LinearGradient

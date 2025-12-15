@@ -27,11 +27,14 @@ export const AuthProvider = ({ children }) => {
     setUser(firebaseUser);
     
     if (firebaseUser) {
-      // User is signed in, sync with backend
+      // User is signed in. Option C: Do NOT auto-verify on startup.
+      // Only test backend connection so public features can work; defer verification to organizer flows.
       try {
-        await syncWithBackend(firebaseUser);
+        const isConnected = await apiService.testConnection();
+        setBackendConnected(isConnected);
       } catch (error) {
-        console.error('Backend sync error:', error);
+        console.warn('Backend connection test failed:', error);
+        setBackendConnected(false);
       }
     } else {
       // User is signed out, but still test backend connection for public data
@@ -292,6 +295,26 @@ export const AuthProvider = ({ children }) => {
     
     // Utility methods
     refreshBackendConnection,
+    // On-demand verification for organizer features
+    verifyOrganizerIfNeeded: async () => {
+      try {
+        if (!user) {
+          return { success: false, error: 'Not authenticated' };
+        }
+        // If already verified and have profile for this UID, skip
+        if (lastVerifiedUidRef.current === user.uid && organizerProfile) {
+          return { success: true, data: organizerProfile };
+        }
+
+        setIsLoading(true);
+        await syncWithBackend(user);
+        return { success: !!(lastVerifiedUidRef.current === user.uid), data: organizerProfile };
+      } catch (e) {
+        return { success: false, error: e?.message || 'Verification failed' };
+      } finally {
+        setIsLoading(false);
+      }
+    },
     
     // Computed properties
     isAuthenticated: !!user,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, Share, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+// StatusBar removed; use root StatusBar in App.js
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useFavorites } from '../providers/FavoritesProvider';
@@ -118,10 +118,7 @@ export default function EventDetailsScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="#000000"
-      />
+      {/* StatusBar moved to App.js */}
       
       {offline && (
         <View style={styles.offlineBanner}>

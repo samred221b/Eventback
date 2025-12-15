@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useFavorites } from '../providers/FavoritesProvider';
@@ -307,7 +306,6 @@ export default function CalendarScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: 'transparent', flex: 1 }]} edges={['top', 'bottom']}>
-      <StatusBar style="light" backgroundColor="#000000" />
       <ScrollView 
         contentContainerStyle={{ flexGrow: 1 ,  zIndex: 5, elevation:4}}
         style={styles.scrollContainer}

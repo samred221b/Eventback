@@ -20,24 +20,25 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 const API_TIMEOUT = 10000; // 10 seconds
+const DEBUG_API = __DEV__;
 
 class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
-    console.log(`🔗 API Service initialized for ${Platform.OS}`);
-    console.log(`📡 Backend URL: ${this.baseURL}`);
+    if (DEBUG_API) console.log(`🔗 API Service initialized for ${Platform.OS}`);
+    if (DEBUG_API) console.log(`📡 Backend URL: ${this.baseURL}`);
   }
 
   // Get Firebase ID token for authentication
   async getAuthToken() {
     try {
       if (auth.currentUser) {
-        console.log('🔐 Getting auth token for user:', auth.currentUser.email);
+        if (DEBUG_API) console.log('🔐 Getting auth token for user:', auth.currentUser.email);
         const token = await auth.currentUser.getIdToken();
-        console.log('✅ Auth token retrieved successfully');
+        if (DEBUG_API) console.log('✅ Auth token retrieved successfully');
         return token;
       } else {
-        console.warn('⚠️ No authenticated user found');
+        if (DEBUG_API) console.warn('⚠️ No authenticated user found');
         return null;
       }
     } catch (error) {
@@ -68,7 +69,7 @@ class ApiService {
     }
 
     try {
-      console.log(`API Request: ${options.method || 'GET'} ${url}`);
+      if (DEBUG_API) console.log(`API Request: ${options.method || 'GET'} ${url}`);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
@@ -86,7 +87,7 @@ class ApiService {
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
       }
 
-      console.log(`API Response: ${response.status}`, data);
+      if (DEBUG_API) console.log(`API Response: ${response.status}`, data);
       return data;
 
     } catch (error) {
@@ -237,7 +238,7 @@ class ApiService {
     try {
       return this.post(`/events/${eventId}/view`, {}, { requireAuth: false });
     } catch (error) {
-      console.warn('Failed to track event view:', error);
+      if (DEBUG_API) console.warn('Failed to track event view:', error);
       // Don't throw error as view tracking shouldn't break the app
       return { success: false };
     }
@@ -246,7 +247,7 @@ class ApiService {
   // Upload image
   async uploadImage(imageUri) {
     try {
-      console.log('📤 Uploading image:', imageUri);
+      if (DEBUG_API) console.log('📤 Uploading image:', imageUri);
 
       // Create FormData
       const formData = new FormData();
@@ -277,7 +278,7 @@ class ApiService {
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
       }
 
-      console.log('✅ Image uploaded successfully:', data.data.url);
+      if (DEBUG_API) console.log('✅ Image uploaded successfully:', data.data.url);
       return data;
 
     } catch (error) {
@@ -303,7 +304,7 @@ class ApiService {
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
       }
 
-      console.log('✅ Image deleted successfully');
+      if (DEBUG_API) console.log('✅ Image deleted successfully');
       return data;
 
     } catch (error) {

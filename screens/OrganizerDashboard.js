@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  StatusBar,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -22,7 +21,7 @@ import { formatDate, parseBoolean } from '../utils/dataProcessor';
 import apiService from '../services/api';
 
 export default function OrganizerDashboard({ navigation }) {
-  const { user, organizerProfile, signOut } = useAuth();
+  const { user, organizerProfile, signOut, verifyOrganizerIfNeeded } = useAuth();
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [insights, setInsights] = useState({
@@ -32,14 +31,33 @@ export default function OrganizerDashboard({ navigation }) {
     topCategory: 'N/A'
   });
   
-  useEffect(() => {
-    loadOrganizerEvents();
-  }, []);
-
+  // Verify organizer on-demand when screen is focused, then load events
   useFocusEffect(
     React.useCallback(() => {
-      loadOrganizerEvents();
-    }, [])
+      let isActive = true;
+      (async () => {
+        try {
+          setIsLoading(true);
+          const res = await verifyOrganizerIfNeeded();
+          if (res?.success && isActive) {
+            await loadOrganizerEvents();
+          } else if (isActive && !res?.success) {
+            Alert.alert(
+              'Verification required',
+              'Please sign in again to manage your events.',
+              [
+                { text: 'OK', onPress: () => navigation.navigate('OrganizerLogin') }
+              ]
+            );
+          }
+        } catch (e) {
+          console.error('Organizer verification failed:', e);
+        } finally {
+          if (isActive) setIsLoading(false);
+        }
+      })();
+      return () => { isActive = false; };
+    }, [verifyOrganizerIfNeeded])
   );
   
   const loadOrganizerEvents = async () => {
@@ -300,12 +318,7 @@ export default function OrganizerDashboard({ navigation }) {
       nestedScrollEnabled={true}
       keyboardShouldPersistTaps="handled"
     >
-      <StatusBar 
-        style="dark" 
-        backgroundColor="#000"
-        hidden={false}
-        translucent={false}
-      />
+      {/* StatusBar moved to App.js */}
       
       <View style={styles.modernDashboardHeader}>
         <View style={styles.modernDashboardHeaderTop}>

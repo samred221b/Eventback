@@ -5,17 +5,24 @@ import {
   StyleSheet, 
   Dimensions, 
   Image, 
-  TouchableOpacity, 
-  StatusBar
+  TouchableOpacity
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen({ navigation }) {
-  const handleGetStarted = () => {
-    navigation.navigate('Main');
+  const handleGetStarted = async () => {
+    try {
+      await AsyncStorage.setItem('hasSeenWelcome', 'true');
+    } catch (e) {
+      // Optional: log error in dev
+      if (__DEV__) console.warn('Failed to set hasSeenWelcome flag:', e);
+    } finally {
+      navigation.navigate('Main');
+    }
   };
 
   return (
