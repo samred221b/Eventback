@@ -39,16 +39,41 @@ export default function OrganizerLoginScreen({ navigation }) {
       const trimmedPassword = password.trim();
       const trimmedName = name.trim();
 
-      const result = isLogin
-        ? await signIn(trimmedEmail, trimmedPassword)
-        : await signUp(trimmedEmail, trimmedPassword, trimmedName);
-
-      if (!result?.success) {
-        setErrorMessage(result?.error || 'Unable to complete the action. Please try again.');
-        return;
+      let result;
+      
+      if (isLogin) {
+        // Handle login
+        result = await signIn(trimmedEmail, trimmedPassword);
+        if (!result?.success) {
+          setErrorMessage(result?.error || 'Unable to log in. Please try again.');
+          return;
+        }
+        navigation.navigate('OrganizerDashboard');
+      } else {
+        // Handle sign up
+        result = await signUp(trimmedEmail, trimmedPassword, trimmedName);
+        if (!result?.success) {
+          setErrorMessage(result?.error || 'Unable to create account. Please try again.');
+          return;
+        }
+        
+        // Show success message with verification info
+        Alert.alert(
+          'Account Created',
+          result.message || 'Your account has been created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Switch to login form
+                setIsLogin(true);
+                setEmail(trimmedEmail);
+                setPassword('');
+              }
+            }
+          ]
+        );
       }
-
-      navigation.navigate('OrganizerDashboard');
     } catch (error) {
       setErrorMessage(error?.message || 'Something went wrong. Please try again.');
     } finally {
@@ -84,7 +109,7 @@ const handleForgotPassword = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style="light" backgroundColor="#000000" />
+      {/* StatusBar is managed in App.js */}
 
       {/* Forgot Password Modal */}
       {showForgotModal && (

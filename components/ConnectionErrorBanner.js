@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -11,29 +11,57 @@ export default function ConnectionErrorBanner({
   disabled = false,
 }) {
   const [secondsLeft, setSecondsLeft] = useState(retryIn);
-  const timerRef = useRef(null);
+  const retryTimeout = useRef();
+  const isMounted = useRef(true);
+
+  // Memoize the retry callback
+  const handleRetry = useCallback(() => {
+    if (onRetry && isMounted.current) {
+      onRetry();
+    }
+  }, [onRetry]);
 
   useEffect(() => {
-    // Start / restart countdown
-    if (disabled) return;
+    isMounted.current = true;
+    
+    if (disabled) {
+      if (retryTimeout.current) {
+        clearTimeout(retryTimeout.current);
+      }
+      return;
+    }
 
-    timerRef.current && clearInterval(timerRef.current);
-    setSecondsLeft(retryIn);
+    // Clear any existing timeout
+    if (retryTimeout.current) {
+      clearTimeout(retryTimeout.current);
+    }
 
-    timerRef.current = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          clearInterval(timerRef.current);
-          // Auto retry once countdown hits 0
-          onRetry && onRetry();
-          return retryIn; // reset for potential subsequent errors
-        }
-        return s - 1;
-      });
-    }, 1000);
+    // Start the countdown
+    let currentSeconds = retryIn;
+    setSecondsLeft(currentSeconds);
 
-    return () => timerRef.current && clearInterval(timerRef.current);
-  }, [retryIn, disabled]);
+    const countdown = () => {
+      if (!isMounted.current) return;
+      
+      if (currentSeconds <= 1) {
+        handleRetry();
+        return;
+      }
+      
+      currentSeconds -= 1;
+      setSecondsLeft(currentSeconds);
+      retryTimeout.current = setTimeout(countdown, 1000);
+    };
+
+    retryTimeout.current = setTimeout(countdown, 1000);
+
+    return () => {
+      isMounted.current = false;
+      if (retryTimeout.current) {
+        clearTimeout(retryTimeout.current);
+      }
+    };
+  }, [retryIn, disabled, handleRetry]);
 
   return (
     <View style={styles.wrapper}>

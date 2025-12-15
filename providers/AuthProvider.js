@@ -5,13 +5,18 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendEmailVerification as firebaseSendEmailVerification
 } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../firebase.config';
 import apiService from '../services/api';
 
 // Enhanced Auth Context with Backend Integration
 const AuthContext = createContext({});
+
+// Key for AsyncStorage
+const AUTH_STORAGE_KEY = '@Eventopia/auth_state';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -22,23 +27,61 @@ export const AuthProvider = ({ children }) => {
   const lastVerifiedUidRef = useRef(null);
   const syncingRef = useRef(false);
 
+  // Save auth state to AsyncStorage
+  const saveAuthState = async (userData) => {
+    try {
+      if (userData) {
+        const { uid, email, emailVerified } = userData;
+        await AsyncStorage.setItem(
+          AUTH_STORAGE_KEY,
+          JSON.stringify({ uid, email, emailVerified })
+        );
+      } else {
+        await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
+      }
+    } catch (error) {
+      console.error('Failed to save auth state:', error);
+    }
+  };
+
+  // Load auth state from AsyncStorage
+  const loadAuthState = async () => {
+    try {
+      const jsonValue = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
+      return jsonValue ? JSON.parse(jsonValue) : null;
+    } catch (error) {
+      console.error('Failed to load auth state:', error);
+      return null;
+    }
+  };
+
   // Handle user state changes
   const handleAuthStateChange = async (firebaseUser) => {
-    setUser(firebaseUser);
-    
     if (firebaseUser) {
-      // User is signed in. Option C: Do NOT auto-verify on startup.
-      // Only test backend connection so public features can work; defer verification to organizer flows.
-      try {
-        const isConnected = await apiService.testConnection();
-        setBackendConnected(isConnected);
-      } catch (error) {
-        console.warn('Backend connection test failed:', error);
-        setBackendConnected(false);
+      // Save user data to AsyncStorage
+      await saveAuthState(firebaseUser);
+      
+      // Check backend connection if not already connected
+      if (!backendConnected) {
+        try {
+          const isConnected = await apiService.testConnection();
+          setBackendConnected(isConnected);
+          
+          // Always try to sync with backend, regardless of email verification
+          if (isConnected) {
+            await syncWithBackend(firebaseUser);
+          }
+        } catch (error) {
+          console.warn('Backend connection test failed:', error);
+          setBackendConnected(false);
+        }
       }
     } else {
-      // User is signed out, but still test backend connection for public data
+      // User signed out
+      await saveAuthState(null);
       setOrganizerProfile(null);
+      
+      // Still check backend connection for public data
       try {
         const isConnected = await apiService.testConnection();
         setBackendConnected(isConnected);
@@ -48,7 +91,13 @@ export const AuthProvider = ({ children }) => {
       }
     }
     
-    if (initializing) setInitializing(false);
+    // Update user state
+    setUser(firebaseUser);
+    
+    // Update loading states
+    if (initializing) {
+      setInitializing(false);
+    }
     setIsLoading(false);
   };
 
@@ -97,10 +146,55 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Initialize auth state
   useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        // First check local storage for faster initial load
+        const savedAuth = await loadAuthState();
+        if (savedAuth) {
+          // If we have saved auth, set the user immediately
+          const { uid, email, emailVerified } = savedAuth;
+          setUser({ uid, email, emailVerified });
+        }
+        
+        // Then set up the auth state listener
+        const unsubscribe = onAuthStateChanged(auth, handleAuthStateChange);
+        
+        // Small delay to prevent flash of loading screen
+        const timer = setTimeout(() => {
+          if (initializing) {
+            setInitializing(false);
+          }
+        }, 500);
+        
+        return () => {
+          clearTimeout(timer);
+          unsubscribe();
+        };
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setInitializing(false);
+        setIsLoading(false);
+      }
+    };
+    
+    initializeAuth();
     const unsubscribe = onAuthStateChanged(auth, handleAuthStateChange);
-    return unsubscribe;
-  }, []);
+  }, [initializing]);
+  
+  // Add sendEmailVerification function
+  const sendEmailVerification = async () => {
+    if (!auth.currentUser) return { success: false, error: 'No user is signed in' };
+    
+    try {
+      await firebaseSendEmailVerification(auth.currentUser);
+      return { success: true };
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      return { success: false, error: error.message };
+    }
+  };
 
   // Sign up with email and password
   const signUp = async (email, password, fullName) => {
@@ -110,6 +204,9 @@ export const AuthProvider = ({ children }) => {
       // Create Firebase user
       const result = await createUserWithEmailAndPassword(auth, email, password);
       
+      // Send verification email
+      await firebaseSendEmailVerification(result.user);
+      
       // Update Firebase profile with full name
       if (fullName) {
         await updateProfile(result.user, {
@@ -117,10 +214,12 @@ export const AuthProvider = ({ children }) => {
         });
       }
       
-      // console.log('✅ User account created & signed in!');
-      
-      // Backend sync will happen automatically via onAuthStateChanged
-      return { success: true, user: result.user };
+      // Show verification message but still allow login
+      return { 
+        success: true, 
+        user: result.user,
+        message: 'Please check your email to verify your account. You can still log in, but some features may be limited until you verify your email.'
+      };
       
     } catch (error) {
       console.error('Sign up error:', error);
@@ -277,8 +376,8 @@ export const AuthProvider = ({ children }) => {
     organizerProfile,
     
     // Loading states
-    isLoading,
-    initializing,
+    isLoading: initializing || isLoading,
+    isInitializing: initializing,
     
     // Connection status
     backendConnected,

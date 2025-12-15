@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -164,10 +164,10 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     if (isLoadingRef.current) return;
     loadEventsFromBackend({ background: false });
-  };
+  }, [isLoadingRef.current]);
 
   const handleRefresh = async () => {
     const now = Date.now();

@@ -59,7 +59,7 @@ export default function WelcomeScreen({ navigation }) {
               <Text style={styles.tagline}>
                 Discover Amazing Events Near You
               </Text>
-              <Feather name="star" size={16} color="rgba(255, 255, 255, 0.9)" />
+              <Feather name="star" size={16} color="rgba(255, 255, 255, 0.8)" />
             </View>
           </View>
 
@@ -74,19 +74,19 @@ export default function WelcomeScreen({ navigation }) {
           <View style={styles.statsSection}>
             <View style={styles.statCard}>
               <Feather name="calendar" size={24} color="#0277BD" />
-              <Text style={styles.statNumber}>10K+</Text>
+              <Text style={styles.statNumber}>200+</Text>
               <Text style={styles.statLabel}>Events</Text>
             </View>
             
             <View style={styles.statCard}>
               <Feather name="users" size={24} color="#0277BD" />
-              <Text style={styles.statNumber}>50K+</Text>
+              <Text style={styles.statNumber}>30K</Text>
               <Text style={styles.statLabel}>Users</Text>
             </View>
             
             <View style={styles.statCard}>
               <Feather name="map-pin" size={24} color="#0277BD" />
-              <Text style={styles.statNumber}>100+</Text>
+              <Text style={styles.statNumber}>10+</Text>
               <Text style={styles.statLabel}>Cities</Text>
             </View>
           </View>
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   // Logo Section
   logoSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 3,
   },
   
  
@@ -204,9 +204,9 @@ const styles = StyleSheet.create({
   
   // VIP Image
   vipImage: {
-    width: width * 0.99,
-    height: height * 0.35,
-    marginBottom: -5,
+    width: 550,
+    height: 300,
+    marginBottom: 10,
   },
   
   // Stats Section
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 5,
     alignItems: 'center',
     shadowColor: '#000',

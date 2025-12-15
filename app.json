@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "EventopiaNew",
-    "slug": "EventopiaNew",
+    "name": "Eventopia",
+    "slug": "eventopia",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/adaptive-icon.png",
@@ -20,7 +20,7 @@
   "translucent": false
 },
     "android": {
-      "package": "com.yourcompany.eventopianew",
+      "package": "com.eventopia.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
