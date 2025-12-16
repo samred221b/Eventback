@@ -150,7 +150,6 @@ function MainTabs() {
 
 // Root App Component
 function App() {
-  const { isLoading } = useAuth();
   const [initialRoute, setInitialRoute] = useState('Welcome');
   const [appReady, setAppReady] = useState(false);
 
@@ -192,8 +191,8 @@ function App() {
     <View style={{ flex: 1 }}>
       <ScreenBackground />
       <StatusBar
-        barStyle="light-content"
-        backgroundColor="#424141e5"
+        barStyle="light"
+        backgroundColor="#011d5883"
         translucent={false}
       />
       <NavigationContainer>
@@ -202,72 +201,6 @@ function App() {
           <Stack.Screen name="Main" component={MainTabs} />
         </Stack.Navigator>
       </NavigationContainer>
-
-      {/* Global loading overlay */}
-      {isLoading && (
-        <View
-          pointerEvents="auto"
-          accessibilityRole="progressbar"
-          accessibilityLabel="Getting your events"
-          style={{
-            ...StyleSheet.absoluteFillObject,
-            backgroundColor: 'rgba(0,0,0,0.35)',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 999,
-            paddingHorizontal: 24,
-          }}
-        >
-          <LinearGradient
-            colors={["#01579B", "#013B6B"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              width: '86%',
-              maxWidth: 420,
-              borderRadius: 18,
-              paddingVertical: 20,
-              paddingHorizontal: 18,
-              alignItems: 'center',
-              shadowColor: '#000',
-              shadowOpacity: 0.25,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 6 },
-              elevation: 8,
-            }}
-          >
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: 'rgba(255,255,255,0.15)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 12,
-              }}
-            >
-              <Feather name="cloud" size={28} color="#FFFFFF" />
-            </View>
-
-            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginBottom: 6 }}>
-              Getting your events
-            </Text>
-            <Text
-              style={{
-                color: 'rgba(255,255,255,0.95)',
-                fontSize: 13.5,
-                textAlign: 'center',
-                marginBottom: 14,
-              }}
-            >
-              Fetching the Latest Events and syncing with Eventopia…
-            </Text>
-
-            <ActivityIndicator size="small" color="#FBBF24" />
-          </LinearGradient>
-        </View>
-      )}
     </View>
   );
 }

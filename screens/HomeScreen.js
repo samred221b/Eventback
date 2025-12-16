@@ -89,11 +89,12 @@ export default function HomeScreen({ navigation }) {
   const loadEventsFromBackend = async ({ isRefresh = false, background = false } = {}) => {
     try {
       isLoadingRef.current = true;
-      // Only show full-screen loader after first load and not during refresh/background
-      const shouldShowLoader = hasInitialLoad && !isRefresh && !background;
-      setIsLoading(shouldShowLoader);
+      // Show loading indicator for initial load or manual refresh
+      if (!background || isRefresh) {
+        setIsLoading(true);
+      }
 
-      // Clear any previous errors when starting a new load
+      // Only clear errors for user-initiated actions
       if (!background) {
         setBackendError(null);
       }
@@ -111,15 +112,17 @@ export default function HomeScreen({ navigation }) {
         setUpcomingEvents(upcomingPrefill);
       }
 
-      // Check network status
+      // Check network status first
       const netInfo = await NetInfo.fetch();
       if (!netInfo.isConnected) {
-        setBackendError({
-          message: 'You appear to be offline',
-          details: 'Showing cached events if available',
-          type: 'warning',
-          showRefresh: true
-        });
+        if (!background) {
+          setBackendError({
+            message: 'You appear to be offline',
+            details: 'Showing cached events if available',
+            type: 'error',
+            showRefresh: true
+          });
+        }
         return;
       }
 
@@ -165,11 +168,7 @@ export default function HomeScreen({ navigation }) {
           setUpcomingEvents(upcoming);
 
           await cacheHomeEvents(transformedEvents);
-          
-          // Only clear error if this wasn't a background refresh
-          if (!background) {
-            setBackendError(null);
-          }
+          setBackendError(null); 
         }
       } catch (apiError) {
         console.error('API Error:', apiError);
@@ -194,11 +193,21 @@ export default function HomeScreen({ navigation }) {
           showRefresh: true
         });
         
-        // If we don't have any cached data, show the error
-        if (cachedEventsPrefill.length === 0) {
-          setProcessedEvents([]);
-          setFeaturedEvents([]);
-          setUpcomingEvents([]);
+        // Only show error if this isn't a background refresh and we have a network-related error
+        if (!background && (errorType === 'error' || errorMessage.includes('Network'))) {
+          setBackendError({
+            message: errorMessage,
+            details: errorDetails,
+            type: 'error',
+            showRefresh: true
+          });
+          
+          // If we don't have any cached data, clear the UI
+          if (cachedEventsPrefill.length === 0) {
+            setProcessedEvents([]);
+            setFeaturedEvents([]);
+            setUpcomingEvents([]);
+          }
         }
       }
     } catch (error) {

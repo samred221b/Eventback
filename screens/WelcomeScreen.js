@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   Dimensions, 
   Image, 
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator
 } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,16 +16,54 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen({ navigation }) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAppReady, setIsAppReady] = useState(false);
+
+  useEffect(() => {
+    // Hide the splash screen
+    const hideSplash = async () => {
+      try {
+        await SplashScreen.hideAsync();
+        // Simulate loading time (replace with actual data loading if needed)
+        setTimeout(() => {
+          setIsLoading(false);
+          setIsAppReady(true);
+        }, 1000);
+      } catch (e) {
+        console.warn('Error hiding splash screen:', e);
+        setIsLoading(false);
+        setIsAppReady(true);
+      }
+    };
+
+    hideSplash();
+  }, []);
+
   const handleGetStarted = async () => {
     try {
       await AsyncStorage.setItem('hasSeenWelcome', 'true');
     } catch (e) {
-      // Optional: log error in dev
       if (__DEV__) console.warn('Failed to set hasSeenWelcome flag:', e);
     } finally {
       navigation.navigate('Main');
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ffffff" />
+      </View>
+    );
+  }
+
+  if (!isAppReady) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ffffff" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -116,6 +156,12 @@ export default function WelcomeScreen({ navigation }) {
 };
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0277BD',
+  },
   container: {
     flex: 1,
     backgroundColor: '#3986b3f6',
