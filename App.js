@@ -192,8 +192,8 @@ function App() {
     <View style={{ flex: 1 }}>
       <ScreenBackground />
       <StatusBar
-        style="light"
-        backgroundColor="#000000"
+        barStyle="light-content"
+        backgroundColor="#424141e5"
         translucent={false}
       />
       <NavigationContainer>

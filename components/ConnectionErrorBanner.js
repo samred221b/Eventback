@@ -1,166 +1,74 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { memo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-export default function ConnectionErrorBanner({
-  message = "We couldn't reach the server.",
-  details,
-  retryIn = 10,
+const ConnectionErrorBanner = memo(({
+  message = "Connection lost. Some features may be limited.",
   onRetry,
   disabled = false,
-}) {
-  const [secondsLeft, setSecondsLeft] = useState(retryIn);
-  const retryTimeout = useRef();
-  const isMounted = useRef(true);
-
-  // Memoize the retry callback
-  const handleRetry = useCallback(() => {
-    if (onRetry && isMounted.current) {
-      onRetry();
-    }
-  }, [onRetry]);
-
-  useEffect(() => {
-    isMounted.current = true;
-    
-    if (disabled) {
-      if (retryTimeout.current) {
-        clearTimeout(retryTimeout.current);
-      }
-      return;
-    }
-
-    // Clear any existing timeout
-    if (retryTimeout.current) {
-      clearTimeout(retryTimeout.current);
-    }
-
-    // Start the countdown
-    let currentSeconds = retryIn;
-    setSecondsLeft(currentSeconds);
-
-    const countdown = () => {
-      if (!isMounted.current) return;
-      
-      if (currentSeconds <= 1) {
-        handleRetry();
-        return;
-      }
-      
-      currentSeconds -= 1;
-      setSecondsLeft(currentSeconds);
-      retryTimeout.current = setTimeout(countdown, 1000);
-    };
-
-    retryTimeout.current = setTimeout(countdown, 1000);
-
-    return () => {
-      isMounted.current = false;
-      if (retryTimeout.current) {
-        clearTimeout(retryTimeout.current);
-      }
-    };
-  }, [retryIn, disabled, handleRetry]);
-
+}) => {
   return (
     <View style={styles.wrapper}>
-      <LinearGradient
-        colors={["#EF4444", "#B91C1C"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.banner}
-      >
+      <View style={styles.banner}>
         <View style={styles.row}>
           <View style={styles.iconWrap}>
-            <Feather name="wifi-off" size={18} color="#FFF" />
+            <Feather name="wifi-off" size={16} color="#FFFFFF" />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>{message}</Text>
-            {!!details && (
-              <Text numberOfLines={2} style={styles.details}>
-                {String(details)}
-              </Text>
-            )}
-            <Text style={styles.countdown}>
-              Retrying in {secondsLeft}s · You can also retry now
-            </Text>
           </View>
+          {onRetry && (
+            <TouchableOpacity
+              onPress={onRetry}
+              disabled={disabled}
+              activeOpacity={0.7}
+              style={styles.retryButton}
+            >
+              <Text style={styles.retryText}>Refresh</Text>
+            </TouchableOpacity>
+          )}
         </View>
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.retryBtn, disabled && { opacity: 0.6 }]}
-            onPress={onRetry}
-            disabled={disabled}
-            activeOpacity={0.85}
-            accessibilityLabel="Retry connecting to server"
-          >
-            <Feather name="refresh-cw" size={14} color="#0F172A" />
-            <Text style={styles.retryText}>Retry now</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
+      </View>
     </View>
   );
-}
+});
+
+export default ConnectionErrorBanner;
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingHorizontal: 12,
-    marginTop: 12,
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   banner: {
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    flex: 1,
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
   title: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontWeight: '500',
+    flex: 1,
   },
-  details: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 12,
-    marginBottom: 6,
-  },
-  countdown: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  actions: {
-    marginTop: 10,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  retryBtn: {
-    backgroundColor: '#FBBF24',
+  retryButton: {
+    marginLeft: 12,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 14,
   },
   retryText: {
-    color: '#0F172A',
-    fontWeight: '800',
-    marginLeft: 6,
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

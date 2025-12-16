@@ -45,7 +45,14 @@ export default function OrganizerLoginScreen({ navigation }) {
         // Handle login
         result = await signIn(trimmedEmail, trimmedPassword);
         if (!result?.success) {
-          setErrorMessage(result?.error || 'Unable to log in. Please try again.');
+          // More specific error message for invalid credentials
+          if (result?.error?.includes('password') || result?.error?.includes('user-not-found')) {
+            setErrorMessage('The email or password you entered is incorrect. Please try again.');
+          } else if (result?.error?.includes('network')) {
+            setErrorMessage('Unable to connect. Please check your internet connection and try again.');
+          } else {
+            setErrorMessage('Unable to log in. Please check your details and try again.');
+          }
           return;
         }
         navigation.navigate('OrganizerDashboard');
@@ -53,14 +60,22 @@ export default function OrganizerLoginScreen({ navigation }) {
         // Handle sign up
         result = await signUp(trimmedEmail, trimmedPassword, trimmedName);
         if (!result?.success) {
-          setErrorMessage(result?.error || 'Unable to create account. Please try again.');
+          if (result?.error?.includes('email-already-in-use')) {
+            setErrorMessage('This email is already registered. Please sign in or use a different email.');
+          } else if (result?.error?.includes('weak-password')) {
+            setErrorMessage('Password should be at least 6 characters long.');
+          } else if (result?.error?.includes('invalid-email')) {
+            setErrorMessage('Please enter a valid email address.');
+          } else {
+            setErrorMessage('Unable to create account. Please try again.');
+          }
           return;
         }
         
         // Show success message with verification info
         Alert.alert(
           'Account Created',
-          result.message || 'Your account has been created successfully!',
+          'Your account has been created successfully! Please check your email to verify your account.',
           [
             {
               text: 'OK',
@@ -75,7 +90,8 @@ export default function OrganizerLoginScreen({ navigation }) {
         );
       }
     } catch (error) {
-      setErrorMessage(error?.message || 'Something went wrong. Please try again.');
+      console.error('Login error:', error);
+      setErrorMessage('An unexpected error occurred. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }
@@ -190,6 +206,14 @@ const handleForgotPassword = () => {
             {isLogin ? 'Sign In' : 'Create Account'}
           </Text>
 
+          {/* Error Message */}
+          {errorMessage ? (
+            <View style={styles.errorContainer}>
+              <Feather name="alert-circle" size={20} color="#DC2626" style={styles.errorIcon} />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          ) : null}
+
           {/* Name Input (Sign Up Only) */}
           {!isLogin && (
             <View style={styles.inputContainer}>
@@ -289,9 +313,6 @@ const handleForgotPassword = () => {
             </LinearGradient>
           </TouchableOpacity>
 
-          {errorMessage ? (
-            <Text style={styles.errorText}>{errorMessage}</Text>
-          ) : null}
 
           {/* Divider */}
           <View style={styles.divider}>

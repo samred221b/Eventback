@@ -60,7 +60,12 @@ export default function HomeScreen({ navigation }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isLoadingRef = useRef(false);
   const lastRefreshTime = useRef(Date.now());
-  const [backendError, setBackendError] = useState(null);
+  const [backendError, setBackendError] = useState({
+    message: '',
+    details: '',
+    type: 'error', // 'error', 'warning', 'info'
+    showRefresh: true
+  });
 
   useFocusEffect(
     React.useCallback(() => {
@@ -88,6 +93,11 @@ export default function HomeScreen({ navigation }) {
       const shouldShowLoader = hasInitialLoad && !isRefresh && !background;
       setIsLoading(shouldShowLoader);
 
+      // Clear any previous errors when starting a new load
+      if (!background) {
+        setBackendError(null);
+      }
+
       // Prefill from cache for instant UI
       const cachedEventsPrefill = await loadHomeEventsFromCache();
       if (cachedEventsPrefill.length > 0) {
@@ -101,62 +111,104 @@ export default function HomeScreen({ navigation }) {
         setUpcomingEvents(upcomingPrefill);
       }
 
-      // Check network status: if offline, stop here (we already showed cache)
+      // Check network status
       const netInfo = await NetInfo.fetch();
       if (!netInfo.isConnected) {
-        setBackendError('You appear to be offline. Please check your internet connection.');
+        setBackendError({
+          message: 'You appear to be offline',
+          details: 'Showing cached events if available',
+          type: 'warning',
+          showRefresh: true
+        });
         return;
       }
 
-      // Fetch fresh data
-      const response = await apiService.getEvents();
-      if (response.success && response.data) {
-        const transformedEvents = response.data
-          .filter(event => event._id && event.title && event.date)
-          .map(event => ({
-            id: event._id,
-            title: event.title,
-            description: event.description,
-            date: event.date,
-            time: event.time,
-            location: event.location,
-            price: event.price || 0,
-            currency: event.currency || 'ETB',
-            category: event.category,
-            featured: event.featured || false,
-            imageUrl: event.imageUrl || event.image || null,
-            organizerName: event.organizerName || event.organizer || '',
-            importantInfo: event.importantInfo || '',
-          }));
+      try {
+        // Set a timeout for the API call
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout. The server is taking too long to respond.')), 10000)
+        );
 
-        setProcessedEvents(transformedEvents);
-        setFeaturedEvents(transformedEvents.filter(e => e.featured).slice(0, 6));
+        // Race between the API call and the timeout
+        const response = await Promise.race([
+          apiService.getEvents(),
+          timeoutPromise
+        ]);
 
-        const now = new Date();
-        const upcoming = transformedEvents
-          .filter(event => new Date(event.date) >= now)
-          .sort((a, b) => new Date(a.date) - new Date(b.date))
-          .slice(0, 3);
-        setUpcomingEvents(upcoming);
+        if (response.success && response.data) {
+          const transformedEvents = response.data
+            .filter(event => event._id && event.title && event.date)
+            .map(event => ({
+              id: event._id,
+              title: event.title,
+              description: event.description,
+              date: event.date,
+              time: event.time,
+              location: event.location,
+              price: event.price || 0,
+              currency: event.currency || 'ETB',
+              category: event.category,
+              featured: event.featured || false,
+              imageUrl: event.imageUrl || event.image || null,
+              organizerName: event.organizerName || event.organizer || '',
+              importantInfo: event.importantInfo || '',
+            }));
 
-        await cacheHomeEvents(transformedEvents); // Cache events after successful fetch
-        setBackendError(null); // Clear any previous error on success
+          setProcessedEvents(transformedEvents);
+          setFeaturedEvents(transformedEvents.filter(e => e.featured).slice(0, 6));
+
+          const now = new Date();
+          const upcoming = transformedEvents
+            .filter(event => new Date(event.date) >= now)
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .slice(0, 3);
+          setUpcomingEvents(upcoming);
+
+          await cacheHomeEvents(transformedEvents);
+          
+          // Only clear error if this wasn't a background refresh
+          if (!background) {
+            setBackendError(null);
+          }
+        }
+      } catch (apiError) {
+        console.error('API Error:', apiError);
+        
+        // Format a user-friendly error message
+        let errorMessage = 'Failed to load events';
+        let errorDetails = 'Please try again later';
+        let errorType = 'error';
+        
+        if (apiError.message.includes('timeout')) {
+          errorMessage = 'Connection Timeout';
+          errorDetails = 'The server is taking too long to respond';
+        } else if (apiError.message.includes('Network request failed')) {
+          errorMessage = 'Network Error';
+          errorDetails = 'Unable to connect to the server';
+        }
+        
+        setBackendError({
+          message: errorMessage,
+          details: errorDetails,
+          type: errorType,
+          showRefresh: true
+        });
+        
+        // If we don't have any cached data, show the error
+        if (cachedEventsPrefill.length === 0) {
+          setProcessedEvents([]);
+          setFeaturedEvents([]);
+          setUpcomingEvents([]);
+        }
       }
     } catch (error) {
-      console.error('Error loading events:', error);
-      setBackendError(error?.message || 'Failed to connect to the server.');
-      // If prefill did not happen (no cache), try once more to read cache
-      const cachedEvents = await loadHomeEventsFromCache();
-      if (cachedEvents.length > 0) {
-        setProcessedEvents(cachedEvents);
-        setFeaturedEvents(cachedEvents.filter(e => e.featured).slice(0, 6));
-        const now = new Date();
-        const upcoming = cachedEvents
-          .filter(event => new Date(event.date) >= now)
-          .sort((a, b) => new Date(a.date) - new Date(b.date))
-          .slice(0, 3);
-        setUpcomingEvents(upcoming);
-      }
+      console.error('Unexpected error in loadEventsFromBackend:', error);
+      setBackendError({
+        message: 'An unexpected error occurred',
+        details: 'Please try again later',
+        type: 'error',
+        showRefresh: true
+      });
     } finally {
       isLoadingRef.current = false;
       setIsLoading(false);

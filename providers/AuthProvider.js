@@ -244,27 +244,48 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      // console.log('✅ User signed in successfully!');
-      
-      // Backend sync will happen automatically via onAuthStateChanged
-      return { success: true, user: result.user };
-      
-    } catch (error) {
-      console.error('Sign in error:', error);
-      let errorMessage = 'An error occurred during sign in';
-      
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No user found with this email address!';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password!';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'That email address is invalid!';
-      } else if (error.code === 'auth/user-disabled') {
-        errorMessage = 'This account has been disabled!';
+      // Input validation
+      if (!email || !password) {
+        return { success: false, error: 'Please enter both email and password' };
       }
       
-      return { success: false, error: errorMessage };
+      try {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        // console.log('✅ User signed in successfully!');
+        return { success: true, user: result.user };
+      } catch (firebaseError) {
+        // Handle Firebase auth errors
+        console.log('Firebase auth error:', firebaseError.code); // Debug log
+        
+        let errorMessage = 'Invalid email or password. Please try again.';
+        
+        // Map Firebase error codes to user-friendly messages
+        const errorMap = {
+          'auth/user-not-found': 'No account found with this email address',
+          'auth/wrong-password': 'Incorrect password. Please try again',
+          'auth/invalid-email': 'Please enter a valid email address',
+          'auth/user-disabled': 'This account has been disabled',
+          'auth/too-many-requests': 'Too many attempts. Please try again later',
+          'auth/network-request-failed': 'Network error. Please check your connection'
+        };
+        
+        if (firebaseError.code && errorMap[firebaseError.code]) {
+          errorMessage = errorMap[firebaseError.code];
+        }
+        
+        return { 
+          success: false, 
+          error: errorMessage,
+          code: firebaseError.code
+        };
+      }
+      
+    } catch (error) {
+      console.error('Unexpected error during sign in:', error);
+      return { 
+        success: false, 
+        error: 'An unexpected error occurred. Please try again.'
+      };
     } finally {
       setIsLoading(false);
     }

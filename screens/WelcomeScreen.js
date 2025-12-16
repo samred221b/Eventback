@@ -118,7 +118,9 @@ export default function WelcomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0277BD',
+    backgroundColor: '#3986b3f6',
+    margin: 0,
+    padding: 0,
   },
   
   gradientBackground: {
@@ -126,7 +128,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: height,
+    bottom: 0,
+  },
+  
+  content: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingBottom: 0,
   },
   
   // Decorative Elements

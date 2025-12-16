@@ -31,33 +31,30 @@ export default function OrganizerDashboard({ navigation }) {
     topCategory: 'N/A'
   });
   
-  // Verify organizer on-demand when screen is focused, then load events
+  // Load events when screen is focused
   useFocusEffect(
     React.useCallback(() => {
       let isActive = true;
       (async () => {
         try {
           setIsLoading(true);
-          const res = await verifyOrganizerIfNeeded();
-          if (res?.success && isActive) {
+          // Try to verify in the background, but don't block the UI
+          verifyOrganizerIfNeeded().catch(e => {
+            console.log('Background verification check failed:', e);
+          });
+          
+          // Always load events regardless of verification status
+          if (isActive) {
             await loadOrganizerEvents();
-          } else if (isActive && !res?.success) {
-            Alert.alert(
-              'Verification required',
-              'Please sign in again to manage your events.',
-              [
-                { text: 'OK', onPress: () => navigation.navigate('OrganizerLogin') }
-              ]
-            );
           }
         } catch (e) {
-          console.error('Organizer verification failed:', e);
+          console.error('Error loading dashboard:', e);
         } finally {
           if (isActive) setIsLoading(false);
         }
       })();
       return () => { isActive = false; };
-    }, [verifyOrganizerIfNeeded])
+    }, [loadOrganizerEvents])
   );
   
   const loadOrganizerEvents = async () => {
