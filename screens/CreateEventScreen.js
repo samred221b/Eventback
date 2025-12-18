@@ -85,7 +85,6 @@ const CreateEventScreen = ({ navigation }) => {
         ]
       );
     } catch (error) {
-      console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image');
     }
   };
@@ -137,13 +136,11 @@ const CreateEventScreen = ({ navigation }) => {
             throw new Error('Upload failed');
           }
         } catch (error) {
-          console.error('Cloudinary Upload Error:', error);
           Alert.alert('Upload Failed', 'Failed to upload image to Cloudinary. Please try again or use an image URL.');
           removeImage();
         }
       }
     } catch (error) {
-      console.error('Error during image picking or upload:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     }
   };
@@ -255,14 +252,9 @@ const CreateEventScreen = ({ navigation }) => {
         importantInfo: formData.importantInfo.trim() || undefined  // Optional field
       };
 
-      console.log('Creating event with data:', eventData);
-
-      console.log('Sending request to create event with data:', JSON.stringify(eventData, null, 2));
       const response = await apiService.createEvent(eventData);
-      console.log('Server response:', JSON.stringify(response, null, 2));
 
       if (response && response.success) {
-        console.log('✅ Event created successfully:', response.data);
         Alert.alert(
           'Success!',
           'Event created successfully!',
@@ -297,28 +289,16 @@ const CreateEventScreen = ({ navigation }) => {
           ]
         );
       } else {
-        console.error('Create event failed:', response);
         Alert.alert('Error', response.message || 'Failed to create event');
       }
     } catch (error) {
-      console.error('Create event error:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        response: error.response?.data,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        headers: error.response?.headers,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers,
-          data: error.config?.data
-        }
-      });
       
       const errorMessage = error.response?.data?.message || error.message || 'Failed to create event. Please try again.';
-      Alert.alert('Error', errorMessage);
+      if (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('too many requests')) {
+        Alert.alert('Rate Limit Exceeded', 'You have made too many requests. Please wait a few minutes and try again.');
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -25,31 +25,21 @@ import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for net
 
 const EVENTS_CACHE_KEY = '@eventopia_events';
 
-// Utility function for logging in development mode
-const log = (...args) => {
-  if (__DEV__) {
-    console.log(...args);
-  }
-};
 
 const cacheEvents = async (events) => {
   try {
-    log('Caching Events:', events);
     await AsyncStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(events));
   } catch (e) {
-    console.error('Failed to cache events:', e);
+    // Silent fail
   }
 };
 
 const loadEventsFromCache = async () => {
   try {
     const cached = await AsyncStorage.getItem(EVENTS_CACHE_KEY);
-    log('Retrieved Cached Events:', cached);
     const parsedEvents = cached ? JSON.parse(cached) : [];
-    log('Parsed Cached Events:', parsedEvents);
     return parsedEvents;
   } catch (e) {
-    console.error('Failed to load cached events:', e);
     return [];
   }
 };
@@ -62,7 +52,7 @@ const cacheFirstPageEvents = async (events) => {
     };
     await AsyncStorage.setItem('@events_cache', JSON.stringify(cacheData));
   } catch (e) {
-    console.error('Failed to cache events:', e);
+    // Silent fail
   }
 };
 
@@ -74,7 +64,7 @@ const loadCachedFirstPageEvents = async () => {
       return events;
     }
   } catch (e) {
-    console.error('Failed to load cached events:', e);
+    // Silent fail
   }
   return [];
 };
@@ -186,7 +176,6 @@ const EventsScreen = ({ navigation }) => {
     // Check network status
     const netInfo = await NetInfo.fetch();
     if (!netInfo.isConnected) {
-      log('Offline: Using cached events');
       fetchedEvents = await loadEventsFromCache();
       if (fetchedEvents.length > 0) {
         setError('Offline: Showing cached events');
@@ -205,7 +194,6 @@ const EventsScreen = ({ navigation }) => {
       const response = await apiService.getEvents(params);
       if (response.success) {
         fetchedEvents = response.data || [];
-        log('Fetched Events:', fetchedEvents);
         setAllEvents(fetchedEvents);
         await cacheEvents(fetchedEvents);
         await cacheFirstPageEvents(fetchedEvents); // Cache first page events
@@ -218,7 +206,6 @@ const EventsScreen = ({ navigation }) => {
 
     if (backendFailed) {
       fetchedEvents = await loadEventsFromCache();
-      log('Using Cached Events:', fetchedEvents);
       if (fetchedEvents.length > 0) {
         setError('Offline: Showing cached events');
       } else {
@@ -238,7 +225,6 @@ const EventsScreen = ({ navigation }) => {
         const now = new Date();
         filteredEvents = filteredEvents.filter(event => new Date(event.date) >= now);
       }
-      log('Final Events to Display:', filteredEvents);
       setEvents(filteredEvents);
     }
 
@@ -317,7 +303,7 @@ const EventsScreen = ({ navigation }) => {
     try {
       await apiService.trackEventView(event.id);
     } catch (error) {
-      console.warn('Failed to track view:', error);
+      // Silent fail
     }
     
     navigation.navigate('EventDetails', { 
@@ -745,6 +731,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    position: 'relative',
+    zIndex: 5, // Ensure container is above other elements but below cards
   },
   // Event Card
   eventCard: {

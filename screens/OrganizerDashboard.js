@@ -40,7 +40,7 @@ export default function OrganizerDashboard({ navigation }) {
           setIsLoading(true);
           // Try to verify in the background, but don't block the UI
           verifyOrganizerIfNeeded().catch(e => {
-            console.log('Background verification check failed:', e);
+            // Silent fail
           });
           
           // Always load events regardless of verification status
@@ -48,7 +48,7 @@ export default function OrganizerDashboard({ navigation }) {
             await loadOrganizerEvents();
           }
         } catch (e) {
-          console.error('Error loading dashboard:', e);
+          // Silent fail
         } finally {
           if (isActive) setIsLoading(false);
         }
@@ -105,7 +105,7 @@ export default function OrganizerDashboard({ navigation }) {
         }
       }
     } catch (error) {
-      console.error('Error loading organizer events:', error);
+      // Silent fail
     } finally {
       setIsLoading(false);
     }
@@ -206,7 +206,7 @@ export default function OrganizerDashboard({ navigation }) {
                 navigation.navigate('OrganizerLogin');
               }
             } catch (error) {
-              console.error('Sign out error:', error);
+              // Silent fail
             }
           }
         }
@@ -651,7 +651,6 @@ export default function OrganizerDashboard({ navigation }) {
                 <SafeTouchableOpacity 
                   style={styles.createEventDraftButton}
                   onPress={() => {
-                    console.log('Save as draft:', newEvent);
                     setShowCreateForm(false);
                   }}
                 >
@@ -661,7 +660,6 @@ export default function OrganizerDashboard({ navigation }) {
                 <SafeTouchableOpacity 
                   style={styles.createEventPublishButton}
                   onPress={() => {
-                    console.log('Publish event:', newEvent);
                     setShowCreateForm(false);
                   }}
                 >

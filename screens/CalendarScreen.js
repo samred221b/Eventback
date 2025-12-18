@@ -17,7 +17,7 @@ const cacheCalendarEvents = async (events) => {
   try {
     await AsyncStorage.setItem(CALENDAR_EVENTS_CACHE_KEY, JSON.stringify(events));
   } catch (e) {
-    console.error('Failed to cache calendar events:', e);
+    // Silent fail
   }
 };
 
@@ -26,7 +26,6 @@ const loadCalendarEventsFromCache = async () => {
     const cached = await AsyncStorage.getItem(CALENDAR_EVENTS_CACHE_KEY);
     return cached ? JSON.parse(cached) : [];
   } catch (e) {
-    console.error('Failed to load cached calendar events:', e);
     return [];
   }
 };
@@ -58,7 +57,6 @@ export default function CalendarScreen({ navigation }) {
     // Check network status
     const netInfo = await NetInfo.fetch();
     if (!netInfo.isConnected) {
-      console.log('Offline: Using cached events');
       fetchedEvents = await loadCalendarEventsFromCache();
       if (fetchedEvents.length > 0) {
         setError('Offline: Showing cached calendar events');
@@ -81,13 +79,11 @@ export default function CalendarScreen({ navigation }) {
         backendFailed = true;
       }
     } catch (error) {
-      console.error('Error fetching calendar events:', error);
       backendFailed = true;
     }
 
     if (backendFailed) {
       fetchedEvents = await loadCalendarEventsFromCache();
-      console.log('Using Cached Events:', fetchedEvents);
       if (fetchedEvents.length > 0) {
         setError('Offline: Showing cached calendar events');
       } else {
@@ -121,11 +117,8 @@ export default function CalendarScreen({ navigation }) {
       
       // Only refresh if cooldown has passed
       if (hasInitialLoad && !isLoadingRef.current && timeSinceLastRefresh > REFRESH_COOLDOWN) {
-        console.log('📅 CalendarScreen focused - refreshing events (cooldown passed)');
         lastRefreshTime.current = now;
         loadEvents();
-      } else if (hasInitialLoad) {
-        console.log('📅 CalendarScreen focused - skipping refresh (cooldown active)');
       }
     }, [hasInitialLoad])
   );
@@ -212,7 +205,7 @@ export default function CalendarScreen({ navigation }) {
     try {
       await apiService.trackEventView(event._id || event.id);
     } catch (error) {
-      console.warn('Failed to track view:', error);
+      // Silent fail
     }
     
     const serializable = makeEventSerializable(event);
@@ -282,13 +275,8 @@ export default function CalendarScreen({ navigation }) {
   const thisWeekEnd = new Date(thisWeekStart);
   thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
   
-  console.log('Today:', today);
-  console.log('This Week Start:', thisWeekStart);
-  console.log('This Week End:', thisWeekEnd);
-
   const thisWeekEvents = events.filter(event => {
     const eventDate = new Date(event.date);
-    console.log('Event Date:', eventDate, 'Event Title:', event.title);
     return eventDate >= thisWeekStart && eventDate <= thisWeekEnd;
   });
 

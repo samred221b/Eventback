@@ -103,17 +103,10 @@ const FavoritesScreen = ({ navigation }) => {
         setFilteredEvents(preMatched);
       }
 
-      // Check network status
-      const netInfo = await NetInfo.fetch();
-      if (!netInfo.isConnected) {
-        setLoading(false);
-        setHasInitialLoad(true);
-        return;
-      }
-
-      const response = await apiService.getEvents();
-      if (response.success && response.data) {
-        allEvents = response.data
+      // We will now rely only on the cache, so the network call is removed.
+      const cached = await loadEventsFromCache();
+      if (cached.length > 0) {
+        allEvents = cached
           .filter(e => e._id && e.title && e.date)
           .map(e => ({
             id: e._id,
@@ -130,8 +123,6 @@ const FavoritesScreen = ({ navigation }) => {
             organizerName: e.organizerName || e.organizer || '',
             importantInfo: e.importantInfo || '',
           }));
-        // Cache all events locally
-        await cacheEvents(response.data);
         fetched = true;
       }
 

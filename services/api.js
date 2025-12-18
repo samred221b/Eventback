@@ -25,25 +25,19 @@ const DEBUG_API = __DEV__;
 class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
-    if (DEBUG_API) console.log(`🔗 API Service initialized for ${Platform.OS}`);
-    if (DEBUG_API) console.log(`📡 Backend URL: ${this.baseURL}`);
-  }
+          }
 
   // Get Firebase ID token for authentication
   async getAuthToken() {
     try {
       if (auth.currentUser) {
-        if (DEBUG_API) console.log('🔐 Getting auth token for user:', auth.currentUser.email);
-        const token = await auth.currentUser.getIdToken();
-        if (DEBUG_API) console.log('✅ Auth token retrieved successfully');
-        return token;
+                const token = await auth.currentUser.getIdToken();
+                return token;
       } else {
-        if (DEBUG_API) console.warn('⚠️ No authenticated user found');
-        return null;
+                return null;
       }
     } catch (error) {
-      console.error('❌ Error getting auth token:', error);
-      return null;
+            return null;
     }
   }
 
@@ -63,14 +57,16 @@ class ApiService {
     // Add authentication token if available
     if (options.requireAuth === true) {
       const token = await this.getAuthToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      if (!token) {
+        const authError = new Error('Authentication required');
+        authError.code = 'auth/no-token';
+        throw authError;
       }
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
     try {
-      if (DEBUG_API) console.log(`API Request: ${options.method || 'GET'} ${url}`);
-      
+            
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
       
@@ -87,12 +83,10 @@ class ApiService {
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
       }
 
-      if (DEBUG_API) console.log(`API Response: ${response.status}`, data);
-      return data;
+            return data;
 
     } catch (error) {
-      console.error(`API Error: ${endpoint}`, error);
-      
+            
       if (error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
@@ -155,8 +149,7 @@ class ApiService {
       // console.log('📊 Events API response:', result);
       return result;
     } catch (error) {
-      console.error('❌ getEvents error:', error);
-      throw error;
+            throw error;
     }
   }
 
@@ -238,8 +231,7 @@ class ApiService {
     try {
       return this.post(`/events/${eventId}/view`, {}, { requireAuth: false });
     } catch (error) {
-      if (DEBUG_API) console.warn('Failed to track event view:', error);
-      // Don't throw error as view tracking shouldn't break the app
+            // Don't throw error as view tracking shouldn't break the app
       return { success: false };
     }
   }
@@ -247,8 +239,7 @@ class ApiService {
   // Upload image
   async uploadImage(imageUri) {
     try {
-      if (DEBUG_API) console.log('📤 Uploading image:', imageUri);
-
+      
       // Create FormData
       const formData = new FormData();
       
@@ -278,12 +269,10 @@ class ApiService {
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
       }
 
-      if (DEBUG_API) console.log('✅ Image uploaded successfully:', data.data.url);
-      return data;
+            return data;
 
     } catch (error) {
-      console.error('❌ Image upload failed:', error);
-      throw error;
+            throw error;
     }
   }
 
@@ -304,12 +293,10 @@ class ApiService {
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
       }
 
-      if (DEBUG_API) console.log('✅ Image deleted successfully');
-      return data;
+            return data;
 
     } catch (error) {
-      console.error('❌ Image deletion failed:', error);
-      throw error;
+            throw error;
     }
   }
 
@@ -341,12 +328,10 @@ class ApiService {
         // console.log('✅ Backend connection successful:', data);
         return true;
       } else {
-        console.error('❌ Backend responded with error:', response.status);
-        return false;
+                return false;
       }
     } catch (error) {
-      console.error('❌ Backend connection test failed:', error.message);
-      return false;
+            return false;
     }
   }
 }
