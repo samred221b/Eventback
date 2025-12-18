@@ -34,7 +34,6 @@ const ConnectionTest = () => {
       }
     } catch (error) {
       setConnectionStatus(`❌ Connection error: ${error.message}`);
-      console.error('Connection test error:', error);
     }
   };
 

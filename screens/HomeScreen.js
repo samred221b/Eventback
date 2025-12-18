@@ -282,7 +282,7 @@ export default function HomeScreen({ navigation }) {
 
       <SafeScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 40, flexGrow: 1 }}
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
       >
@@ -633,7 +633,7 @@ function AutoScrollingPromoCarousel({ navigation }) {
       title: 'Save your Favourite Events',
       subtitle: 'Keep track of events you love and never miss out.',
       buttonText: 'View Favourites',
-      action: () => {},
+     action: () => navigation.navigate('Favorites'),
     },
   ];
 
@@ -690,7 +690,7 @@ function AutoScrollingPromoCarousel({ navigation }) {
                   {banner.subtitle}
                 </Text>
                 <TouchableOpacity
-                  style={homeStyles.heroBannerButton}
+                  style={[homeStyles.heroBannerButton, { zIndex: 1000, elevation: 10 }]}
                   onPress={banner.action}
                   activeOpacity={0.85}
                 >

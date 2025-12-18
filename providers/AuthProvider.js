@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
         await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
       }
     } catch (error) {
-      console.error('Failed to save auth state:', error);
+      // Silent fail
     }
   };
 
@@ -50,7 +50,6 @@ export const AuthProvider = ({ children }) => {
       const jsonValue = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
       return jsonValue ? JSON.parse(jsonValue) : null;
     } catch (error) {
-      console.error('Failed to load auth state:', error);
       return null;
     }
   };
@@ -72,7 +71,6 @@ export const AuthProvider = ({ children }) => {
             await syncWithBackend(firebaseUser);
           }
         } catch (error) {
-          console.warn('Backend connection test failed:', error);
           setBackendConnected(false);
         }
       }
@@ -86,7 +84,6 @@ export const AuthProvider = ({ children }) => {
         const isConnected = await apiService.testConnection();
         setBackendConnected(isConnected);
       } catch (error) {
-        console.warn('Backend connection test failed:', error);
         setBackendConnected(false);
       }
     }
@@ -119,7 +116,6 @@ export const AuthProvider = ({ children }) => {
       setBackendConnected(isConnected);
       
       if (!isConnected) {
-        console.warn('Backend not available, working in offline mode');
         return;
       }
 
@@ -131,15 +127,12 @@ export const AuthProvider = ({ children }) => {
           setOrganizerProfile(response.user);
           // Mark this UID as verified to prevent duplicate calls on re-renders
           lastVerifiedUidRef.current = firebaseUser.uid;
-          // console.log('✅ Synced with backend:', response.user.name);
         }
       } catch (authError) {
         // Auth verification failed, but backend is still connected
-        console.warn('Auth verification failed, but backend is available:', authError.message);
         // Don't set backendConnected to false just because auth failed
       }
     } catch (error) {
-      console.error('Backend sync failed:', error);
       setBackendConnected(false);
     } finally {
       syncingRef.current = false;
@@ -173,7 +166,6 @@ export const AuthProvider = ({ children }) => {
           unsubscribe();
         };
       } catch (error) {
-        console.error('Error initializing auth:', error);
         setInitializing(false);
         setIsLoading(false);
       }
@@ -191,7 +183,6 @@ export const AuthProvider = ({ children }) => {
       await firebaseSendEmailVerification(auth.currentUser);
       return { success: true };
     } catch (error) {
-      console.error('Error sending verification email:', error);
       return { success: false, error: error.message };
     }
   };
@@ -222,7 +213,6 @@ export const AuthProvider = ({ children }) => {
       };
       
     } catch (error) {
-      console.error('Sign up error:', error);
       let errorMessage = 'An error occurred during sign up';
       
       if (error.code === 'auth/email-already-in-use') {
@@ -251,12 +241,9 @@ export const AuthProvider = ({ children }) => {
       
       try {
         const result = await signInWithEmailAndPassword(auth, email, password);
-        // console.log('✅ User signed in successfully!');
         return { success: true, user: result.user };
       } catch (firebaseError) {
         // Handle Firebase auth errors
-        console.log('Firebase auth error:', firebaseError.code); // Debug log
-        
         let errorMessage = 'Invalid email or password. Please try again.';
         
         // Map Firebase error codes to user-friendly messages
@@ -281,7 +268,6 @@ export const AuthProvider = ({ children }) => {
       }
       
     } catch (error) {
-      console.error('Unexpected error during sign in:', error);
       return { 
         success: false, 
         error: 'An unexpected error occurred. Please try again.'
@@ -297,10 +283,8 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(true);
       await signOut(auth);
       setOrganizerProfile(null);
-      // console.log('✅ User signed out successfully!');
       return { success: true };
     } catch (error) {
-      console.error('Sign out error:', error);
       return { success: false, error: 'An error occurred during sign out' };
     } finally {
       setIsLoading(false);
@@ -312,10 +296,8 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       await sendPasswordResetEmail(auth, email);
-      // console.log('✅ Password reset email sent!');
       return { success: true };
     } catch (error) {
-      console.error('Reset password error:', error);
       let errorMessage = 'An error occurred while sending reset email';
       
       if (error.code === 'auth/user-not-found') {
@@ -343,13 +325,11 @@ export const AuthProvider = ({ children }) => {
       
       if (response.success) {
         setOrganizerProfile(response.data);
-        // console.log('✅ Profile updated successfully!');
         return { success: true, data: response.data };
       }
       
       return { success: false, error: 'Failed to update profile' };
     } catch (error) {
-      console.error('Update profile error:', error);
       return { success: false, error: error.message || 'An error occurred while updating profile' };
     } finally {
       setIsLoading(false);
@@ -366,7 +346,6 @@ export const AuthProvider = ({ children }) => {
       const response = await apiService.getOrganizerStats();
       return response.success ? response.data : null;
     } catch (error) {
-      console.error('Get organizer stats error:', error);
       return null;
     }
   };
@@ -383,7 +362,6 @@ export const AuthProvider = ({ children }) => {
       
       return isConnected;
     } catch (error) {
-      console.error('Refresh backend connection error:', error);
       setBackendConnected(false);
       return false;
     }

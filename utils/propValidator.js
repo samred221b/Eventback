@@ -18,10 +18,8 @@ export const validateBooleanProps = (props, booleanPropNames = []) => {
       // Convert string booleans to actual booleans
       if (originalType === 'string') {
         validatedProps[propName] = originalValue.toLowerCase() === 'true';
-        console.warn(`⚠️  Boolean prop '${propName}' was string "${originalValue}", converted to boolean ${validatedProps[propName]}`);
       } else if (originalType !== 'boolean' && originalValue != null) {
         validatedProps[propName] = Boolean(originalValue);
-        console.warn(`⚠️  Boolean prop '${propName}' was ${originalType} "${originalValue}", converted to boolean ${validatedProps[propName]}`);
       }
     }
   });
@@ -47,13 +45,11 @@ export const validateNumericProps = (props, numericPropNames = []) => {
         const numericValue = parseFloat(originalValue);
         if (!isNaN(numericValue)) {
           validatedProps[propName] = numericValue;
-          console.warn(`⚠️  Numeric prop '${propName}' was string "${originalValue}", converted to number ${numericValue}`);
         }
       } else if (originalType !== 'number' && originalValue != null) {
         const numericValue = Number(originalValue);
         if (!isNaN(numericValue)) {
           validatedProps[propName] = numericValue;
-          console.warn(`⚠️  Numeric prop '${propName}' was ${originalType} "${originalValue}", converted to number ${numericValue}`);
         }
       }
     }
@@ -87,11 +83,5 @@ export const COMMON_NUMERIC_PROPS = {
  * @param {Object} props - Props object
  */
 export const debugProps = (componentName, props) => {
-  console.group(`🔍 Props Debug: ${componentName}`);
-  Object.entries(props).forEach(([key, value]) => {
-    const type = typeof value;
-    const isArray = Array.isArray(value);
-    console.log(`  ${key}: ${value} (${isArray ? 'array' : type})`);
-  });
-  console.groupEnd();
+  // Debug function - no-op in production
 };

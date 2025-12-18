@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import apiService from '../services/api';
 
 const FavoritesContext = createContext();
 
@@ -43,13 +42,7 @@ export const FavoritesProvider = ({ children }) => {
       const newFavorites = [...favorites, eventId];
       setFavorites(newFavorites);
       await saveFavorites(newFavorites);
-      
-      // Sync with backend
-      console.log('👍 Adding to favorites and syncing with backend:', eventId);
-      await apiService.likeEvent(eventId);
-      console.log('✅ Successfully synced favorite with backend');
     } catch (error) {
-      console.error('❌ Failed to sync favorite with backend:', error);
       // Keep local favorite even if backend sync fails
     }
   };
@@ -60,13 +53,7 @@ export const FavoritesProvider = ({ children }) => {
       const newFavorites = favorites.filter(id => id !== eventId);
       setFavorites(newFavorites);
       await saveFavorites(newFavorites);
-      
-      // Sync with backend (toggle like will remove it)
-      console.log('👎 Removing from favorites and syncing with backend:', eventId);
-      await apiService.likeEvent(eventId);
-      console.log('✅ Successfully synced favorite removal with backend');
     } catch (error) {
-      console.error('❌ Failed to sync favorite removal with backend:', error);
       // Keep local state even if backend sync fails
     }
   };

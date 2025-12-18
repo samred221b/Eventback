@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
-    borderRadius: 24,
+    borderRadius: 0,
   },
   heroPlaceholder: {
     ...StyleSheet.absoluteFillObject,

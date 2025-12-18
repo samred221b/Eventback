@@ -104,6 +104,8 @@ function MainTabs() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
+          zIndex: 100,
+          elevation: 10,
         },
         tabBarActiveTintColor: '#0277BD',
         tabBarInactiveTintColor: '#6B7280',
