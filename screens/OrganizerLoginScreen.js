@@ -405,15 +405,17 @@ const handleForgotPassword = () => {
             <TouchableOpacity 
               style={styles.quickLinkCard} 
               activeOpacity={0.8}
-              onPress={() => navigation.navigate('TermsPrivacy')}
+              onPress={() => navigation.navigate('About')}
             >
               <LinearGradient
-                colors={['#F59E0B', '#D97706']}
+                colors={['#10B981', '#059669']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
                 style={styles.quickLinkGradient}
               >
-                <Feather name="shield" size={20} color="#FFFFFF" />
+                <Feather name="info" size={20} color="#FFFFFF" />
               </LinearGradient>
-              <Text style={styles.quickLinkText}>Privacy Policy</Text>
+              <Text style={styles.quickLinkText}>About the App</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.quickLinkCard} 

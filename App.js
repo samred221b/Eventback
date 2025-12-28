@@ -10,9 +10,6 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as SplashScreen from 'expo-splash-screen';
 import { Asset } from 'expo-asset';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logger } from './utils/logger';
-import { clearExpiredItems } from './utils/cacheUtils';
 
 import { QueryProvider } from './providers/QueryProvider';
 import { FavoritesProvider } from './providers/FavoritesProvider';
@@ -31,11 +28,8 @@ import UpdateProfileScreen from './screens/UpdateProfileScreen';
 import VerificationScreen from './screens/VerificationScreen';
 import HelpSupportScreen from './screens/HelpSupportScreen';
 import TermsPrivacyScreen from './screens/TermsPrivacyScreen';
-import AdminEventsScreen from './screens/AdminEventsScreen';
-import AdminOrganizersScreen from './screens/AdminOrganizersScreen';
-import AdminAnalyticsScreen from './screens/AdminAnalyticsScreen';
-import AdminOrganizerDetailsScreen from './screens/AdminOrganizerDetailsScreen';
 import PricingScreen from './screens/PricingScreen';
+import AboutScreen from './screens/AboutScreen';
 
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
@@ -57,10 +51,7 @@ function OrganizerStack() {
       <Stack.Screen name="Verification" component={VerificationScreen} />
       <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
       <Stack.Screen name="TermsPrivacy" component={TermsPrivacyScreen} />
-      <Stack.Screen name="AdminEvents" component={AdminEventsScreen} />
-      <Stack.Screen name="AdminOrganizers" component={AdminOrganizersScreen} />
-      <Stack.Screen name="AdminAnalytics" component={AdminAnalyticsScreen} />
-      <Stack.Screen name="AdminOrganizerDetails" component={AdminOrganizerDetailsScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
     </Stack.Navigator>
   );
 }
@@ -175,14 +166,7 @@ function App() {
       try {
         await SplashScreen.preventAutoHideAsync();
 
-        // Clean up expired cache entries (non-blocking best-effort)
-        try {
-          await clearExpiredItems();
-        } catch (e) {
-          logger.warn('Cache cleanup error:', e);
-        }
-
-        // Always show Welcome screen on launch
+        // Always start at Welcome on each app launch
         if (isMounted) setInitialRoute('Welcome');
 
         // Preload critical assets
@@ -191,7 +175,7 @@ function App() {
           require('./assets/vip.png'),
         ]);
       } catch (e) {
-        logger.warn('App prepare error:', e);
+        console.warn('App prepare error:', e);
       } finally {
         if (isMounted) setAppReady(true);
         await SplashScreen.hideAsync();
@@ -213,7 +197,7 @@ function App() {
     <View style={{ flex: 1 }}>
       <ScreenBackground />
       <StatusBar
-        style="light"
+        barStyle="light"
         backgroundColor="#011d5883"
         translucent={false}
       />
