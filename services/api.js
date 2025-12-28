@@ -1,26 +1,62 @@
 // API Service for Eventopia Backend Integration
 import { auth } from '../firebase.config';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // API Configuration
-// Use localhost for web/simulator, but your IP for physical device
+// Prefer app config's extra.apiBaseUrl when available
 const getApiBaseUrl = () => {
+  try {
+    const extra = (Constants?.expoConfig?.extra) || (Constants?.manifest?.extra);
+    if (extra?.apiBaseUrl) {
+      return extra.apiBaseUrl;
+    }
+  } catch (e) {
+    // ignore and fall back
+  }
+
   if (!__DEV__) {
     return 'https://eventoback-1.onrender.com/api'; // Production URL
   }
-  
+
   // For development
   if (Platform.OS === 'web') {
     return 'https://eventoback-1.onrender.com/api'; // Web can use production backend
   }
-  
-  // For mobile (Expo Go), use your computer's IP (confirmed working)
+
+  // For mobile (Expo Go), default to production backend
   return 'https://eventoback-1.onrender.com/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();
 const API_TIMEOUT = 10000; // 10 seconds
 const DEBUG_API = __DEV__;
+
+// Helpers
+const isRetriableStatus = (status) => [502, 503, 504].includes(status);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function parseResponseSafely(response) {
+  // Handle no content
+  if (response.status === 204) return {};
+  const contentType = response.headers?.get?.('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  try {
+    if (isJson) {
+      return await response.json();
+    }
+    const text = await response.text();
+    // Try JSON parse fallback
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { message: text };
+    }
+  } catch (e) {
+    // Final fallback
+    return {};
+  }
+}
 
 class ApiService {
   constructor() {
@@ -44,54 +80,80 @@ class ApiService {
   // Generic API request method
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    
-    const config = {
-      timeout: API_TIMEOUT,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
+
+    const baseHeaders = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
     };
 
+    const method = (options.method || 'GET').toUpperCase();
+    const requireAuth = options.requireAuth === true;
+    const maxRetries = method === 'GET' ? 1 : 0; // one retry for GET only
+
     // Add authentication token if available
-    if (options.requireAuth === true) {
+    if (requireAuth) {
       const token = await this.getAuthToken();
       if (!token) {
         const authError = new Error('Authentication required');
         authError.code = 'auth/no-token';
         throw authError;
       }
-      config.headers.Authorization = `Bearer ${token}`;
+      baseHeaders.Authorization = `Bearer ${token}`;
     }
 
-    try {
-            
+    let attempt = 0;
+    while (true) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-      
-      const response = await fetch(url, {
-        ...config,
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
+      try {
+        const response = await fetch(url, {
+          ...options,
+          method,
+          headers: baseHeaders,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
 
-      const data = await response.json();
+        const data = await parseResponseSafely(response);
 
-      if (!response.ok) {
-        throw new Error(data.message || data.error || `HTTP ${response.status}`);
+        if (!response.ok) {
+          const errorMessage = data?.message || data?.error || `HTTP ${response.status}`;
+          const shouldRetry = attempt < maxRetries && (isRetriableStatus(response.status));
+          if (shouldRetry) {
+            attempt += 1;
+            await sleep(300 * attempt);
+            continue;
+          }
+          const err = new Error(errorMessage);
+          err.status = response.status;
+          throw err;
+        }
+
+        return data;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        // Normalize timeout error
+        if (error.name === 'AbortError') {
+          if (attempt < maxRetries) {
+            attempt += 1;
+            await sleep(300 * attempt);
+            continue;
+          }
+          const timeoutErr = new Error('Request timeout');
+          timeoutErr.code = 'request/timeout';
+          throw timeoutErr;
+        }
+
+        // Network errors (no status) are retriable once for GET
+        const isNetworkError = !('status' in error);
+        if (isNetworkError && attempt < maxRetries) {
+          attempt += 1;
+          await sleep(300 * attempt);
+          continue;
+        }
+
+        throw error;
       }
-
-            return data;
-
-    } catch (error) {
-            
-      if (error.name === 'AbortError') {
-        throw new Error('Request timeout');
-      }
-      
-      throw error;
     }
   }
 
@@ -298,6 +360,11 @@ class ApiService {
     } catch (error) {
             throw error;
     }
+  }
+
+  // Banner endpoints
+  async getBanners() {
+    return this.get('/banners', { requireAuth: false });
   }
 
   // Test backend connection

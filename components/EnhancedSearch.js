@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '../utils/logger';
 
 const { width } = Dimensions.get('window');
 
@@ -48,7 +49,7 @@ const EnhancedSearch = ({
         setRecentSearches(JSON.parse(stored));
       }
     } catch (error) {
-      console.error('Error loading recent searches:', error);
+      logger.error('Error loading recent searches:', error);
     }
   };
 
@@ -62,7 +63,7 @@ const EnhancedSearch = ({
       await AsyncStorage.setItem('recentSearches', JSON.stringify(updated));
       setRecentSearches(updated);
     } catch (error) {
-      console.error('Error saving recent search:', error);
+      logger.error('Error saving recent search:', error);
     }
   };
 
@@ -71,7 +72,7 @@ const EnhancedSearch = ({
       await AsyncStorage.removeItem('recentSearches');
       setRecentSearches([]);
     } catch (error) {
-      console.error('Error clearing recent searches:', error);
+      logger.error('Error clearing recent searches:', error);
     }
   };
 

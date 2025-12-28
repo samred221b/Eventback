@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { useFavorites } from '../providers/FavoritesProvider';
 import { formatPrice, formatDate, formatTime } from '../utils/dataProcessor';
 import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
+import { logger } from '../utils/logger';
 
 const { width } = Dimensions.get('window');
 
@@ -31,26 +32,79 @@ export default function EventDetailsScreen({ route, navigation }) {
         title: event.title,
       });
     } catch (error) {
-      console.error('Error sharing event:', error);
+      logger.error('Error sharing event:', error);
     }
   };
 
   const handleGetDirections = () => {
-    const [lat, lng] = event.location.coordinates;
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-    
+    try {
+      // Check if location and coordinates exist and are valid
+      if (!event.location) {
+        Alert.alert('Location not available', 'This event does not have a valid location.');
+        return;
+      }
+
+      // Handle different location formats
+      let lat, lng;
+      
+      if (Array.isArray(event.location.coordinates) && event.location.coordinates.length >= 2) {
+        // Handle array format: [lng, lat]
+        [lng, lat] = event.location.coordinates;
+      } else if (event.location.latitude && event.location.longitude) {
+        // Handle object format: { latitude: x, longitude: y }
+        lat = event.location.latitude;
+        lng = event.location.longitude;
+      } else if (event.location.lat && event.location.lng) {
+        // Handle alternative object format
+        lat = event.location.lat;
+        lng = event.location.lng;
+      } else {
+        // Fallback to address-based search if coordinates aren't available
+        const address = encodeURIComponent(
+          [
+            event.location.address,
+            event.location.city,
+            event.location.country
+          ].filter(Boolean).join(', ')
+        );
+        
+        if (!address) {
+          throw new Error('No valid address or coordinates available');
+        }
+        
+        const url = `https://www.google.com/maps/search/?api=1&query=${address}`;
+        openMapsWithUrl(url, event.location.name || 'Event Location');
+        return;
+      }
+      
+      // If we have valid coordinates, use them
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+      openMapsWithUrl(url, event.location.name || 'Event Location');
+      
+    } catch (error) {
+      logger.error('Error getting directions:', error);
+      Alert.alert(
+        'Error',
+        'Could not get directions. The event location might be invalid or missing.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+  
+  const openMapsWithUrl = (url, locationName) => {
     Alert.alert(
       'Open Maps',
-      `Get directions to ${event.location.name}?`,
+      `Get directions to ${locationName}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Open Google Maps', 
           onPress: () => {
             import('react-native').then(({ Linking }) => {
-              Linking.openURL(url).catch(err => 
-                Alert.alert('Error', 'Could not open maps')
-              );
+              Linking.openURL(url).catch(err => {
+                logger.error('Error opening maps:', err);
+                Alert.alert('Error', 'Could not open maps. Please make sure you have Google Maps installed.');
+              });
             });
           }
         },
@@ -116,6 +170,22 @@ export default function EventDetailsScreen({ route, navigation }) {
     event.location?.city,
   ].filter(Boolean);
 
+  // Function to get related hashtags based on category
+  const getRelatedHashtags = (category) => {
+    const hashtags = {
+      education: ['#Learning', '#Knowledge', '#EducationMatters'],
+      food: ['#Foodie', '#Delicious', '#Culinary'],
+      music: ['#Concert', '#LiveMusic', '#MusicLovers'],
+      sports: ['#Fitness', '#Athlete', '#SportsEvent'],
+      art: ['#Artistic', '#Creative', '#ArtExhibition'],
+      technology: ['#TechTalk', '#Innovation', '#Future'],
+      business: ['#Networking', '#Entrepreneur', '#BusinessGrowth'],
+      health: ['#Wellness', '#HealthyLiving', '#HealthCare'],
+      // Add more categories as needed
+    };
+    return hashtags[category.toLowerCase()] || ['#Eventopia'];
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* StatusBar moved to App.js */}
@@ -126,27 +196,27 @@ export default function EventDetailsScreen({ route, navigation }) {
         </View>
       )}
       
-      <View style={styles.heroContainer}>
-        {event.imageUrl ? (
-          <Image 
-            source={{ uri: event.imageUrl }} 
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <LinearGradient
-            colors={['#0277BD', '#01579B']}
-            style={styles.heroPlaceholder}
-          >
-            <Feather name="image" size={80} color="rgba(255, 255, 255, 0.5)" />
-          </LinearGradient>
-        )}
-      </View>
-
       <ScrollView 
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.heroContainer}>
+          {event.imageUrl ? (
+            <Image 
+              source={{ uri: event.imageUrl }} 
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <LinearGradient
+              colors={['#0277BD', '#01579B']}
+              style={styles.heroPlaceholder}
+            >
+              <Feather name="image" size={80} color="rgba(255, 255, 255, 0.5)" />
+            </LinearGradient>
+          )}
+        </View>
+        
         <View style={styles.contentContainer}>
           <View style={styles.mainContentCard}>
             <Text style={styles.detailsEyebrow}>Event Spotlight</Text>
@@ -154,6 +224,7 @@ export default function EventDetailsScreen({ route, navigation }) {
             <Text style={styles.detailsMeta}>
               {formatDate(event.date)} • {event.location?.city || event.location?.country || 'Location'}{event.category ? ` • ${event.category}` : ''}
             </Text>
+            <Text style={styles.detailsMeta}>Related: {getRelatedHashtags(event.category).join(' ')}</Text>
             <View style={styles.divider} />
             <Text style={styles.cardTitle}>About the Experience</Text>
             <Text style={styles.detailsSubtitle}>
@@ -241,13 +312,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroContainer: {
-    height: 280,
+    height: 400,
+    position: 'relative',
   },
   heroImage: {
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     borderRadius: 0,
+    overflow: 'hidden',
   },
   heroPlaceholder: {
     ...StyleSheet.absoluteFillObject,
@@ -256,76 +331,92 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
+    background: 'linear-gradient(180deg, rgba(2,119,189,0.1) 0%, rgba(2,119,189,0.3) 70%, rgba(1,87,155,0.8) 100%)',
+  },
+  heroGradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    background: 'linear-gradient(135deg, rgba(2,119,189,0.2) 0%, rgba(1,87,155,0.2) 100%)',
   },
   contentContainer: {
     padding: 20,
     backgroundColor: 'transparent',
   },
   mainContentCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 28,
+    padding: 28,
+    marginBottom: 24,
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: 12,
+    backdropFilter: 'blur(20px)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    marginTop: -60,
+    position: 'relative',
+    zIndex: 10,
   },
   detailsEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0284C7',
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0277BD',
     textTransform: 'uppercase',
-    marginBottom: 4,
+    letterSpacing: 2,
+    marginBottom: 12,
   },
   detailsTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1E293B',
-    lineHeight: 34,
-  },
-  detailsCategory: {
-    fontSize: 14,
-    color: '#475569',
-    textTransform: 'uppercase',
-    marginBottom: 4,
+    fontSize: 34,
+    fontWeight: '900',
+    color: '#0F172A',
+    lineHeight: 42,
+    marginBottom: 16,
   },
   detailsMeta: {
-    fontSize: 14,
-    color: '#475569',
-    marginTop: 6,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
+    lineHeight: 24,
+    marginBottom: 8,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(2, 132, 199, 0.15)',
+    backgroundColor: 'rgba(2, 119, 189, 0.2)',
     marginVertical: 16,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginBottom: 16,
   },
   detailsSubtitle: {
-    fontSize: 15,
-    lineHeight: 24,
-    color: '#334155',
+    fontSize: 17,
+    lineHeight: 28,
+    color: '#475569',
+    fontWeight: '500',
   },
   essentialsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 24,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    backdropFilter: 'blur(15px)',
     borderWidth: 1,
-    borderColor: 'rgba(2, 132, 199, 0.2)',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   detailListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: 'rgba(2, 119, 189, 0.15)',
   },
   detailListItemIcon: {
     marginRight: 16,
@@ -334,24 +425,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   detailListItemLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0277BD',
     textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   detailListItemValue: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1E293B',
+    lineHeight: 22,
   },
   noticeCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(2, 132, 199, 0.2)',
-    borderLeftWidth: 4,
-    borderLeftColor: '#0284C7',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderLeftWidth: 0,
+    borderLeftColor: 'transparent',
+    borderRadius: 0,
+    padding: 0,
     marginBottom: 16,
   },
   noticeBody: {
@@ -359,16 +453,20 @@ const styles = StyleSheet.create({
     color: '#334155',
   },
   ctaCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(2, 132, 199, 0.2)',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    padding: 0,
+    marginBottom: 20,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   ctaHeadline: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#0F172A',
     marginBottom: 12,
   },
   ctaButtonRow: {
@@ -380,43 +478,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0284C7',
-    paddingVertical: 12,
-    borderRadius: 999,
+    backgroundColor: '#0277BD',
+    paddingVertical: 14,
+    borderRadius: 12,
   },
   ctaPrimaryText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '600',
+    fontSize: 15,
   },
   ctaSecondaryButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E0F2FE',
-    paddingVertical: 12,
-    borderRadius: 999,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#0277BD',
+    paddingVertical: 14,
+    borderRadius: 12,
   },
   ctaSecondaryText: {
-    color: '#0369A1',
-    fontWeight: '700',
+    color: '#0277BD',
+    fontWeight: '600',
+    fontSize: 15,
   },
   headerBar: {
     position: 'absolute',
-    top: 40,
-    left: 20,
-    right: 20,
+    top: 50,
+    left: 24,
+    right: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+    backdropFilter: 'blur(20px)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   headerActions: {
     flexDirection: 'row',

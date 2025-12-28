@@ -141,39 +141,45 @@ export const AuthProvider = ({ children }) => {
 
   // Initialize auth state
   useEffect(() => {
+    let isMounted = true;
+    let unsubscribe = null;
+    let timer = null;
+
     const initializeAuth = async () => {
       try {
         // First check local storage for faster initial load
         const savedAuth = await loadAuthState();
-        if (savedAuth) {
+        if (savedAuth && isMounted) {
           // If we have saved auth, set the user immediately
           const { uid, email, emailVerified } = savedAuth;
           setUser({ uid, email, emailVerified });
         }
-        
+
         // Then set up the auth state listener
-        const unsubscribe = onAuthStateChanged(auth, handleAuthStateChange);
-        
+        unsubscribe = onAuthStateChanged(auth, handleAuthStateChange);
+
         // Small delay to prevent flash of loading screen
-        const timer = setTimeout(() => {
-          if (initializing) {
+        timer = setTimeout(() => {
+          if (isMounted && initializing) {
             setInitializing(false);
           }
         }, 500);
-        
-        return () => {
-          clearTimeout(timer);
-          unsubscribe();
-        };
       } catch (error) {
-        setInitializing(false);
-        setIsLoading(false);
+        if (isMounted) {
+          setInitializing(false);
+          setIsLoading(false);
+        }
       }
     };
-    
+
     initializeAuth();
-    const unsubscribe = onAuthStateChanged(auth, handleAuthStateChange);
-  }, [initializing]);
+
+    return () => {
+      isMounted = false;
+      if (timer) clearTimeout(timer);
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
   
   // Add sendEmailVerification function
   const sendEmailVerification = async () => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import homeStyles from '../styles/homeStyles';
 import DatePickerModal from '../components/DatePickerModal';
 import TimePickerModal from '../components/TimePickerModal';
 
-const CreateEventScreen = ({ navigation }) => {
+const CreateEventScreen = ({ navigation, route }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const { user, organizerProfile, backendConnected, verifyOrganizerIfNeeded } = useAuth();
@@ -45,6 +45,33 @@ const CreateEventScreen = ({ navigation }) => {
     importantInfo: '',
   });
   const [imageUri, setImageUri] = useState(null);
+
+  // Populate form when editing an event
+  useEffect(() => {
+    if (route?.params?.editEvent) {
+      const event = route.params.editEvent;
+      setFormData({
+        title: event.title || '',
+        description: event.description || '',
+        category: event.category || 'conference',
+        mode: event.mode || 'In-person',
+        address: event.address || '',
+        city: event.city || 'Addis Ababa',
+        country: event.country || 'Ethiopia',
+        lat: event.lat || 9.0320,
+        lng: event.lng || 38.7469,
+        date: event.date || '',
+        time: event.time || '',
+        capacity: event.capacity || '',
+        price: event.price || '0',
+        featured: event.featured || false,
+        imageUrl: event.imageUrl || null,
+        organizerName: event.organizerName || '',
+        importantInfo: event.importantInfo || '',
+      });
+      setImageUri(event.imageUrl || null);
+    }
+  }, [route?.params?.editEvent]);
 
   const categories = [
     'music', 'culture', 'education', 'sports', 'art', 'business', 
@@ -74,22 +101,6 @@ const CreateEventScreen = ({ navigation }) => {
   };
 
   const pickImage = async () => {
-    try {
-      // Show warning about image limitations
-      Alert.alert(
-        'Image Upload Notice',
-        'Currently, uploaded images are stored locally and may not display on other devices. For best results, consider using web image URLs (like from Unsplash, Google Drive, etc.) in the Image URL field below.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Continue Anyway', onPress: () => proceedWithImagePicker() }
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick image');
-    }
-  };
-
-  const proceedWithImagePicker = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -292,12 +303,16 @@ const CreateEventScreen = ({ navigation }) => {
         Alert.alert('Error', response.message || 'Failed to create event');
       }
     } catch (error) {
-      
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to create event. Please try again.';
-      if (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('too many requests')) {
+      const rawMessage = error?.response?.data?.message || error?.message || '';
+      const messageLower = String(rawMessage).toLowerCase();
+      const isTimeout = error?.name === 'AbortError' || messageLower.includes('timeout');
+
+      if (typeof rawMessage === 'string' && messageLower.includes('too many requests')) {
         Alert.alert('Rate Limit Exceeded', 'You have made too many requests. Please wait a few minutes and try again.');
+      } else if (isTimeout) {
+        Alert.alert('Request Timeout', 'The server is taking too long to respond. Please check your internet connection or try again later.');
       } else {
-        Alert.alert('Error', errorMessage);
+        Alert.alert('Error', rawMessage || 'Failed to create event. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -498,6 +513,7 @@ const CreateEventScreen = ({ navigation }) => {
               💡 Tip: Use image URLs from Unsplash, Google Drive, or other web sources for better compatibility
             </Text>
           </View>
+
 
           {/* Category */}
           <View style={createEventStyles.inputGroup}>

@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import axios from 'axios';
 
 import { useAuth } from '../providers/AuthProvider';
 import { SafeScrollView, SafeTouchableOpacity } from '../components/SafeComponents';
@@ -28,7 +30,15 @@ export default function OrganizerDashboard({ navigation }) {
     totalViews: 0,
     totalLikes: 0,
     growthRate: 0,
-    topCategory: 'N/A'
+    topCategory: 'N/A',
+    totalEvents: 0,
+    upcomingEvents: 0,
+    pastEvents: 0,
+    avgViewsPerEvent: 0,
+    engagementRate: 0,
+    monthlyGrowth: 0,
+    bestPerformingEvent: null,
+    recentActivity: 0,
   });
   
   // Load events when screen is focused
@@ -110,6 +120,222 @@ export default function OrganizerDashboard({ navigation }) {
       setIsLoading(false);
     }
   };
+
+  // Banner upload handlers
+  const pickBannerImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'We need camera roll permissions to upload images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const localUri = result.assets[0].uri;
+        setBannerImageUri(localUri);
+
+        Alert.alert('Uploading...', 'Please wait while your banner is uploaded.');
+
+        const fd = new FormData();
+        fd.append('file', {
+          uri: localUri,
+          type: 'image/jpeg',
+          name: 'banner.jpg',
+        });
+        fd.append('upload_preset', 'Eventopia');
+
+        try {
+          const response = await axios.post(
+            'https://api.cloudinary.com/v1_1/dqme0oqap/image/upload',
+            fd,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          );
+          if (response.data.secure_url) {
+            setBannerImageUrl(response.data.secure_url);
+            Alert.alert('Success!', 'Banner uploaded successfully.');
+          } else {
+            throw new Error('Upload failed');
+          }
+        } catch (error) {
+          Alert.alert('Upload Failed', 'Failed to upload banner. Please try again.');
+          setBannerImageUri(null);
+          setBannerImageUrl(null);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    }
+  };
+
+  const removeBannerImage = () => {
+    setBannerImageUri(null);
+    setBannerImageUrl(null);
+  };
+
+  const addBanner = async () => {
+    if (!isPromoAdmin) {
+      Alert.alert('Access denied', 'Only the administrator can manage promotional banners.');
+      return;
+    }
+    if (!bannerImageUrl) {
+      Alert.alert('Banner Missing', 'Please upload a banner image first.');
+      return;
+    }
+    try {
+      setIsBannerPublishing(true);
+      const verify = await verifyOrganizerIfNeeded();
+      if (!verify?.success) {
+        Alert.alert('Verification required', 'Please sign in again to publish banners.');
+        setIsBannerPublishing(false);
+        return;
+      }
+
+      const res = await apiService.post('/banners', {
+        imageUrl: bannerImageUrl,
+        order: 0,
+        isActive: true,
+      }, { requireAuth: true });
+
+      if (res?.success) {
+        Alert.alert('Success', 'Promotional banner published successfully.');
+        setBannerImageUri(null);
+        setBannerImageUrl(null);
+        await loadBanners();
+      } else {
+        Alert.alert('Error', res?.message || 'Failed to publish banner');
+      }
+    } catch (error) {
+      Alert.alert('Error', error?.message || 'Failed to publish banner.');
+    } finally {
+      setIsBannerPublishing(false);
+    }
+  };
+
+  const replaceSelectedBanner = async () => {
+    if (!isPromoAdmin) {
+      Alert.alert('Access denied', 'Only the administrator can manage promotional banners.');
+      return;
+    }
+    if (!selectedBannerId) {
+      Alert.alert('Select Banner', 'Please select a banner to replace.');
+      return;
+    }
+    if (!bannerImageUrl) {
+      Alert.alert('Image Missing', 'Please pick and upload a new image first.');
+      return;
+    }
+    try {
+      setIsBannerPublishing(true);
+      const verify = await verifyOrganizerIfNeeded();
+      if (!verify?.success) {
+        Alert.alert('Verification required', 'Please sign in again to replace banners.');
+        setIsBannerPublishing(false);
+        return;
+      }
+      const res = await apiService.put(`/banners/${selectedBannerId}`, {
+        imageUrl: bannerImageUrl,
+      }, { requireAuth: true });
+      if (res?.success) {
+        Alert.alert('Success', 'Banner replaced successfully.');
+        setBannerImageUri(null);
+        setBannerImageUrl(null);
+        await loadBanners();
+      } else {
+        Alert.alert('Error', res?.message || 'Failed to replace banner');
+      }
+    } catch (error) {
+      Alert.alert('Error', error?.message || 'Failed to replace banner.');
+    } finally {
+      setIsBannerPublishing(false);
+    }
+  };
+
+  const deleteSelectedBanner = async () => {
+    if (!isPromoAdmin) {
+      Alert.alert('Access denied', 'Only the administrator can manage promotional banners.');
+      return;
+    }
+    if (!selectedBannerId) {
+      Alert.alert('Select Banner', 'Please select a banner to delete.');
+      return;
+    }
+    Alert.alert('Delete Banner', 'Are you sure you want to delete this banner?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try {
+          setIsBannerPublishing(true);
+          const verify = await verifyOrganizerIfNeeded();
+          if (!verify?.success) {
+            Alert.alert('Verification required', 'Please sign in again to delete banners.');
+            setIsBannerPublishing(false);
+            return;
+          }
+          const res = await apiService.delete(`/banners/${selectedBannerId}`, { requireAuth: true });
+          if (res?.success) {
+            Alert.alert('Deleted', 'Banner deleted successfully.');
+            await loadBanners();
+          } else {
+            Alert.alert('Error', res?.message || 'Failed to delete banner');
+          }
+        } catch (error) {
+          Alert.alert('Error', error?.message || 'Failed to delete banner.');
+        } finally {
+          setIsBannerPublishing(false);
+        }
+      }}
+    ]);
+  };
+
+  const loadBanners = async () => {
+    if (!isPromoAdmin) {
+      setIsBannersLoading(false);
+      setShowBannerModal(false);
+      Alert.alert('Access denied', 'Only the administrator can manage promotional banners.');
+      return;
+    }
+    setIsBannersLoading(true);
+    try {
+      let list = null;
+      // Ensure auth is fresh so we can access the private management endpoint
+      try { await verifyOrganizerIfNeeded(); } catch (_) {}
+      // Try private management endpoint first
+      try {
+        const res = await apiService.get('/banners/all', { requireAuth: true });
+        if (res?.success && Array.isArray(res.data)) {
+          list = res.data;
+        }
+      } catch (_) { /* fall back to public endpoint */ }
+
+      // Fallback to public active banners if private route unavailable
+      if (!Array.isArray(list)) {
+        try {
+          const res2 = await apiService.getBanners();
+          if (res2?.success && Array.isArray(res2.data)) {
+            list = res2.data;
+          }
+        } catch (_) {}
+      }
+
+      if (Array.isArray(list)) {
+        setBanners(list);
+        if (!selectedBannerId && list.length) {
+          setSelectedBannerId(list[0]._id || list[0].id || null);
+        } else if (selectedBannerId && !list.find(b => ((b._id || b.id) === selectedBannerId))) {
+          setSelectedBannerId(list[0]?._id || list[0]?.id || null);
+        }
+      }
+    } finally {
+      setIsBannersLoading(false);
+    }
+  };
+
+  
   
   const getEventStatus = (dateString) => {
     const eventDate = new Date(dateString);
@@ -124,13 +350,52 @@ export default function OrganizerDashboard({ navigation }) {
   
   const calculateInsights = (events) => {
     if (events.length === 0) {
-      setInsights({ totalViews: 0, totalLikes: 0, growthRate: 0, topCategory: 'N/A' });
+      setInsights({ 
+        totalViews: 0, 
+        totalLikes: 0, 
+        growthRate: 0, 
+        topCategory: 'N/A',
+        totalEvents: 0,
+        upcomingEvents: 0,
+        pastEvents: 0,
+        avgViewsPerEvent: 0,
+        engagementRate: 0,
+        monthlyGrowth: 0,
+        bestPerformingEvent: null,
+        recentActivity: 0,
+      });
       return;
     }
 
     const totalViews = events.reduce((sum, e) => sum + (e.views || 0), 0);
     const totalLikes = events.reduce((sum, e) => sum + (e.likes || 0), 0);
+    const totalEvents = events.length;
     
+    // Calculate upcoming vs past events
+    const now = new Date();
+    const upcomingEvents = events.filter(e => new Date(e.date) >= now).length;
+    const pastEvents = events.filter(e => new Date(e.date) < now).length;
+    
+    // Calculate average views per event
+    const avgViewsPerEvent = totalEvents > 0 ? Math.round(totalViews / totalEvents) : 0;
+    
+    // Calculate engagement rate (likes per 100 views)
+    const engagementRate = totalViews > 0 ? ((totalLikes / totalViews) * 100).toFixed(1) : 0;
+    
+    // Find best performing event
+    const bestPerformingEvent = events.reduce((best, event) => 
+      (event.views || 0) > (best?.views || 0) ? event : best, null);
+    
+    // Calculate monthly growth (events created in last 30 days)
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const recentEvents = events.filter(e => new Date(e.date) >= thirtyDaysAgo);
+    const monthlyGrowth = totalEvents > 0 ? ((recentEvents.length / totalEvents) * 100).toFixed(1) : 0;
+    
+    // Calculate recent activity (events in last 7 days)
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const recentActivity = events.filter(e => new Date(e.date) >= sevenDaysAgo).length;
+    
+    // Category analysis
     const categories = {};
     events.forEach(e => {
       if (e.category) {
@@ -142,22 +407,37 @@ export default function OrganizerDashboard({ navigation }) {
       ? Object.keys(categories).reduce((a, b) => categories[a] > categories[b] ? a : b)
       : 'N/A';
     
-    const now = new Date();
+    // Calculate growth rate (events created in last month vs total)
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-    const recentEvents = events.filter(e => new Date(e.date) >= lastMonth);
-    const growthRate = events.length > 0 
-      ? ((recentEvents.length / events.length) * 100).toFixed(1)
+    const lastMonthEvents = events.filter(e => new Date(e.date) >= lastMonth);
+    const growthRate = totalEvents > 0 
+      ? ((lastMonthEvents.length / totalEvents) * 100).toFixed(1)
       : 0;
     
     setInsights({
       totalViews,
       totalLikes,
       growthRate: parseFloat(growthRate),
-      topCategory: topCategory.charAt(0).toUpperCase() + topCategory.slice(1)
+      topCategory,
+      totalEvents,
+      upcomingEvents,
+      pastEvents,
+      avgViewsPerEvent,
+      engagementRate: parseFloat(engagementRate),
+      monthlyGrowth: parseFloat(monthlyGrowth),
+      bestPerformingEvent,
+      recentActivity,
     });
   };
   
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showBannerModal, setShowBannerModal] = useState(false);
+  const [bannerImageUri, setBannerImageUri] = useState(null);
+  const [bannerImageUrl, setBannerImageUrl] = useState(null);
+  const [isBannerPublishing, setIsBannerPublishing] = useState(false);
+  const [banners, setBanners] = useState([]);
+  const [selectedBannerId, setSelectedBannerId] = useState(null);
+  const [isBannersLoading, setIsBannersLoading] = useState(false);
   const [newEvent, setNewEvent] = useState({
     title: '',
     category: '',
@@ -167,11 +447,18 @@ export default function OrganizerDashboard({ navigation }) {
     endDate: '',
     price: ''
   });
+  const isPromoAdmin = (user?.email?.toLowerCase?.() === 'samred221b@gmail.com');
+
+  useEffect(() => {
+    if (showBannerModal) {
+      loadBanners();
+    }
+  }, [showBannerModal]);
 
   const dashboardProfile = {
     name: organizerProfile?.name || user?.displayName || user?.email?.split('@')[0] || 'Organizer',
     email: organizerProfile?.email || user?.email || '',
-    avatar: '?????',
+    avatar: '',
     totalEvents: organizerProfile?.totalEvents || organizerEvents.length,
     activeEvents: organizerEvents.filter(e => e.status !== 'Ended').length,
     totalFavorites: organizerEvents.reduce((sum, event) => sum + (event.likes || 0), 0),
@@ -264,7 +551,7 @@ export default function OrganizerDashboard({ navigation }) {
             </View>
             <View style={styles.dashboardEventDetails}>
               <Text style={styles.dashboardEventTitle} numberOfLines={1}>{event.title}</Text>
-              <Text style={styles.dashboardEventDate}>?? {formatDate(event.date)} � {event.time}</Text>
+              <Text style={styles.dashboardEventDate}>{formatDate(event.date)}{event.time ? ` • ${event.time}` : ''}</Text>
               <View style={styles.dashboardEventMeta}>
                 <View style={styles.dashboardEventStatusWrapper}>
                   <View style={[styles.dashboardEventStatus, 
@@ -427,42 +714,293 @@ export default function OrganizerDashboard({ navigation }) {
 
       <View style={styles.dashboardSection}>
         <View style={styles.modernDashboardSectionHeader}>
-          <Text style={styles.modernDashboardSectionTitle}>Insights</Text>
+          <Text style={styles.modernDashboardSectionTitle}>Advanced Insights</Text>
           <View style={styles.modernDashboardGrowthBadge}>
             <Feather name="trending-up" size={14} color="#10B981" />
             <Text style={styles.modernDashboardGrowthText}>+{insights.growthRate}%</Text>
           </View>
         </View>
 
-        <View style={styles.modernDashboardInsightsGrid}>
-          <View style={styles.modernDashboardInsightCard}>
-            <View style={styles.modernDashboardInsightIconContainer}>
-              <Feather name="eye" size={20} color="#0277BD" />
+        {/* Main Metrics Row */}
+        <View style={styles.advancedInsightsMainRow}>
+          <View style={[styles.advancedInsightCard, { backgroundColor: '#EBF5FF' }]}>
+            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#0277BD' }]}>
+              <Feather name="eye" size={20} color="#FFFFFF" />
             </View>
-            <Text style={styles.modernDashboardInsightValue}>{insights.totalViews.toLocaleString()}</Text>
-            <Text style={styles.modernDashboardInsightLabel}>Total Views</Text>
+            <Text style={styles.advancedInsightValue}>{insights.totalViews.toLocaleString()}</Text>
+            <Text style={styles.advancedInsightLabel}>Total Views</Text>
+            <View style={styles.advancedInsightTrend}>
+              <Feather name="arrow-up" size={12} color="#10B981" />
+              <Text style={styles.advancedInsightTrendText}>+{insights.monthlyGrowth}%</Text>
+            </View>
           </View>
 
-          <View style={styles.modernDashboardInsightCard}>
-            <View style={styles.modernDashboardInsightIconContainer}>
-              <Feather name="heart" size={20} color="#EF4444" />
+          <View style={[styles.advancedInsightCard, { backgroundColor: '#FEF2F2' }]}>
+            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#EF4444' }]}>
+              <Feather name="heart" size={20} color="#FFFFFF" />
             </View>
-            <Text style={styles.modernDashboardInsightValue}>{insights.totalLikes}</Text>
-            <Text style={styles.modernDashboardInsightLabel}>Favorites</Text>
+            <Text style={styles.advancedInsightValue}>{insights.totalLikes}</Text>
+            <Text style={styles.advancedInsightLabel}>Total Favorites</Text>
+            <View style={styles.advancedInsightTrend}>
+              <Feather name="users" size={12} color="#10B981" />
+              <Text style={styles.advancedInsightTrendText}>{insights.engagementRate}%</Text>
+            </View>
           </View>
 
-          <View style={styles.modernDashboardInsightCard}>
-            <View style={styles.modernDashboardInsightIconContainer}>
-              <Feather name="award" size={20} color="#F59E0B" />
+          <View style={[styles.advancedInsightCard, { backgroundColor: '#FEF3C7' }]}>
+            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#F59E0B' }]}>
+              <Feather name="calendar" size={20} color="#FFFFFF" />
             </View>
-            <Text style={styles.modernDashboardInsightValue}>{insights.topCategory}</Text>
-            <Text style={styles.modernDashboardInsightLabel}>Top Category</Text>
+            <Text style={styles.advancedInsightValue}>{insights.totalEvents}</Text>
+            <Text style={styles.advancedInsightLabel}>Total Events</Text>
+            <View style={styles.advancedInsightTrend}>
+              <Feather name="clock" size={12} color="#10B981" />
+              <Text style={styles.advancedInsightTrendText}>{insights.upcomingEvents} active</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Secondary Metrics Row */}
+        <View style={styles.advancedInsightsSecondaryRow}>
+          <View style={[styles.advancedInsightCard, { backgroundColor: '#F0FDF4' }]}>
+            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#10B981' }]}>
+              <Feather name="bar-chart" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.advancedInsightValue}>{insights.avgViewsPerEvent}</Text>
+            <Text style={styles.advancedInsightLabel}>Avg Views/Event</Text>
+            <View style={styles.advancedInsightMiniChart}>
+              <Text style={styles.advancedInsightMiniChartText}>▲</Text>
+            </View>
+          </View>
+
+          <View style={[styles.advancedInsightCard, { backgroundColor: '#F5F3FF' }]}>
+            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#8B5CF6' }]}>
+              <Feather name="award" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.advancedInsightValue}>{insights.topCategory}</Text>
+            <Text style={styles.advancedInsightLabel}>Top Category</Text>
+            <View style={styles.advancedInsightBadge}>
+              <Text style={styles.advancedInsightBadgeText}>Popular</Text>
+            </View>
+          </View>
+
+          <View style={[styles.advancedInsightCard, { backgroundColor: '#FDF4FF' }]}>
+            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#EC4899' }]}>
+              <Feather name="zap" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.advancedInsightValue}>{insights.recentActivity}</Text>
+            <Text style={styles.advancedInsightLabel}>This Week</Text>
+            <View style={styles.advancedInsightActivity}>
+              <Text style={styles.advancedInsightActivityText}>Active</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Best Performing Event Card */}
+        {insights.bestPerformingEvent && (
+          <View style={styles.bestPerformingEventCard}>
+            <View style={styles.bestPerformingEventHeader}>
+              <View style={styles.bestPerformingEventIconContainer}>
+                <Feather name="star" size={16} color="#F59E0B" />
+              </View>
+              <Text style={styles.bestPerformingEventTitle}>Best Performing Event</Text>
+            </View>
+            <View style={styles.bestPerformingEventContent}>
+              <Text style={styles.bestPerformingEventName} numberOfLines={1}>
+                {insights.bestPerformingEvent.title}
+              </Text>
+              <View style={styles.bestPerformingEventStats}>
+                <View style={styles.bestPerformingEventStat}>
+                  <Feather name="eye" size={14} color="#6B7280" />
+                  <Text style={styles.bestPerformingEventStatText}>
+                    {insights.bestPerformingEvent.views || 0} views
+                  </Text>
+                </View>
+                <View style={styles.bestPerformingEventStat}>
+                  <Feather name="heart" size={14} color="#6B7280" />
+                  <Text style={styles.bestPerformingEventStatText}>
+                    {insights.bestPerformingEvent.likes || 0} likes
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={styles.bestPerformingEventButton}
+              onPress={() => navigation.navigate('EventDetails', { event: insights.bestPerformingEvent })}
+            >
+              <Feather name="arrow-right" size={16} color="#0277BD" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Performance Overview */}
+        <View style={styles.performanceOverviewCard}>
+          <Text style={styles.performanceOverviewTitle}>Performance Overview</Text>
+          <View style={styles.performanceMetrics}>
+            <View style={styles.performanceMetric}>
+              <Text style={styles.performanceMetricValue}>{insights.pastEvents}</Text>
+              <Text style={styles.performanceMetricLabel}>Past Events</Text>
+              <View style={styles.performanceMetricBar}>
+                <View 
+                  style={[
+                    styles.performanceMetricBarFill, 
+                    { 
+                      width: `${insights.totalEvents > 0 ? (insights.pastEvents / insights.totalEvents) * 100 : 0}%`,
+                      backgroundColor: '#6B7280'
+                    }
+                  ]} 
+                />
+              </View>
+            </View>
+            
+            <View style={styles.performanceMetric}>
+              <Text style={styles.performanceMetricValue}>{insights.upcomingEvents}</Text>
+              <Text style={styles.performanceMetricLabel}>Upcoming</Text>
+              <View style={styles.performanceMetricBar}>
+                <View 
+                  style={[
+                    styles.performanceMetricBarFill, 
+                    { 
+                      width: `${insights.totalEvents > 0 ? (insights.upcomingEvents / insights.totalEvents) * 100 : 0}%`,
+                      backgroundColor: '#10B981'
+                    }
+                  ]} 
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* Admin Panel - Only visible to admin */}
+      {isPromoAdmin && (
+        <View style={styles.dashboardSection}>
+          <Text style={styles.dashboardSectionTitle}>Admin Panel</Text>
+          <View style={styles.dashboardSettings}>
+            <View style={styles.settingsGroup}>
+              <Text style={styles.settingsGroupTitle}>Event Management</Text>
+              <SafeTouchableOpacity 
+                style={styles.dashboardSettingItem} 
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('AdminEvents')}
+              >
+                <View style={styles.settingItemLeft}>
+                  <View style={[styles.settingIconContainer, { backgroundColor: '#dc2626' }]}>
+                    <Feather name="calendar" size={16} color="#FFFFFF" />
+                  </View>
+                  <View>
+                    <Text style={styles.dashboardSettingText}>Manage All Events</Text>
+                    <Text style={styles.dashboardSettingSubtext}>View, edit, and delete any event</Text>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={16} color="#94A3B8" />
+              </SafeTouchableOpacity>
+              
+              <SafeTouchableOpacity 
+                style={styles.dashboardSettingItem} 
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('AdminOrganizers')}
+              >
+                <View style={styles.settingItemLeft}>
+                  <View style={[styles.settingIconContainer, { backgroundColor: '#7c3aed' }]}>
+                    <Feather name="users" size={16} color="#FFFFFF" />
+                  </View>
+                  <View>
+                    <Text style={styles.dashboardSettingText}>Manage Organizers</Text>
+                    <Text style={styles.dashboardSettingSubtext}>Verify and manage organizer accounts</Text>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={16} color="#94A3B8" />
+              </SafeTouchableOpacity>
+              
+              <SafeTouchableOpacity 
+                style={styles.dashboardSettingItem} 
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('AdminAnalytics')}
+              >
+                <View style={styles.settingItemLeft}>
+                  <View style={[styles.settingIconContainer, { backgroundColor: '#059669' }]}>
+                    <Feather name="bar-chart-2" size={16} color="#FFFFFF" />
+                  </View>
+                  <View>
+                    <Text style={styles.dashboardSettingText}>System Analytics</Text>
+                    <Text style={styles.dashboardSettingSubtext}>View platform statistics and trends</Text>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={16} color="#94A3B8" />
+              </SafeTouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      <View style={styles.dashboardSection}>
+        <Text style={styles.dashboardSectionTitle}>Billing & Subscription</Text>
+        <View style={styles.dashboardSettings}>
+          <View style={styles.settingsGroup}>
+            <Text style={styles.settingsGroupTitle}>Current Plan</Text>
+            <SafeTouchableOpacity 
+              style={styles.dashboardSettingItem} 
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('Pricing')}
+            >
+              <View style={styles.settingItemLeft}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#10B981' }]}>
+                  <Feather name="credit-card" size={16} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.dashboardSettingText}>View Pricing Plans</Text>
+                  <Text style={styles.dashboardSettingSubtext}>Upgrade or change your subscription</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={16} color="#94A3B8" />
+            </SafeTouchableOpacity>
+          </View>
+          
+          <View style={styles.settingsGroup}>
+            <Text style={styles.settingsGroupTitle}>Usage</Text>
+            <SafeTouchableOpacity 
+              style={styles.dashboardSettingItem} 
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('Pricing')}
+            >
+              <View style={styles.settingItemLeft}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#8B5CF6' }]}>
+                  <Feather name="bar-chart" size={16} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.dashboardSettingText}>Usage Statistics</Text>
+                  <Text style={styles.dashboardSettingSubtext}>Track your event usage</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={16} color="#94A3B8" />
+            </SafeTouchableOpacity>
+          </View>
+          
+          <View style={styles.settingsGroup}>
+            <Text style={styles.settingsGroupTitle}>Payment</Text>
+            <SafeTouchableOpacity 
+              style={styles.dashboardSettingItem} 
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('Pricing')}
+            >
+              <View style={styles.settingItemLeft}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#F59E0B' }]}>
+                  <Feather name="dollar-sign" size={16} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.dashboardSettingText}>Payment Methods</Text>
+                  <Text style={styles.dashboardSettingSubtext}>Manage billing information</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={16} color="#94A3B8" />
+            </SafeTouchableOpacity>
           </View>
         </View>
       </View>
 
       <View style={styles.dashboardSection}>
-        <Text style={styles.dashboardSectionTitle}>?? Settings & Preferences</Text>
+        <Text style={styles.dashboardSectionTitle}>Settings & Preferences</Text>
         <View style={styles.dashboardSettings}>
           <View style={styles.settingsGroup}>
             <Text style={styles.settingsGroupTitle}>Account</Text>
@@ -524,6 +1062,23 @@ export default function OrganizerDashboard({ navigation }) {
             <SafeTouchableOpacity 
               style={styles.dashboardSettingItem} 
               activeOpacity={0.7}
+              onPress={() => { setIsBannersLoading(true); setShowBannerModal(true); }}
+            >
+              <View style={styles.settingItemLeft}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#22c55e' }]}>
+                  <Feather name="image" size={16} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.dashboardSettingText}>Promotional Banner</Text>
+                  <Text style={styles.dashboardSettingSubtext}>Upload and publish home banner</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={16} color="#94A3B8" />
+            </SafeTouchableOpacity>
+
+            <SafeTouchableOpacity 
+              style={styles.dashboardSettingItem} 
+              activeOpacity={0.7}
               onPress={() => navigation.navigate('TermsPrivacy')}
             >
               <View style={styles.settingItemLeft}>
@@ -569,7 +1124,7 @@ export default function OrganizerDashboard({ navigation }) {
                 onPress={() => setShowCreateForm(false)}
                 style={styles.createEventClose}
               >
-                <Text style={styles.createEventCloseText}>?</Text>
+                <Text style={styles.createEventCloseText}>×</Text>
               </SafeTouchableOpacity>
             </View>
             
@@ -664,6 +1219,114 @@ export default function OrganizerDashboard({ navigation }) {
                   }}
                 >
                   <Text style={styles.createEventPublishText}>Publish Event</Text>
+                </SafeTouchableOpacity>
+              </View>
+            </SafeScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      
+      <Modal
+        visible={showBannerModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowBannerModal(false)}
+      >
+        <View style={styles.createEventOverlay}>
+          <View style={styles.createEventModal}>
+            <View style={styles.createEventHeader}>
+              <Text style={styles.createEventTitle}>Promotional Banner</Text>
+              <SafeTouchableOpacity 
+                onPress={() => setShowBannerModal(false)}
+                style={styles.createEventClose}
+              >
+                <Text style={styles.createEventCloseText}>×</Text>
+              </SafeTouchableOpacity>
+            </View>
+
+            <SafeScrollView style={styles.createEventForm}>
+              <View style={{ marginBottom: 12 }}>
+                {isBannersLoading ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+                    <ActivityIndicator size="small" color="#0277BD" />
+                    <Text style={{ color: '#4b5563', marginTop: 8 }}>Loading banners...</Text>
+                  </View>
+                ) : banners.length === 0 ? (
+                  <Text style={{ color: '#4b5563' }}>No banners yet</Text>
+                ) : (
+                  banners.map(b => (
+                    <SafeTouchableOpacity
+                      key={b._id || b.id}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 10,
+                        borderWidth: 2, borderColor: (selectedBannerId === (b._id || b.id)) ? '#0277BD' : '#E5E7EB', borderRadius: 12,
+                        marginBottom: 10, backgroundColor: '#FFFFFF'
+                      }}
+                      onPress={() => setSelectedBannerId(b._id || b.id)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={{ width: 60, height: 40, borderRadius: 8, overflow: 'hidden', backgroundColor: '#f3f4f6', marginRight: 12 }}>
+                        <Image source={{ uri: b.imageUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#111827', fontWeight: '700' }}>{b.title || 'Banner'}</Text>
+                        <Text style={{ color: '#6b7280', fontSize: 12 }}>{b.imageUrl?.slice(0, 40)}</Text>
+                      </View>
+                      <View style={{ width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#0277BD', alignItems: 'center', justifyContent: 'center' }}>
+                        {selectedBannerId === (b._id || b.id) && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0277BD' }} />}
+                      </View>
+                    </SafeTouchableOpacity>
+                  ))
+                )}
+              </View>
+
+              <View style={{ marginBottom: 16 }}>
+                {bannerImageUri ? (
+                  <View style={{ borderRadius: 12, overflow: 'hidden', backgroundColor: '#0b24473b' }}>
+                    <Image source={{ uri: bannerImageUri }} style={{ width: '100%', height: 160 }} resizeMode="cover" />
+                  </View>
+                ) : (
+                  <Text style={{ color: '#4b5563' }}>Recommended: 1600x800px • Max 10MB</Text>
+                )}
+              </View>
+
+              <View style={styles.createEventActions}>
+                <SafeTouchableOpacity 
+                  style={styles.createEventDraftButton}
+                  onPress={bannerImageUri ? removeBannerImage : pickBannerImage}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.createEventDraftText}>{bannerImageUri ? 'Remove Image' : 'Pick Image'}</Text>
+                </SafeTouchableOpacity>
+
+                <SafeTouchableOpacity 
+                  style={styles.createEventPublishButton}
+                  onPress={addBanner}
+                  disabled={!bannerImageUrl || isBannerPublishing}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.createEventPublishText}>{isBannerPublishing ? 'Publishing...' : 'Add Banner'}</Text>
+                </SafeTouchableOpacity>
+              </View>
+
+              <View style={styles.createEventActions}>
+                <SafeTouchableOpacity 
+                  style={styles.createEventDraftButton}
+                  onPress={replaceSelectedBanner}
+                  disabled={!selectedBannerId || !bannerImageUrl || isBannerPublishing}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.createEventDraftText}>Replace Selected</Text>
+                </SafeTouchableOpacity>
+
+                <SafeTouchableOpacity 
+                  style={styles.createEventPublishButton}
+                  onPress={deleteSelectedBanner}
+                  disabled={!selectedBannerId || isBannerPublishing}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.createEventPublishText}>Delete Selected</Text>
                 </SafeTouchableOpacity>
               </View>
             </SafeScrollView>

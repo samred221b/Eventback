@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -10,18 +10,34 @@ import homeStyles from '../styles/homeStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
+import { logger } from '../utils/logger';
+import { getWithTTL, setWithTTL, TTL } from '../utils/cacheUtils';
 
 const CALENDAR_EVENTS_CACHE_KEY = '@eventopia_calendar_events';
 
 const cacheCalendarEvents = async (events) => {
   try {
-    await AsyncStorage.setItem(CALENDAR_EVENTS_CACHE_KEY, JSON.stringify(events));
+    // Primary: cache with TTL for 6 hours
+    await setWithTTL(CALENDAR_EVENTS_CACHE_KEY, events, TTL.SIX_HOURS);
   } catch (e) {
-    // Silent fail
+    // Fallback: store raw for backward compatibility
+    try {
+      await AsyncStorage.setItem(CALENDAR_EVENTS_CACHE_KEY, JSON.stringify(events));
+    } catch (_) {
+      // Silent fail
+    }
   }
 };
 
 const loadCalendarEventsFromCache = async () => {
+  // Try TTL cache first (return data even if expired for offline fallback)
+  try {
+    const { data } = await getWithTTL(CALENDAR_EVENTS_CACHE_KEY);
+    if (Array.isArray(data)) return data;
+  } catch (e) {
+    // ignore and try raw cache
+  }
+  // Fallback to legacy raw cache
   try {
     const cached = await AsyncStorage.getItem(CALENDAR_EVENTS_CACHE_KEY);
     return cached ? JSON.parse(cached) : [];
@@ -43,6 +59,7 @@ export default function CalendarScreen({ navigation }) {
   const [showOverlay, setShowOverlay] = useState(false); // Add this line
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all'); // New filter state
 
   const insets = useSafeAreaInsets();
 
@@ -53,6 +70,7 @@ export default function CalendarScreen({ navigation }) {
 
     let fetchedEvents = [];
     let backendFailed = false;
+    let timeoutOccurred = false;
 
     // Check network status
     const netInfo = await NetInfo.fetch();
@@ -64,7 +82,7 @@ export default function CalendarScreen({ navigation }) {
         setError('Failed to load calendar events. Please check your connection.');
       }
       setAllEvents(fetchedEvents);
-      filterEvents(fetchedEvents, searchQuery);
+      filterEvents(fetchedEvents, searchQuery, activeFilter);
       setIsLoading(false);
       setIsRefreshing(false);
       return;
@@ -79,10 +97,19 @@ export default function CalendarScreen({ navigation }) {
         backendFailed = true;
       }
     } catch (error) {
-      backendFailed = true;
+      const messageLower = String(error?.message || '').toLowerCase();
+      const isTimeout = error?.name === 'AbortError' || messageLower.includes('timeout');
+      if (isTimeout) {
+        timeoutOccurred = true;
+        setError('Request Timeout: The server is taking too long to respond. Please check your internet connection or try again later.');
+        Alert.alert('Request Timeout', 'The server is taking too long to respond. Please check your internet connection or try again later.');
+      } else {
+        backendFailed = true;
+        logger.error('CalendarScreen loadEvents error:', error);
+      }
     }
 
-    if (backendFailed) {
+    if (backendFailed && !timeoutOccurred) {
       fetchedEvents = await loadCalendarEventsFromCache();
       if (fetchedEvents.length > 0) {
         setError('Offline: Showing cached calendar events');
@@ -95,7 +122,7 @@ export default function CalendarScreen({ navigation }) {
       return new Date(a.date) - new Date(b.date);
     });
     setAllEvents(sortedEvents);
-    filterEvents(sortedEvents, searchQuery);
+    filterEvents(sortedEvents, searchQuery, activeFilter);
     setIsLoading(false);
     setIsRefreshing(false);
   };
@@ -134,27 +161,55 @@ export default function CalendarScreen({ navigation }) {
     }, [])
   );
 
-  const filterEvents = (eventsList, query) => {
-    if (!query.trim()) {
-      setEvents(eventsList);
-      return;
-    }
-
-    const lowerQuery = query.toLowerCase();
-    const filtered = eventsList.filter(event => {
-      return (
-        event.title?.toLowerCase().includes(lowerQuery) ||
-        event.location?.city?.toLowerCase().includes(lowerQuery) ||
-        event.location?.name?.toLowerCase().includes(lowerQuery) ||
-        event.category?.toLowerCase().includes(lowerQuery)
+  const filterEvents = (eventsList, query, filter = activeFilter) => {
+    let filtered = eventsList;
+    
+    // Apply search query
+    if (query.trim()) {
+      filtered = filtered.filter(event =>
+        event.title?.toLowerCase().includes(query.toLowerCase()) ||
+        event.description?.toLowerCase().includes(query.toLowerCase()) ||
+        event.location?.name?.toLowerCase().includes(query.toLowerCase()) ||
+        event.location?.city?.toLowerCase().includes(query.toLowerCase())
       );
-    });
+    }
+    
+    // Apply smart filters
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
+    switch (filter) {
+      case 'thisWeek':
+        filtered = filtered.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate >= today && eventDate <= weekFromNow;
+        });
+        break;
+      case 'free':
+        filtered = filtered.filter(event => event.price === 0 || event.price === '0');
+        break;
+      case 'online':
+        filtered = filtered.filter(event => event.mode === 'Online');
+        break;
+      case 'inperson':
+        filtered = filtered.filter(event => event.mode === 'In-person');
+        break;
+      case 'favorites':
+        filtered = filtered.filter(event => favorites.some(fav => fav.id === event._id || fav.id === event.id));
+        break;
+      case 'all':
+      default:
+        // No additional filtering
+        break;
+    }
+    
     setEvents(filtered);
   };
 
   useEffect(() => {
-    filterEvents(allEvents, searchQuery);
-  }, [searchQuery]);
+    filterEvents(allEvents, searchQuery, activeFilter);
+  }, [searchQuery, activeFilter]);
 
   const getEventsForDate = (date) => {
     const dateStr = date.toISOString().split('T')[0];
@@ -386,8 +441,74 @@ export default function CalendarScreen({ navigation }) {
           </LinearGradient>
         </View>
 
-        {/* Month Selector */}
-        <View style={styles.monthSelector}>
+        {/* Filter Chips */}
+        <View style={styles.filterChipsContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterChipsScroll}
+          >
+            {[
+              { key: 'all', label: 'All', icon: 'grid' },
+              { key: 'thisWeek', label: 'This Week', icon: 'calendar' },
+              { key: 'free', label: 'Free', icon: 'tag' },
+              { key: 'online', label: 'Online', icon: 'wifi' },
+              { key: 'inperson', label: 'In-person', icon: 'users' },
+              { key: 'favorites', label: 'Favorites', icon: 'heart' }
+            ].map((filter) => (
+              <TouchableOpacity
+                key={filter.key}
+                style={[
+                  styles.filterChip,
+                  activeFilter === filter.key && styles.filterChipActive
+                ]}
+                onPress={() => setActiveFilter(filter.key)}
+                activeOpacity={0.8}
+              >
+                <Feather 
+                  name={filter.icon} 
+                  size={14} 
+                  color={activeFilter === filter.key ? '#FFFFFF' : '#6B7280'} 
+                />
+                <Text style={[
+                  styles.filterChipText,
+                  activeFilter === filter.key && styles.filterChipTextActive
+                ]}>
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Compact Search Row */}
+        {showSearch && (
+          <View style={styles.compactSearchContainer}>
+            <View style={styles.searchInputContainer}>
+              <Feather name="search" size={16} color="#6B7280" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search events..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#9CA3AF"
+                autoFocus
+                returnKeyType="search"
+              />
+              {searchQuery && (
+                <TouchableOpacity
+                  style={styles.clearSearchButton}
+                  onPress={() => setSearchQuery('')}
+                >
+                  <Feather name="x" size={16} color="#6B7280" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Month Navigation */}
+        <View style={styles.monthNavigation}>
           <TouchableOpacity 
             style={styles.monthChevron}
             onPress={() => changeMonth(-1)}
@@ -458,7 +579,7 @@ export default function CalendarScreen({ navigation }) {
                       {day.getDate()}
                     </Text>
                     {hasEvents && (
-                      <View style={styles.eventDot} />
+                      <View style={styles.eventBadge} />
                     )}
                   </TouchableOpacity>
                 );
@@ -629,12 +750,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
-  eventDot: {
-    width: 4,
-    height: 4,
-    backgroundColor: '#DC2626',
-    borderRadius: 2,
-    marginTop: 2,
+  eventBadge: {
+    width: 18,
+    height: 8,
+    backgroundColor: '#F59E0B', // Bright amber for visibility
+    borderRadius: 6,
+    marginTop: 6,
+    alignSelf: 'center',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.4,
+    shadowRadius: 2,
+    elevation: 2,
   },
   // Upcoming Events Section
   upcomingEventsSection: {
@@ -736,5 +863,77 @@ const styles = StyleSheet.create({
   offlineText: {
     color: '#000',
     fontWeight: '500',
+  },
+  // Filter Chips Styles
+  filterChipsContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: 'transparent',
+  },
+  filterChipsScroll: {
+    gap: 12,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 6,
+  },
+  filterChipActive: {
+    backgroundColor: '#0277BD',
+    borderColor: '#0277BD',
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  // Compact Search Styles
+  compactSearchContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  searchIcon: {
+    marginRight: 4,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  clearSearchButton: {
+    padding: 4,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  // Month Navigation Styles
+  monthNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'transparent',
   },
 });

@@ -22,6 +22,7 @@ import apiService from '../services/api';
 import favStyles from '../styles/Favouritescreenstyle';
 import homeStyles from '../styles/homeStyles';
 import EnhancedSearch from '../components/EnhancedSearch';
+import { logger } from '../utils/logger';
 
 const makeEventSerializable = (event) => {
   const { parsedDate, ...rest } = event;
@@ -153,7 +154,7 @@ const FavoritesScreen = ({ navigation }) => {
       setFavoriteEvents(matched);
       setFilteredEvents(matched);
     } catch (error) {
-      console.error('FavoritesScreen: Failed to load events', error);
+      logger.error('FavoritesScreen: Failed to load events', error);
     } finally {
       setLoading(false);
       setHasInitialLoad(true);
@@ -183,7 +184,7 @@ const FavoritesScreen = ({ navigation }) => {
     try {
       await apiService.trackEventView(event.id);
     } catch (err) {
-      console.warn('Track view failed');
+      logger.warn('Track view failed');
     }
     const serializable = makeEventSerializable(event);
     serializable.organizerName = event.organizerName || event.organizer || '';
@@ -193,50 +194,65 @@ const FavoritesScreen = ({ navigation }) => {
 
   const renderEvent = ({ item }) => (
     <SafeTouchableOpacity
-      style={styles.favoriteEventCard}
+      style={styles.eventCard}
       onPress={() => handleEventPress(item)}
       activeOpacity={0.95}
     >
-      <View style={styles.favoriteEventImageContainer}>
+      <View style={styles.eventImageContainer}>
         {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.favoriteEventImage} />
+          <Image source={{ uri: item.imageUrl }} style={styles.eventImage} />
         ) : (
-          <View style={styles.favoriteEventPlaceholder}>
-            <Feather name="image" size={32} color="#60A5FA" />
-          </View>
+          <LinearGradient
+            colors={['#E0E7FF', '#C7D2FE']}
+            style={styles.eventPlaceholder}
+          >
+            <Feather name="image" size={24} color="#6366F1" />
+          </LinearGradient>
         )}
       </View>
 
-      <View style={styles.favoriteEventContent}>
-        <Text style={styles.favoriteEventTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-
-        <Text style={styles.favoriteEventDate}>
-          {new Date(item.date).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          })}{' '}
-          • {item.time || 'Time TBD'}
-        </Text>
-
-        <Text style={styles.favoriteEventLocation} numberOfLines={1}>
-          {typeof item.location === 'string' ? item.location : item.location?.name || 'Location TBA'}
-        </Text>
-
-        <View style={styles.favoriteEventFooter}>
-          <Text style={styles.favoriteEventPrice}>
-            {item.price === 0 ? 'Free' : `${item.currency} ${item.price}`}
+      <View style={styles.eventContent}>
+        <View style={styles.eventHeader}>
+          <Text style={styles.eventTitle} numberOfLines={2}>
+            {item.title}
           </Text>
-
-          {/* Heart button to unfavorite */}
-          <SafeTouchableOpacity
+          <TouchableOpacity
             onPress={() => toggleFavorite(item.id)}
-            style={styles.favoriteHeartButton}
+            style={styles.heartButton}
+            activeOpacity={0.8}
           >
-            <Feather name="heart" size={22} color="#EF4444" fill="#EF4444" />
-          </SafeTouchableOpacity>
+            <Feather name="heart" size={18} color="#EF4444" fill="#EF4444" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.eventMeta}>
+          <View style={styles.metaItem}>
+            <Feather name="calendar" size={14} color="#64748B" />
+            <Text style={styles.metaText}>
+              {new Date(item.date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              })}
+            </Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Feather name="clock" size={14} color="#64748B" />
+            <Text style={styles.metaText}>{item.time || 'TBD'}</Text>
+          </View>
+        </View>
+
+        <View style={styles.eventFooter}>
+          <View style={styles.locationItem}>
+            <Feather name="map-pin" size={14} color="#64748B" />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {typeof item.location === 'string' ? item.location : item.location?.name || 'Location TBA'}
+            </Text>
+          </View>
+          <View style={styles.priceBadge}>
+            <Text style={styles.priceText}>
+              {item.price === 0 ? 'Free' : `${item.currency} ${item.price}`}
+            </Text>
+          </View>
         </View>
       </View>
     </SafeTouchableOpacity>
@@ -316,12 +332,21 @@ const FavoritesScreen = ({ navigation }) => {
         ListHeaderComponentStyle={{ marginBottom: 16 }}
         ListEmptyComponent={
           hasInitialLoad ? (
-            <View style={styles.emptyFavoritesContainer}>
-              <Feather name="award" size={80} color="#93C5FD" />
-              <Text style={styles.emptyFavoritesTitle}>No Favorites Yet</Text>
-              <Text style={styles.emptyFavoritesText}>
-                Your favorite events will appear here. Start exploring and save what you love!
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconContainer}>
+                <Feather name="heart" size={48} color="#E0E7FF" />
+              </View>
+              <Text style={styles.emptyTitle}>No Favorites Yet</Text>
+              <Text style={styles.emptyDescription}>
+                Start exploring events and tap the heart icon to save your favorites here
               </Text>
+              <TouchableOpacity 
+                style={styles.exploreButton}
+                onPress={() => navigation.navigate('Home')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.exploreButtonText}>Explore Events</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={{ paddingVertical: 16 }} />

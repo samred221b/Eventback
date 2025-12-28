@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -22,6 +23,7 @@ import apiService from '../services/api';
 import EnhancedSearch from '../components/EnhancedSearch';
 import homeStyles from '../styles/homeStyles';
 import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
+import { logger } from '../utils/logger';
 
 const EVENTS_CACHE_KEY = '@eventopia_events';
 
@@ -69,6 +71,13 @@ const loadCachedFirstPageEvents = async () => {
   return [];
 };
 
+const renderEmptyComponent = () => (
+  <View style={styles.emptyContainer}>
+    <Text style={styles.emptyText}>No events available</Text>
+    <Text style={styles.emptySubtext}>Please check your connection or try again later.</Text>
+  </View>
+);
+
 const EventsScreen = ({ navigation }) => {
   const { backendConnected } = useAuth();
   const [events, setEvents] = useState([]);
@@ -81,10 +90,12 @@ const EventsScreen = ({ navigation }) => {
   const [sortBy, setSortBy] = useState('date');
   const [showFilters, setShowFilters] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showSecondaryFilters, setShowSecondaryFilters] = useState(false); // New state for secondary filters
   const [error, setError] = useState(null);
   const { favorites, toggleFavorite } = useFavorites();
   const isLoadingRef = useRef(false);
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('all'); // New smart filter state
 
   const categories = [
     { key: 'all', icon: 'grid', label: 'All' },
@@ -143,9 +154,14 @@ const EventsScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
-    // Reload when category or event type changes
+    // Reload when event type changes (not category)
     loadEvents();
-  }, [selectedCategory, selectedEventType]);
+  }, [selectedEventType]);
+
+  useEffect(() => {
+    // Apply smart filter when it changes
+    filterEventsByCategory(selectedCategory, activeFilter);
+  }, [activeFilter, selectedCategory]);
 
   const handleRefresh = () => {
     if (isLoadingRef.current) return; // Prevent multiple refreshes
@@ -172,6 +188,7 @@ const EventsScreen = ({ navigation }) => {
 
     let fetchedEvents = [];
     let backendFailed = false;
+    let timeoutOccurred = false;
 
     // Check network status
     const netInfo = await NetInfo.fetch();
@@ -201,10 +218,19 @@ const EventsScreen = ({ navigation }) => {
         backendFailed = true;
       }
     } catch (error) {
-      backendFailed = true;
+      const messageLower = String(error?.message || '').toLowerCase();
+      const isTimeout = error?.name === 'AbortError' || messageLower.includes('timeout');
+      if (isTimeout) {
+        timeoutOccurred = true;
+        setError('Request Timeout: The server is taking too long to respond. Please check your internet connection or try again later.');
+        Alert.alert('Request Timeout', 'The server is taking too long to respond. Please check your internet connection or try again later.');
+      } else {
+        backendFailed = true;
+        logger.error('EventsScreen loadEvents error:', error);
+      }
     }
 
-    if (backendFailed) {
+    if (backendFailed && !timeoutOccurred) {
       fetchedEvents = await loadEventsFromCache();
       if (fetchedEvents.length > 0) {
         setError('Offline: Showing cached events');
@@ -234,14 +260,46 @@ const EventsScreen = ({ navigation }) => {
     setHasInitialLoad(true);
   };
 
-  // Local filtering function for category changes
-  const filterEventsByCategory = (category) => {
-    if (category === 'all') {
-      setEvents(allEvents);
-    } else {
-      const filtered = allEvents.filter(event => event.category === category);
-      setEvents(filtered);
+  // Local filtering function for category changes and smart filters
+  const filterEventsByCategory = (category, smartFilter = activeFilter) => {
+    let filtered = allEvents;
+    
+    // Apply category filter
+    if (category !== 'all') {
+      filtered = filtered.filter(event => event.category === category);
     }
+    
+    // Apply smart filters
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
+    switch (smartFilter) {
+      case 'thisWeek':
+        filtered = filtered.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate >= today && eventDate <= weekFromNow;
+        });
+        break;
+      case 'free':
+        filtered = filtered.filter(event => event.price === 0 || event.price === '0');
+        break;
+      case 'online':
+        filtered = filtered.filter(event => event.mode === 'Online');
+        break;
+      case 'inperson':
+        filtered = filtered.filter(event => event.mode === 'In-person');
+        break;
+      case 'favorites':
+        filtered = filtered.filter(event => favorites.some(fav => fav.id === event._id || fav.id === event.id));
+        break;
+      case 'all':
+      default:
+        // No additional filtering
+        break;
+    }
+    
+    setEvents(filtered);
   };
 
   // Apply sorting to events
@@ -451,9 +509,15 @@ const EventsScreen = ({ navigation }) => {
       );
     }
     return (
-      <View style={styles.eventsContainer}>
-        {events.map(renderEventCard)}
-      </View>
+      <FlatList
+        data={events}
+        keyExtractor={event => event._id || event.id}
+        renderItem={({ item }) => renderEventCard(item)}
+        numColumns={2}
+        columnWrapperStyle={{ justifyContent: 'space-between' }}
+        contentContainerStyle={styles.eventsContainer}
+        showsVerticalScrollIndicator={false}
+      />
     );
   };
 
@@ -470,16 +534,8 @@ const EventsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['top', 'bottom']}>
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        style={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-        }
-      >
-        {/* Home-style Header */}
-        <View style={[homeStyles.homeHeaderContainer, { marginTop: 0 }]} > 
+      {/* Home-style Header */}
+      <View style={[homeStyles.homeHeaderContainer, { marginTop: 0 }]} > 
           <LinearGradient
             colors={['#0277BD', '#01579B']}
             start={{ x: 0, y: 0 }}
@@ -507,7 +563,7 @@ const EventsScreen = ({ navigation }) => {
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={homeStyles.homeHeaderIconButton}
-                  onPress={() => setShowSortMenu(!showSortMenu)}
+                  onPress={() => setShowSecondaryFilters(!showSecondaryFilters)}
                   activeOpacity={0.7}
                 >
                   <Feather name="sliders" size={20} color="rgba(255, 255, 255, 1)" />
@@ -537,6 +593,51 @@ const EventsScreen = ({ navigation }) => {
           </View>
         )}
 
+        {/* Filter Sections - Show when secondary filters toggled */}
+        {showSecondaryFilters && (
+          <View>
+            {/* Smart Filter Chips */}
+            <View style={styles.filterChipsContainer}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterChipsScroll}
+              >
+                {[
+                  { key: 'all', label: 'All', icon: 'grid' },
+                  { key: 'thisWeek', label: 'This Week', icon: 'calendar' },
+                  { key: 'free', label: 'Free', icon: 'tag' },
+                  { key: 'online', label: 'Online', icon: 'wifi' },
+                  { key: 'inperson', label: 'In-person', icon: 'users' },
+                  { key: 'favorites', label: 'Favorites', icon: 'heart' }
+                ].map((filter) => (
+                  <TouchableOpacity
+                    key={filter.key}
+                    style={[
+                      styles.filterChip,
+                      activeFilter === filter.key && styles.filterChipActive
+                    ]}
+                    onPress={() => setActiveFilter(filter.key)}
+                    activeOpacity={0.8}
+                  >
+                    <Feather 
+                      name={filter.icon} 
+                      size={14} 
+                      color={activeFilter === filter.key ? '#FFFFFF' : '#6B7280'} 
+                    />
+                    <Text style={[
+                      styles.filterChipText,
+                      activeFilter === filter.key && styles.filterChipTextActive
+                    ]}>
+                      {filter.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        )}
+
         {/* Horizontal Scrollable Categories */}
         <ScrollView
           horizontal
@@ -559,8 +660,8 @@ const EventsScreen = ({ navigation }) => {
             >
               <Feather
                 name={category.icon}
-                size={14}
-                color={selectedCategory === category.key ? '#FFFFFF' : '#0277BD'}
+                size={10}
+                color={selectedCategory === category.key ? '#FFFFFF' : '#1F2937'}
               />
               <Text
                 style={[
@@ -631,10 +732,20 @@ const EventsScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           ) : (
-            renderEventList()
+            <FlatList
+              data={events}
+              keyExtractor={event => event._id || event.id}
+              renderItem={({ item }) => renderEventCard(item)}
+              numColumns={2}
+              columnWrapperStyle={{ justifyContent: 'space-between' }}
+              contentContainerStyle={styles.eventsContainer}
+              showsVerticalScrollIndicator={false}
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              ListEmptyComponent={renderEmptyComponent}
+            />
           )}
         </View>
-      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -657,48 +768,51 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     backgroundColor: 'transparent',
-    maxHeight: 60, // Added maxHeight to ensure consistent vertical size
+    marginHorizontal: 16,
+    marginBottom: 12,
+    maxHeight: 50,
   },
   categoriesContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 6,
   },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10, // Reduced from 16
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    marginRight: 8, // Reduced from 10
-    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#94a3b8',
-    shadowOffset: { width: 0, height: 1 },
+    borderColor: 'rgba(0, 0, 0, 0.3)',
+    marginRight: 6,
+    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowRadius: 4,
     elevation: 2,
-    maxWidth: 120, // Added maxWidth to ensure consistency
+    backdropFilter: 'blur(10px)',
+    gap: 3,
+    maxWidth: 100,
   },
   categoryChipActive: {
-    backgroundColor: '#0277BD',
-    borderColor: '#0277BD',
-    shadowColor: '#0277BD',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    backgroundColor: 'rgba(2, 119, 189, 0.8)',
+    borderColor: 'rgba(0, 0, 0, 0.5)',
+    shadowColor: 'rgba(2, 119, 189, 0.3)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
   categoryChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#334155',
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#1F2937',
   },
   categoryChipTextActive: {
-    color: '#fff',
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
@@ -723,14 +837,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   eventsContent: {
+    flex: 1,
     backgroundColor: 'transparent',
   },
   eventsContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingVertical: 20,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
+    alignItems: 'stretch',
     position: 'relative',
     zIndex: 5, // Ensure container is above other elements but below cards
   },
@@ -744,7 +858,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 4,
     overflow: 'hidden',
-    width: '48%',
+    flexBasis: '48%', // Change width to flexBasis
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.6)',
     minHeight: 300, // Ensures equal height for all cards
@@ -907,32 +1021,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#9ca3af',
-    textAlign: 'center',
-  },
-  // Sort Menu Styles
-  sortMenuSection: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginTop: 8,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  sortMenuHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  sortMenuTitle: {
-    fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
   },
@@ -972,6 +1060,38 @@ const styles = StyleSheet.create({
     height: 400,
     borderRadius: 200,
     backgroundColor: 'rgba(2, 132, 199, 0.1)',
+  },
+  // Filter Chips Styles
+  filterChipsContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: 'transparent',
+  },
+  filterChipsScroll: {
+    gap: 12,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 6,
+  },
+  filterChipActive: {
+    backgroundColor: '#0277BD',
+    borderColor: '#0277BD',
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
   },
 });
 

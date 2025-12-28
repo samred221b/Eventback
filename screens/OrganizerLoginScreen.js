@@ -7,6 +7,8 @@ import { useAuth } from '../providers/AuthProvider';
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { Feather } from '@expo/vector-icons';
 import Logo from '../assets/Logo.png';
+import { logger } from '../utils/logger';
+import PricingScreen from './PricingScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -90,7 +92,7 @@ export default function OrganizerLoginScreen({ navigation }) {
         );
       }
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       setErrorMessage('An unexpected error occurred. Please try again later.');
     } finally {
       setIsSubmitting(false);
@@ -111,7 +113,7 @@ const handleForgotPassword = () => {
       await sendPasswordResetEmail(auth, email);
       Alert.alert("Success", "Password reset email sent! Check your inbox.");
     } catch (error) {
-      console.error("Error sending password reset email:", error);
+      logger.error("Error sending password reset email:", error);
       Alert.alert("Error", "Failed to send password reset email. Please try again.");
     }
   };
@@ -351,20 +353,95 @@ const handleForgotPassword = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Features Section */}
-        <View style={styles.featuresSection}>
-          <Text style={styles.featuresTitle}>Why Join Eventopia?</Text>
-          {features.map((feature, index) => (
-            <View key={index} style={styles.featureCard}>
-              <View style={styles.featureIconContainer}>
-                <Feather name={feature.icon} size={24} color="#0277BD" />
+        {/* Benefits Section */}
+        <View style={styles.benefitsSection}>
+          <Text style={styles.benefitsTitle}>Start Your Event Journey</Text>
+          <Text style={styles.benefitsSubtitle}>Join thousands of successful event organizers</Text>
+          
+          <View style={styles.benefitsGrid}>
+            <View style={styles.benefitCard}>
+              <View style={styles.benefitIconContainer}>
+                <Feather name="trending-up" size={20} color="#0277BD" />
               </View>
-              <View style={styles.featureContent}>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
-              </View>
+              <Text style={styles.benefitNumber}>10K+</Text>
+              <Text style={styles.benefitLabel}>Events Created</Text>
             </View>
-          ))}
+            
+            <View style={styles.benefitCard}>
+              <View style={styles.benefitIconContainer}>
+                <Feather name="users" size={20} color="#10B981" />
+              </View>
+              <Text style={styles.benefitNumber}>50K+</Text>
+              <Text style={styles.benefitLabel}>Active Users</Text>
+            </View>
+            
+            <View style={styles.benefitCard}>
+              <View style={styles.benefitIconContainer}>
+                <Feather name="star" size={20} color="#F59E0B" />
+              </View>
+              <Text style={styles.benefitNumber}>4.8</Text>
+              <Text style={styles.benefitLabel}>User Rating</Text>
+            </View>
+          </View>
+        </View>
+        
+        {/* Quick Links */}
+        <View style={styles.quickLinksSection}>
+          <Text style={styles.quickLinksTitle}>Quick Links</Text>
+          <View style={styles.quickLinksGrid}>
+            <TouchableOpacity 
+              style={styles.quickLinkCard} 
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('Pricing')}
+            >
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                style={styles.quickLinkGradient}
+              >
+                <Feather name="book-open" size={20} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.quickLinkText}>Pricing Plans</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.quickLinkCard} 
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('TermsPrivacy')}
+            >
+              <LinearGradient
+                colors={['#F59E0B', '#D97706']}
+                style={styles.quickLinkGradient}
+              >
+                <Feather name="shield" size={20} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.quickLinkText}>Privacy Policy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.quickLinkCard} 
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('TermsPrivacy')}
+            >
+              <LinearGradient
+                colors={['#EF4444', '#DC2626']}
+                style={styles.quickLinkGradient}
+              >
+                <Feather name="file-text" size={20} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.quickLinkText}>Terms of Service</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.quickLinkCard} 
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('HelpSupport')}
+            >
+              <LinearGradient
+                colors={['#8B5CF6', '#7C3AED']}
+                style={styles.quickLinkGradient}
+              >
+                <Feather name="message-circle" size={20} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.quickLinkText}>Contact Support</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -542,54 +619,102 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0277BD',
   },
-  // Features Section
-  featuresSection: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 24,
+  // Benefits Section
+  benefitsSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+    paddingBottom: 0,
   },
-  featuresTitle: {
-    fontSize: 22,
+  benefitsTitle: {
+    fontSize: 24,
     fontWeight: '800',
-    color: '#1F2937',
-    marginBottom: 20,
+    color: '#1A1A1A',
     textAlign: 'center',
+    marginBottom: 8,
   },
-  featureCard: {
+  benefitsSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  benefitsGrid: {
     flexDirection: 'row',
+    gap: 16,
+    marginBottom: 32,
+  },
+  benefitCard: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
+    alignItems: 'center',
+    shadowColor: 'rgba(0, 0, 0, 0.06)',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
   },
-  featureIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#E3F2FD',
+  benefitIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F8FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginBottom: 12,
   },
-  featureContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  featureTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1F2937',
+  benefitNumber: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A1A1A',
     marginBottom: 4,
   },
-  featureDescription: {
-    fontSize: 14,
+  benefitLabel: {
+    fontSize: 12,
     color: '#6B7280',
-    fontWeight: '500',
-    lineHeight: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  // Quick Links Section
+  quickLinksSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+    paddingTop: 16,
+  },
+  quickLinksTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 20,
+  },
+  quickLinksGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  quickLinkCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  quickLinkGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickLinkText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

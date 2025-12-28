@@ -8,10 +8,11 @@ import {
   TouchableOpacity,
   ActivityIndicator
 } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '../utils/logger';
+import { StatusBar } from 'expo-status-bar';
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,30 +21,29 @@ export default function WelcomeScreen({ navigation }) {
   const [isAppReady, setIsAppReady] = useState(false);
 
   useEffect(() => {
-    // Hide the splash screen
-    const hideSplash = async () => {
+    // Initialize welcome screen state (splash is controlled in App.js)
+    const init = async () => {
       try {
-        await SplashScreen.hideAsync();
         // Simulate loading time (replace with actual data loading if needed)
         setTimeout(() => {
           setIsLoading(false);
           setIsAppReady(true);
         }, 1000);
       } catch (e) {
-        console.warn('Error hiding splash screen:', e);
+        logger.warn('Error during welcome initialization:', e);
         setIsLoading(false);
         setIsAppReady(true);
       }
     };
 
-    hideSplash();
+    init();
   }, []);
 
   const handleGetStarted = async () => {
     try {
       await AsyncStorage.setItem('hasSeenWelcome', 'true');
     } catch (e) {
-      if (__DEV__) console.warn('Failed to set hasSeenWelcome flag:', e);
+      logger.warn('Failed to set hasSeenWelcome flag:', e);
     } finally {
       navigation.navigate('Main');
     }
@@ -67,6 +67,7 @@ export default function WelcomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="light" backgroundColor="#011d5883" />
       
       {/* Blue Gradient Background */}
       <LinearGradient
@@ -84,71 +85,62 @@ export default function WelcomeScreen({ navigation }) {
       {/* Main Content */}
       <View style={styles.content}>
         
-          {/* Logo Section */}
-          <View style={styles.logoSection}>
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../assets/Logo.png')} 
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
-            <Text style={styles.brandName}>Eventopia</Text>
-            <View style={styles.taglineContainer}>
-              <Feather name="star" size={16} color="rgba(255, 255, 255, 0.9)" />
-              <Text style={styles.tagline}>
-                Discover Amazing Events Near You
-              </Text>
-              <Feather name="star" size={16} color="rgba(255, 255, 255, 0.8)" />
-            </View>
-          </View>
+        {/* Top Section - Logo and Brand */}
+        <View style={styles.topSection}>
+          <Image 
+            source={require('../assets/Logo.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.brandName}>Eventopia</Text>
+          <Text style={styles.brandTagline}>Where Extraordinary Moments Happen</Text>
+        </View>
 
-          {/* VIP Highlight */}
-          <Image
-            source={require('../assets/vip.png')}
+        {/* Middle Section - VIP Image */}
+        <View style={styles.middleSection}>
+          <Image 
+            source={require('../assets/vip.png')} 
             style={styles.vipImage}
             resizeMode="contain"
           />
+          
+          <View style={styles.circleLabels}>
+            <Text style={styles.circleLabel}>Explore</Text>
+            <Text style={styles.circleLabel}>Connect</Text>
+            <Text style={styles.circleLabel}>Create</Text>
+          </View>
+        </View>
 
-          {/* Stats Section */}
-          <View style={styles.statsSection}>
-            <View style={styles.statCard}>
-              <Feather name="calendar" size={24} color="#0277BD" />
-              <Text style={styles.statNumber}>200+</Text>
-              <Text style={styles.statLabel}>Events</Text>
+        {/* Stats Section */}
+        <View style={styles.statsSection}>
+          <View style={styles.simpleStatsContainer}>
+            <View style={styles.simpleStatCard}>
+              <Text style={styles.simpleStatNumber}>200+</Text>
+              <Text style={styles.simpleStatLabel}>Events</Text>
             </View>
             
-            <View style={styles.statCard}>
-              <Feather name="users" size={24} color="#0277BD" />
-              <Text style={styles.statNumber}>30K</Text>
-              <Text style={styles.statLabel}>Users</Text>
+            <View style={styles.simpleStatCard}>
+              <Text style={styles.simpleStatNumber}>30K</Text>
+              <Text style={styles.simpleStatLabel}>Users</Text>
             </View>
             
-            <View style={styles.statCard}>
-              <Feather name="map-pin" size={24} color="#0277BD" />
-              <Text style={styles.statNumber}>10+</Text>
-              <Text style={styles.statLabel}>Cities</Text>
+            <View style={styles.simpleStatCard}>
+              <Text style={styles.simpleStatNumber}>10+</Text>
+              <Text style={styles.simpleStatLabel}>Cities</Text>
             </View>
           </View>
+        </View>
 
-          {/* CTA Button */}
+        {/* Bottom Section - CTA */}
+        <View style={styles.bottomSection}>
           <TouchableOpacity 
-            style={styles.getStartedButton}
+            style={styles.simpleButton}
             onPress={handleGetStarted}
             activeOpacity={0.9}
           >
-            <View style={styles.buttonContent}>
-              <Feather name="arrow-right-circle" size={24} color="#0277BD" />
-              <Text style={styles.buttonText}>Get Started</Text>
-            </View>
+            <Text style={styles.simpleButtonText}>Get Started</Text>
+            <Feather name="arrow-right" size={18} color="#0277BD" style={styles.simpleButtonIcon} />
           </TouchableOpacity>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Feather name="check-circle" size={16} color="rgba(255, 255, 255, 0.7)" />
-            <Text style={styles.footerText}>
-              Join thousands discovering events daily
-            </Text>
         </View>
       </View>
     </View>
@@ -179,8 +171,263 @@ const styles = StyleSheet.create({
   
   content: {
     flex: 1,
+    flexDirection: 'column',
     justifyContent: 'space-between',
     paddingBottom: 0,
+  },
+  
+  // Three Section Layout
+  topSection: {
+    alignItems: 'center',
+    marginTop: 80,
+    marginBottom: 6,
+  },
+  logoContainer: {
+    marginBottom: 2,
+    position: 'relative',
+  },
+  logo: {
+    width: 80,
+    height: 80,
+  },
+  brandName: {
+    fontSize: 32,
+    fontWeight: '300',
+    color: '#FFD700',
+    letterSpacing: 6,
+    textTransform: 'uppercase',
+    fontFamily: 'Helvetica Neue',
+    textShadowColor: 'rgba(255, 215, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
+  brandTagline: {
+    fontSize: 14,
+    fontWeight: '300',
+    color: 'rgba(255, 255, 255, 0.9)',
+    letterSpacing: 2,
+    marginTop: 4,
+    fontStyle: 'italic',
+    fontFamily: 'Helvetica Neue',
+    textShadowColor: 'rgba(255, 255, 255, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  
+  middleSection: {
+    alignItems: 'center',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+  },
+  vipImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+  },
+  circleLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingHorizontal: 40,
+  },
+  circleLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  statsSection: {
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+  },
+  simpleStatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 16,
+  },
+  simpleStatCard: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  simpleStatNumber: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  simpleStatLabel: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  messageCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 20,
+    paddingHorizontal: 30,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backdropFilter: 'blur(10px)',
+  },
+  unifiedCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 24,
+    paddingHorizontal: 30,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backdropFilter: 'blur(10px)',
+  },
+  messageTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  messageSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+    width: '100%',
+  },
+  featureText: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '400',
+    flex: 1,
+  },
+  
+  bottomSection: {
+    alignItems: 'center',
+    paddingHorizontal: 30,
+    paddingBottom: 30,
+  },
+  simpleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  simpleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0277BD',
+    letterSpacing: 0.3,
+  },
+  simpleButtonIcon: {
+    marginLeft: 6,
+  },
+  modernStatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 32,
+    gap: 16,
+  },
+  modernStatCard: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  modernStatIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modernStatNumber: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  modernStatLabel: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '400',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 30,
+    gap: 4,
+  },
+  statCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 100, 100, 0.3)',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backdropFilter: 'blur(4px)',
+    flex: 1,
+    shadowColor: 'rgba(0, 0, 0, 0.03)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  statIconContainer: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  statNumber: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    marginBottom: 1,
+    textShadowColor: 'rgba(255, 255, 255, 0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
+  },
+  statLabel: {
+    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '300',
+    textAlign: 'center',
+    letterSpacing: 0.1,
   },
   
   // Decorative Elements
@@ -300,44 +547,22 @@ const styles = StyleSheet.create({
   
   // Button
   getStartedButton: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    marginBottom: 16,
-    shadowColor: '#000',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  
-  buttonContent: {
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  
   buttonText: {
     color: '#0277BD',
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  
-  // Footer
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-  },
-  
-  footerText: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 });

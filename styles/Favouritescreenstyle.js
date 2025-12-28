@@ -4,152 +4,210 @@ import { StyleSheet } from 'react-native';
 export default StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F8FF', // A soft, modern blue-gray
-  },
-  emptyFavoritesContainer: {
-    flex: 1,
-    backgroundColor: '#F4F8FF', // Match the main container
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyFavoritesTitle: {
-    fontSize: 24, // Make it more prominent
-    fontWeight: '700',
-    color: '#1E3A8A', // A deeper, more engaging blue
-    marginTop: 24,
-  },
-  emptyFavoritesText: {
-    fontSize: 16,
-    color: '#475569', // A softer, readable gray-blue
-    textAlign: 'center',
-    marginTop: 12,
-    lineHeight: 24, // Improve readability
-  },
-  favoriteEventCard: {
-    height: 110,
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    marginBottom: 18,
-    marginHorizontal: 14,
-    overflow: 'hidden',
-    elevation: 1,           // less shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
+    backgroundColor: '#F8FAFC',
   },
   
-  favoriteEventImageContainer: {
-    width: 100,
-    height: 100,
-    backgroundColor: 'rgba(7, 240, 77, 0.33)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(59, 130, 246, 0.15)',
+  // Modern Header
+  modernHeader: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: 'rgba(102, 126, 234, 0.3)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  favoriteEventImage: {
-    width: 100,
-    height: 120,
-    borderRadius: 8,
-    
-  },
-  favoriteEventPlaceholder: {
-    width: 120,
-    height: 140,
-    backgroundColor: '#e2e8f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  favoriteEventContent: {
-    flex: 1,
-    padding: 12,
-    justifyContent: 'center',
-  },
-  favoriteEventTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#1e293b',
-    marginBottom: 2,
-  },
-  favoriteEventDate: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 2,
-  },
-  favoriteEventLocation: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  favoriteEventFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  favoriteEventPrice: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#0277BD',
-  },
-  favoriteHeartButton: {
-    padding: 6,
-  },
-  // ----- HEADER AND SEARCH STYLES FROM CALENDARSCREEN -----
-  header: {
-    paddingTop: 50,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-    shadowColor: '#0277BD',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  curvedHeader: {
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+  headerGradient: {
+    padding: 24,
   },
   headerContent: {
+    gap: 8,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  headerLeft: {
-    flex: 1,
-  },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#FFFFFF',
   },
-  headerSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: 2,
-    fontWeight: '400',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  headerIconButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
+  searchButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+  },
+
+  // Search Section
   searchSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    zIndex: 100,
-    elevation: 5,
+    borderBottomColor: '#F1F5F9',
+  },
+
+  // Event Card
+  eventCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+    overflow: 'hidden',
+  },
+  eventImageContainer: {
+    width: '100%',
+    height: 120,
+  },
+  eventImage: {
+    width: '100%',
+    height: '100%',
+  },
+  eventPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eventContent: {
+    padding: 16,
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  eventTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    lineHeight: 24,
+    marginRight: 12,
+  },
+  heartButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eventMeta: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 12,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  eventFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  locationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+    flex: 1,
+  },
+  priceBadge: {
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  priceText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0277BD',
+  },
+
+  // Empty State
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+  },
+  emptyIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#F0F9FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1A1A1A',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptyDescription: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  exploreButton: {
+    backgroundColor: '#0277BD',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 25,
+  },
+  exploreButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // Loading State
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#64748B',
+    fontWeight: '500',
   },
 });

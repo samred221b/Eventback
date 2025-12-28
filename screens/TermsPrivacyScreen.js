@@ -1,18 +1,52 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
+import homeStyles from '../styles/homeStyles';
 
 export default function TermsPrivacyScreen({ navigation }) {
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="light" backgroundColor="#FFFFFF" />
+      
+      {/* Header - Home Style */}
+      <View style={homeStyles.homeHeaderContainer}>
+        <LinearGradient
+          colors={['#0277BD', '#01579B']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={homeStyles.homeHeaderCard}
         >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Terms & Privacy</Text>
+          <View style={homeStyles.homeHeaderTopRow}>
+            <View style={homeStyles.modernDashboardProfile}>
+              <View style={homeStyles.modernDashboardAvatar}>
+                <View style={homeStyles.modernDashboardAvatarInner}>
+                  <Feather name="shield" size={20} color="#0F172A" />
+                </View>
+              </View>
+              <View>
+                <Text style={homeStyles.homeHeaderWelcomeText}>Legal</Text>
+                <Text style={homeStyles.homeHeaderNameText}>Terms & Privacy</Text>
+              </View>
+            </View>
+            <View style={homeStyles.homeHeaderActions}>
+              <TouchableOpacity 
+                style={homeStyles.homeHeaderIconButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Feather name="arrow-left" size={20} color="rgba(255, 255, 255, 1)" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={homeStyles.homeHeaderMetaRow}>
+            <Text style={homeStyles.homeHeaderMetaText}>Terms of Service</Text>
+            <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
+            <Text style={homeStyles.homeHeaderMetaText}>Privacy Policy</Text>
+            <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
+            <Text style={homeStyles.homeHeaderMetaText}>User Rights</Text>
+          </View>
+        </LinearGradient>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -146,41 +180,15 @@ export default function TermsPrivacyScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a2e',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: 50,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#ffffff',
+    backgroundColor: '#F8FAFC',
+    paddingTop: 44, // Add padding for status bar
   },
   content: {
     flex: 1,

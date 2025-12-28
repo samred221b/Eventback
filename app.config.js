@@ -1,0 +1,67 @@
+// Dynamic Expo config (takes precedence over app.json)
+// Mirrors existing app.json to avoid breaking, adds env-driven extras and scheme
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://eventoback-1.onrender.com/api';
+
+export default {
+  expo: {
+    name: 'Eventopia',
+    slug: 'EventopiaNew',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/adaptive-icon.png',
+    userInterfaceStyle: 'light',
+    splash: {
+      image: './assets/splash-icon.png',
+      resizeMode: 'contain',
+      backgroundColor: '#ffffff',
+    },
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: 'com.eventopia.app',
+      infoPlist: {
+        NSPhotoLibraryUsageDescription: 'We need access to your photo library to let you upload event images.',
+        NSPhotoLibraryAddUsageDescription: 'We need permission to save images to your photo library.',
+        NSCameraUsageDescription: 'Camera access is used to take photos for your events.',
+      },
+    },
+    androidStatusBar: {
+      barStyle: 'light-content',
+      backgroundColor: '#000000',
+      translucent: false,
+    },
+    android: {
+      package: 'com.eventopia.app',
+      adaptiveIcon: {
+        foregroundImage: './assets/adaptive-icon.png',
+        backgroundColor: '#ffffff',
+      },
+      edgeToEdgeEnabled: true,
+    },
+    web: {
+      favicon: './assets/favicon.png',
+    },
+    scheme: 'eventopia',
+    updates: {
+      enabled: true,
+    },
+    runtimeVersion: {
+      policy: 'appVersion',
+    },
+    extra: {
+      apiBaseUrl: API_BASE_URL,
+      eas: {
+        projectId: 'dca1c3fb-f27c-4620-8f56-28b256d44d32',
+      },
+      // Optional: firebase config could be provided here and read in firebase.config.js
+      firebase: {
+        apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'AIzaSyAPnbzGnBaOZmM1Iw6Tt7Yikr3cQvpy4ek',
+        authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'eventopia-a70ad.firebaseapp.com',
+        projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'eventopia-a70ad',
+        storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'eventopia-a70ad.firebasestorage.app',
+        messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '82619158647',
+        appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:82619158647:android:1343e518bb088774017672',
+      },
+    },
+  },
+};

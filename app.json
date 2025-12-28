@@ -12,7 +12,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.eventopia.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "We need access to your photo library to let you upload event images.",
+        "NSPhotoLibraryAddUsageDescription": "We need permission to save images to your photo library.",
+        "NSCameraUsageDescription": "Camera access is used to take photos for your events."
+      }
     },
     "androidStatusBar": {
   "barStyle": "light-content",
@@ -31,12 +37,10 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
+      "apiBaseUrl": "https://eventoback-1.onrender.com/api",
       "eas": {
         "projectId": "dca1c3fb-f27c-4620-8f56-28b256d44d32"
       }
-    },
-    "packagerOpts": {
-      "host": "localhost"
     }
   }
 }

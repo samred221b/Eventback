@@ -1,0 +1,60 @@
+name: Expo OTA Update
+
+on:
+  push:
+    branches: ["main", "develop"]
+  workflow_dispatch: {}
+
+jobs:
+  update-preview:
+    name: EAS Update (preview)
+    if: ${{ github.ref == 'refs/heads/develop' && secrets.EXPO_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Setup Expo & EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publish OTA update to preview
+        env:
+          EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL }}
+        run: npx eas update --branch preview --message "CI ${GITHUB_SHA}"
+
+  update-production:
+    name: EAS Update (production)
+    if: ${{ github.ref == 'refs/heads/main' && secrets.EXPO_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Setup Expo & EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publish OTA update to production
+        env:
+          EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL }}
+        run: npx eas update --branch production --message "CI ${GITHUB_SHA}"
+
+  missing-secrets:
+    name: Missing EXPO_TOKEN
+    if: ${{ secrets.EXPO_TOKEN == '' || secrets.EXPO_TOKEN == null }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "EXPO_TOKEN not set as a GitHub secret. Skipping Expo updates."

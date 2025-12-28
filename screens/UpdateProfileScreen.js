@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
+import { logger } from '../utils/logger';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../providers/AuthProvider';
 
@@ -106,7 +107,7 @@ export default function UpdateProfileScreen({ navigation }) {
         }));
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      logger.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image');
     }
   };

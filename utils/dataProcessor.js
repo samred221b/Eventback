@@ -1,5 +1,6 @@
 // Data processing utilities for converting API strings to proper types
 // Important: Always convert coordinates to numbers to prevent native map crashes
+import { logger } from './logger';
 
 /**
  * Parse event data from JSON/API and ensure proper types
@@ -7,21 +8,20 @@
  * @returns {Object} - Processed event with proper types
  */
 export const parseEvent = (rawEvent) => {
-  // Important: parseFloat coordinates to avoid java.lang.String -> Double crash in Android native maps
-  const parsedCoordinates = rawEvent.location.coordinates.map(coord => {
-    const parsed = parseFloat(coord);
-    if (isNaN(parsed)) {
-      console.warn(`Invalid coordinate: ${coord}, using default`);
-      return 9.03; // Default to Addis Ababa if invalid
-    }
-    return parsed;
-  });
+  // Update parseEvent to handle GeoJSON coordinates
+  const parsedCoordinates = {
+    type: 'Point',
+    coordinates: [
+      parseFloat(rawEvent.location.coordinates[1]), // lng
+      parseFloat(rawEvent.location.coordinates[0])  // lat
+    ]
+  };
 
   return {
     ...rawEvent,
     location: {
       ...rawEvent.location,
-      coordinates: parsedCoordinates, // Now guaranteed to be numbers
+      geo: parsedCoordinates, // Use GeoJSON format
     },
     // Convert string numbers to actual numbers
     price: typeof rawEvent.price === 'string' ? parseFloat(rawEvent.price) : rawEvent.price,
@@ -46,7 +46,7 @@ export const parseEvent = (rawEvent) => {
  */
 export const processEventsData = (rawEvents) => {
   if (!Array.isArray(rawEvents)) {
-    console.error('Events data is not an array:', rawEvents);
+    logger.error('Events data is not an array:', rawEvents);
     return [];
   }
 
@@ -54,7 +54,7 @@ export const processEventsData = (rawEvents) => {
     try {
       return parseEvent(event);
     } catch (error) {
-      console.error('Error parsing event:', event, error);
+      logger.error('Error parsing event:', event, error);
       return null;
     }
   }).filter(event => event !== null); // Remove any failed parsing attempts
@@ -62,20 +62,19 @@ export const processEventsData = (rawEvents) => {
 
 /**
  * Validate coordinates are numbers before passing to native components
- * @param {Array} coordinates - [latitude, longitude]
+ * @param {Object} coordinates - GeoJSON Point object
  * @returns {boolean} - true if valid numeric coordinates
  */
 export const validateCoordinates = (coordinates) => {
-  if (!Array.isArray(coordinates) || coordinates.length !== 2) {
+  // Update validateCoordinates to use GeoJSON format
+  if (!coordinates || coordinates.type !== 'Point' || !Array.isArray(coordinates.coordinates) || coordinates.coordinates.length !== 2) {
     return false;
   }
-  
-  const [lat, lng] = coordinates;
+
+  const [lng, lat] = coordinates.coordinates;
   return (
     typeof lat === 'number' && 
     typeof lng === 'number' && 
-    !isNaN(lat) && 
-    !isNaN(lng) &&
     lat >= -90 && lat <= 90 &&
     lng >= -180 && lng <= 180
   );
