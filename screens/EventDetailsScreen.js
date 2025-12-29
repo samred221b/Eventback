@@ -181,6 +181,7 @@ export default function EventDetailsScreen({ route, navigation }) {
       technology: ['#TechTalk', '#Innovation', '#Future'],
       business: ['#Networking', '#Entrepreneur', '#BusinessGrowth'],
       health: ['#Wellness', '#HealthyLiving', '#HealthCare'],
+      religious: ['#Faith', '#Spiritual', '#ReligiousEvent'],
       // Add more categories as needed
     };
     return hashtags[category.toLowerCase()] || ['#Eventopia'];

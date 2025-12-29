@@ -116,6 +116,7 @@ const EventsScreen = ({ navigation }) => {
     { key: 'charity', icon: 'gift', label: 'Charity' },
     { key: 'networking', icon: 'users', label: 'Network' },
     { key: 'workshop', icon: 'tool', label: 'Workshop' },
+    { key: 'religious', icon: 'heart', label: 'Religious' },
   ];
 
   const sortOptions = [

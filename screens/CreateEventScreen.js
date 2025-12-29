@@ -76,7 +76,7 @@ const CreateEventScreen = ({ navigation, route }) => {
   const categories = [
     'music', 'culture', 'education', 'sports', 'art', 'business', 
     'food', 'technology', 'health', 'fashion', 'travel', 'photography', 
-    'gaming', 'automotive', 'charity', 'networking', 'workshop', 'conference'
+    'gaming', 'automotive', 'charity', 'networking', 'workshop', 'conference', 'religious'
   ];
 
   const connectionStatus = backendConnected

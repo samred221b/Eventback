@@ -63,7 +63,7 @@ const eventSchemas = {
     category: Joi.string().valid(
       'music', 'culture', 'education', 'sports', 'art', 'business', 
       'food', 'technology', 'health', 'fashion', 'travel', 'photography', 
-      'gaming', 'automotive', 'charity', 'networking', 'workshop', 'conference'
+      'gaming', 'automotive', 'charity', 'networking', 'workshop', 'conference', 'religious'
     ).required(),
     location: Joi.object({
       address: Joi.string().max(200).required(),
@@ -92,7 +92,7 @@ const eventSchemas = {
     category: Joi.string().valid(
       'music', 'culture', 'education', 'sports', 'art', 'business', 
       'food', 'technology', 'health', 'fashion', 'travel', 'photography', 
-      'gaming', 'automotive', 'charity', 'networking', 'workshop', 'conference'
+      'gaming', 'automotive', 'charity', 'networking', 'workshop', 'conference', 'religious'
     ).optional(),
     location: Joi.object({
       address: Joi.string().max(200).optional(),

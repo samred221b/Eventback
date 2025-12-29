@@ -43,7 +43,7 @@ const eventSchema = new mongoose.Schema({
     enum: [
       'music', 'culture', 'education', 'sports', 'art', 'business', 
       'food', 'technology', 'health', 'fashion', 'travel', 'photography', 
-      'gaming', 'automotive', 'charity', 'networking', 'workshop', 'conference'
+      'gaming', 'automotive', 'charity', 'networking', 'workshop', 'conference', 'religious'
     ]
   },
   

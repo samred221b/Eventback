@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 72,
+    paddingTop: 180, // Increased from 72 to move content lower
     paddingBottom: 32,
     justifyContent: 'space-between',
   },
@@ -245,6 +245,7 @@ const styles = StyleSheet.create({
 
   bottomSection: {
     marginTop: 'auto',
+    marginBottom: 60, // Added bottom margin to move stats and CTA up
   },
 
   logo: {

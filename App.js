@@ -34,12 +34,22 @@ import AdminAnalyticsScreen from './screens/AdminAnalyticsScreen';
 import AdminEventsScreen from './screens/AdminEventsScreen';
 import AdminOrganizersScreen from './screens/AdminOrganizersScreen';
 import AdminOrganizerDetailsScreen from './screens/AdminOrganizerDetailsScreen';
+import UsageStatisticsScreen from './screens/UsageStatisticsScreen';
 
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './store';
 import ScreenBackground from './components/ScreenBackground';
 import ErrorBoundary from './components/ErrorBoundary';
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://0c1e979aaaad1fbe62132b1617719ce8@o4510617427705856.ingest.de.sentry.io/4510617430589520',
+  enableAutoSessionTracking: true,
+  tracesSampleRate: 1.0,
+});
+
+Sentry.captureMessage('Hello, Sentry!');
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -54,6 +64,7 @@ function OrganizerStack() {
       <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
       <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} />
       <Stack.Screen name="Verification" component={VerificationScreen} />
+      <Stack.Screen name="UsageStatistics" component={UsageStatisticsScreen} />
       <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
       <Stack.Screen name="TermsPrivacy" component={TermsPrivacyScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
@@ -203,8 +214,8 @@ function App() {
       <View style={{ flex: 1 }}>
         <ScreenBackground />
         <StatusBar
-          barStyle="light"
-          backgroundColor="#011d5883"
+          style="light"
+          backgroundColor="#000000"
           translucent={false}
         />
         <NavigationContainer>

@@ -962,7 +962,7 @@ export default function OrganizerDashboard({ navigation }) {
             <SafeTouchableOpacity 
               style={styles.dashboardSettingItem} 
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('Pricing')}
+              onPress={() => navigation.navigate('UsageStatistics')}
             >
               <View style={styles.settingItemLeft}>
                 <View style={[styles.settingIconContainer, { backgroundColor: '#8B5CF6' }]}>

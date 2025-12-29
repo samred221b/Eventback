@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { logger } from '../utils/logger';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../providers/AuthProvider';
+import homeStyles from '../styles/homeStyles';
 
 export default function UpdateProfileScreen({ navigation }) {
   const { user, organizerProfile, updateProfile } = useAuth();
+  const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(false);
   const [profileData, setProfileData] = useState({
     name: '',
@@ -115,26 +120,53 @@ export default function UpdateProfileScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
+      <View style={[homeStyles.homeHeaderContainer, { paddingTop: insets.top }]}>
+        <LinearGradient
+          colors={['#0277BD', '#01579B']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={homeStyles.homeHeaderCard}
         >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Update Profile</Text>
-        <TouchableOpacity 
-          style={styles.saveButton}
-          onPress={handleUpdateProfile}
-          disabled={isLoading}
-        >
-          <Text style={styles.saveButtonText}>
-            {isLoading ? 'Saving...' : 'Save'}
-          </Text>
-        </TouchableOpacity>
+          <View style={homeStyles.homeHeaderTopRow}>
+            <View style={homeStyles.modernDashboardProfile}>
+              <View style={homeStyles.modernDashboardAvatar}>
+                <View style={homeStyles.modernDashboardAvatarInner}>
+                  <Feather name="user" size={20} color="#0F172A" />
+                </View>
+              </View>
+              <View>
+                <Text style={homeStyles.homeHeaderWelcomeText}>Update Profile</Text>
+                <Text style={homeStyles.homeHeaderNameText}>{profileData.name || 'Organizer'}</Text>
+              </View>
+            </View>
+            <View style={homeStyles.homeHeaderActions}>
+              <TouchableOpacity 
+                style={styles.saveButton}
+                onPress={handleUpdateProfile}
+                disabled={isLoading}
+              >
+                <Text style={styles.saveButtonText}>
+                  {isLoading ? 'Saving...' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={homeStyles.homeHeaderMetaRow}>
+            <Text style={homeStyles.homeHeaderMetaText}>Edit Profile</Text>
+            <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
+            <Text style={homeStyles.homeHeaderMetaText}>Update Info</Text>
+            <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
+            <Text style={homeStyles.homeHeaderMetaText}>Save Changes</Text>
+          </View>
+        </LinearGradient>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom }}
+      >
         {/* Profile Picture Section */}
         <View style={styles.profileImageSection}>
           <TouchableOpacity style={styles.profileImageContainer} onPress={handleImagePicker}>
