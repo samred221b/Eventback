@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Dimensions, 
-  Image, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  Image,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  ScrollView
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -67,8 +68,6 @@ export default function WelcomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" backgroundColor="#011d5883" />
-      
       {/* Blue Gradient Background */}
       <LinearGradient
         colors={['#0277BD', '#01579B', '#014A7F']}
@@ -96,18 +95,23 @@ export default function WelcomeScreen({ navigation }) {
           <Text style={styles.brandTagline}>Where Extraordinary Moments Happen</Text>
         </View>
 
-        {/* Middle Section - VIP Image */}
+        {/* Middle Section - App Features */}
         <View style={styles.middleSection}>
-          <Image 
-            source={require('../assets/vip.png')} 
-            style={styles.vipImage}
-            resizeMode="contain"
-          />
-          
-          <View style={styles.circleLabels}>
-            <Text style={styles.circleLabel}>Explore</Text>
-            <Text style={styles.circleLabel}>Connect</Text>
-            <Text style={styles.circleLabel}>Create</Text>
+          <View style={styles.appDescriptionContainer}>
+            <View style={styles.featureList}>
+              <View style={styles.featureItem}>
+                <Feather name="search" size={20} color="#0277BD" style={styles.featureIcon} />
+                <Text style={styles.featureText}>Discover events near you</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Feather name="calendar" size={20} color="#0277BD" style={styles.featureIcon} />
+                <Text style={styles.featureText}>Create and manage your events</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Feather name="users" size={20} color="#0277BD" style={styles.featureIcon} />
+                <Text style={styles.featureText}>Connect with event organizers</Text>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -179,8 +183,8 @@ const styles = StyleSheet.create({
   // Three Section Layout
   topSection: {
     alignItems: 'center',
-    marginTop: 80,
-    marginBottom: 6,
+    marginTop: 60,
+    marginBottom: 20,
   },
   logoContainer: {
     marginBottom: 2,
@@ -215,9 +219,11 @@ const styles = StyleSheet.create({
   },
   
   middleSection: {
+    flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 30,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    justifyContent: 'center',
   },
   vipImage: {
     width: 80,
@@ -463,10 +469,9 @@ const styles = StyleSheet.create({
   
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    paddingBottom: 0,
   },
   
   // Logo Section
@@ -503,11 +508,57 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   
-  // VIP Image
-  vipImage: {
-    width: 550,
-    height: 300,
-    marginBottom: 10,
+  // App Description Section
+  appDescriptionContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 0,
+    width: '100%',
+  },
+  
+  appDescriptionTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 32,
+  },
+  
+  appDescriptionText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+    paddingHorizontal: 10,
+  },
+  
+  featureList: {
+    width: '100%',
+    gap: 8,
+    maxWidth: 350,
+  },
+  
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  
+  featureIcon: {
+    marginRight: 12,
+  },
+  
+  featureText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    flex: 1,
   },
   
   // Stats Section

@@ -15,7 +15,7 @@ import { QueryProvider } from './providers/QueryProvider';
 import { FavoritesProvider } from './providers/FavoritesProvider';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 
-import WelcomeScreen from './screens/WelcomeScreen';
+import ModernWelcomeScreen from './screens/ModernWelcomeScreen';
 import HomeScreen from './screens/HomeScreen';                    // ← Now imported cleanly
 import EventsScreen from './screens/EventsScreen';
 import CalendarScreen from './screens/CalendarScreen';
@@ -30,11 +30,16 @@ import HelpSupportScreen from './screens/HelpSupportScreen';
 import TermsPrivacyScreen from './screens/TermsPrivacyScreen';
 import PricingScreen from './screens/PricingScreen';
 import AboutScreen from './screens/AboutScreen';
+import AdminAnalyticsScreen from './screens/AdminAnalyticsScreen';
+import AdminEventsScreen from './screens/AdminEventsScreen';
+import AdminOrganizersScreen from './screens/AdminOrganizersScreen';
+import AdminOrganizerDetailsScreen from './screens/AdminOrganizerDetailsScreen';
 
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './store';
 import ScreenBackground from './components/ScreenBackground';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -194,20 +199,27 @@ function App() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScreenBackground />
-      <StatusBar
-        barStyle="light"
-        backgroundColor="#011d5883"
-        translucent={false}
-      />
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
-          <Stack.Screen name="Welcome" component={WelcomeScreen} />
-          <Stack.Screen name="Main" component={MainTabs} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </View>
+    <ErrorBoundary>
+      <View style={{ flex: 1 }}>
+        <ScreenBackground />
+        <StatusBar
+          barStyle="light"
+          backgroundColor="#011d5883"
+          translucent={false}
+        />
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
+            <Stack.Screen name="Welcome" component={ModernWelcomeScreen} />
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
+            <Stack.Screen name="AdminEvents" component={AdminEventsScreen} />
+            <Stack.Screen name="AdminAnalytics" component={AdminAnalyticsScreen} />
+            <Stack.Screen name="AdminOrganizers" component={AdminOrganizersScreen} />
+            <Stack.Screen name="AdminOrganizerDetails" component={AdminOrganizerDetailsScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </View>
+    </ErrorBoundary>
   );
 }
 

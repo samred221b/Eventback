@@ -2,6 +2,7 @@
 // Mirrors existing app.json to avoid breaking, adds env-driven extras and scheme
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://eventoback-1.onrender.com/api';
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 export default {
   expo: {
@@ -53,7 +54,7 @@ export default {
       eas: {
         projectId: 'dca1c3fb-f27c-4620-8f56-28b256d44d32',
       },
-      // Optional: firebase config could be provided here and read in firebase.config.js
+      // Firebase config from environment variables
       firebase: {
         apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'AIzaSyAPnbzGnBaOZmM1Iw6Tt7Yikr3cQvpy4ek',
         authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'eventopia-a70ad.firebaseapp.com',
@@ -62,6 +63,9 @@ export default {
         messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '82619158647',
         appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:82619158647:android:1343e518bb088774017672',
       },
+      // Feature flags
+      debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === 'true',
+      analyticsEnabled: process.env.EXPO_PUBLIC_ANALYTICS_ENABLED === 'true',
     },
   },
 };

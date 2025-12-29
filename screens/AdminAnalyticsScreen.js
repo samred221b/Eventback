@@ -29,7 +29,9 @@ const AdminAnalyticsScreen = ({ navigation }) => {
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch analytics');
-      console.error('Admin fetch analytics error:', error);
+      if (__DEV__) {
+        console.error('Admin fetch analytics error:', error);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

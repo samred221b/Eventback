@@ -61,7 +61,9 @@ const AdminOrganizersScreen = ({ navigation }) => {
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch organizers');
-      console.error('Admin fetch organizers error:', error);
+      if (__DEV__) {
+        console.error('Admin fetch organizers error:', error);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -92,7 +94,9 @@ const AdminOrganizersScreen = ({ navigation }) => {
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to update organizer');
-      console.error('Admin verify organizer error:', error);
+      if (__DEV__) {
+        console.error('Admin verify organizer error:', error);
+      }
     }
   };
 
@@ -109,7 +113,9 @@ const AdminOrganizersScreen = ({ navigation }) => {
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to update organizer status');
-      console.error('Admin update organizer status error:', error);
+      if (__DEV__) {
+        console.error('Admin update organizer status error:', error);
+      }
     }
   };
 
@@ -121,7 +127,9 @@ const AdminOrganizersScreen = ({ navigation }) => {
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch organizer details');
-      console.error('Admin organizer details error:', error);
+      if (__DEV__) {
+        console.error('Admin organizer details error:', error);
+      }
     }
   };
 

@@ -63,7 +63,9 @@ const AdminEventsScreen = ({ navigation }) => {
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch events');
-      console.error('Admin fetch events error:', error);
+      if (__DEV__) {
+        console.error('Admin fetch events error:', error);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -94,7 +96,9 @@ const AdminEventsScreen = ({ navigation }) => {
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to update event');
-      console.error('Admin feature event error:', error);
+      if (__DEV__) {
+        console.error('Admin feature event error:', error);
+      }
     }
   };
 
@@ -111,7 +115,9 @@ const AdminEventsScreen = ({ navigation }) => {
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to update event status');
-      console.error('Admin update status error:', error);
+      if (__DEV__) {
+        console.error('Admin update status error:', error);
+      }
     }
   };
 
@@ -133,7 +139,9 @@ const AdminEventsScreen = ({ navigation }) => {
               }
             } catch (error) {
               Alert.alert('Error', 'Failed to delete event');
-              console.error('Admin delete event error:', error);
+              if (__DEV__) {
+                console.error('Admin delete event error:', error);
+              }
             }
           }
         }
