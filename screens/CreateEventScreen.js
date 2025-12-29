@@ -168,48 +168,80 @@ const CreateEventScreen = ({ navigation, route }) => {
     const { title, description, address, date, time } = formData;
     
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter an event title');
+      Alert.alert(
+        '⚠️ Please Fill the Informations Properly and Correct',
+        'Your event needs a title to stand out\n\n💡 Add a catchy title that describes your event clearly.',
+        [{ text: 'Got it', style: 'default' }]
+      );
       return false;
     }
     
     if (!description.trim()) {
-      Alert.alert('Error', 'Please enter an event description');
+      Alert.alert(
+        '📝 Missing Event Description',
+        'Tell people what makes your event special!\n\n💡 Describe what attendees can expect, activities, or highlights.',
+        [{ text: 'Got it', style: 'default' }]
+      );
       return false;
     }
     
     if (!address.trim()) {
-      Alert.alert('Error', 'Please enter an event address');
+      Alert.alert(
+        '📍 Missing Event Location',
+        'Where will your amazing event take place?\n\n💡 Enter the venue address so attendees know where to go.',
+        [{ text: 'Got it', style: 'default' }]
+      );
       return false;
     }
     
     if (!date) {
-      Alert.alert('Error', 'Please enter an event date (YYYY-MM-DD)');
+      Alert.alert(
+        '📅 Missing Event Date',
+        'When is your event happening?\n\n💡 Select a date so people can mark their calendars!',
+        [{ text: 'Got it', style: 'default' }]
+      );
       return false;
     }
     
     if (!time) {
-      Alert.alert('Error', 'Please enter an event time (HH:MM)');
+      Alert.alert(
+        '⏰ Missing Event Time',
+        'What time should everyone arrive?\n\n💡 Set the time so attendees can plan accordingly.',
+        [{ text: 'Got it', style: 'default' }]
+      );
       return false;
     }
     
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date)) {
-      Alert.alert('Error', 'Please enter date in YYYY-MM-DD format');
+      Alert.alert(
+        '📅 Invalid Date Format',
+        'Please use the correct date format.\n\n💡 Example: 2024-12-25 (YYYY-MM-DD)',
+        [{ text: 'Got it', style: 'default' }]
+      );
       return false;
     }
     
     // Validate time format (accepts only hh:mm AM/PM)
     const time12Regex = /^(0[1-9]|1[0-2]):[0-5][0-9] ?(AM|PM)$/i;
     if (!time12Regex.test(time)) {
-      Alert.alert('Error', 'Please enter time in hh:mm AM/PM format');
+      Alert.alert(
+        '⏰ Invalid Time Format',
+        'Please use the correct time format.\n\n💡 Example: 7:30 PM or 02:15 AM',
+        [{ text: 'Got it', style: 'default' }]
+      );
       return false;
     }
     
     // Validate future date
     const eventDate = new Date(`${date}T${time}`);
     if (eventDate <= new Date()) {
-      Alert.alert('Error', 'Event date must be in the future');
+      Alert.alert(
+        '🚀 Future Events Only',
+        'Events must be scheduled for the future!\n\n💡 Pick a date and time that hasn\'t passed yet.',
+        [{ text: 'Got it', style: 'default' }]
+      );
       return false;
     }
     
@@ -419,7 +451,7 @@ const CreateEventScreen = ({ navigation, route }) => {
             <View style={createEventStyles.inputContainer}>
               <TextInput
                 style={[createEventStyles.input, createEventStyles.textArea]}
-                placeholder="Paint a picture with words... What makes your event special?"
+                placeholder="Describe your event?"
                 placeholderTextColor="#9CA3AF"
                 value={formData.description}
                 onChangeText={(value) => handleInputChange('description', value)}
@@ -588,7 +620,7 @@ const CreateEventScreen = ({ navigation, route }) => {
               <View style={createEventStyles.iconContainer}>
                 <Feather name="map-pin" size={18} color="#FFFFFF" />
               </View>
-              <Text style={createEventStyles.label}>Where's the magic happening? *</Text>
+              <Text style={createEventStyles.label}>Place? *</Text>
             </View>
             <View style={createEventStyles.inputContainer}>
               <TextInput
@@ -606,21 +638,28 @@ const CreateEventScreen = ({ navigation, route }) => {
           <View style={createEventStyles.row}>
             <View style={createEventStyles.halfInput}>
               <Text style={createEventStyles.label}>City *</Text>
-              <TextInput
-                style={createEventStyles.input}
-                placeholder="City"
-                value={formData.city}
-                onChangeText={(value) => handleInputChange('city', value)}
-              />
+              <View style={createEventStyles.inputContainer}>
+                <TextInput
+                  style={createEventStyles.input}
+                  placeholder="City"
+                  value={formData.city}
+                  onChangeText={(value) => handleInputChange('city', value)}
+                />
+                <View style={createEventStyles.inputAccent} />
+              </View>
             </View>
             <View style={createEventStyles.halfInput}>
               <Text style={createEventStyles.label}>Country *</Text>
-              <TextInput
-                style={createEventStyles.input}
-                placeholder="Country"
-                value={formData.country}
-                onChangeText={(value) => handleInputChange('country', value)}
-              />
+              <View style={createEventStyles.inputContainer}>
+                <TextInput
+                  style={[createEventStyles.input, { backgroundColor: '#F3F4F6', color: '#9CA3AF' }]}
+                  placeholder="Country"
+                  value={formData.country}
+                  onChangeText={(value) => handleInputChange('country', value)}
+                  editable={false}
+                />
+                <View style={[createEventStyles.inputAccent, { backgroundColor: '#E5E7EB' }]} />
+              </View>
             </View>
           </View>
 
@@ -628,15 +667,18 @@ const CreateEventScreen = ({ navigation, route }) => {
           <View style={createEventStyles.row}>
             <View style={createEventStyles.halfInput}>
               <Text style={createEventStyles.label}>Date *</Text>
-              <TouchableOpacity
-                style={createEventStyles.input}
-                activeOpacity={0.8}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={{ color: formData.date ? '#1F2937' : '#9CA3AF', fontSize: 16 }}>
-                  {formData.date || 'Select date'}
-                </Text>
-              </TouchableOpacity>
+              <View style={createEventStyles.inputContainer}>
+                <TouchableOpacity
+                  style={createEventStyles.input}
+                  activeOpacity={0.8}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={{ color: formData.date ? '#1F2937' : '#9CA3AF', fontSize: 16 }}>
+                    {formData.date || 'Select date'}
+                  </Text>
+                </TouchableOpacity>
+                <View style={createEventStyles.inputAccent} />
+              </View>
               <DatePickerModal
                 visible={showDatePicker}
                 initialDate={formData.date}
@@ -652,15 +694,18 @@ const CreateEventScreen = ({ navigation, route }) => {
             </View>
             <View style={createEventStyles.halfInput}>
               <Text style={createEventStyles.label}>Time * (hh:mm AM/PM)</Text>
-              <TouchableOpacity
-                style={createEventStyles.input}
-                activeOpacity={0.8}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Text style={{ color: formData.time ? '#1F2937' : '#9CA3AF', fontSize: 16 }}>
-                  {formData.time || 'Select time'}
-                </Text>
-              </TouchableOpacity>
+              <View style={createEventStyles.inputContainer}>
+                <TouchableOpacity
+                  style={createEventStyles.input}
+                  activeOpacity={0.8}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Text style={{ color: formData.time ? '#1F2937' : '#9CA3AF', fontSize: 16 }}>
+                    {formData.time || 'Select time'}
+                  </Text>
+                </TouchableOpacity>
+                <View style={createEventStyles.inputAccent} />
+              </View>
               <TimePickerModal
                 visible={showTimePicker}
                 initialTime={formData.time}
@@ -684,50 +729,62 @@ const CreateEventScreen = ({ navigation, route }) => {
           <View style={createEventStyles.row}>
             <View style={createEventStyles.halfInput}>
               <Text style={createEventStyles.label}>Capacity (Optional)</Text>
-              <TextInput
-                style={createEventStyles.input}
-                placeholder="100"
-                value={formData.capacity}
-                onChangeText={(value) => handleInputChange('capacity', value)}
-                keyboardType="numeric"
-              />
+              <View style={createEventStyles.inputContainer}>
+                <TextInput
+                  style={createEventStyles.input}
+                  placeholder="100"
+                  value={formData.capacity}
+                  onChangeText={(value) => handleInputChange('capacity', value)}
+                  keyboardType="numeric"
+                />
+                <View style={createEventStyles.inputAccent} />
+              </View>
             </View>
             <View style={createEventStyles.halfInput}>
               <Text style={createEventStyles.label}>Price (ETB)</Text>
-              <TextInput
-                style={createEventStyles.input}
-                placeholder="0"
-                value={formData.price}
-                onChangeText={(value) => handleInputChange('price', value)}
-                keyboardType="numeric"
-              />
+              <View style={createEventStyles.inputContainer}>
+                <TextInput
+                  style={createEventStyles.input}
+                  placeholder="0"
+                  value={formData.price}
+                  onChangeText={(value) => handleInputChange('price', value)}
+                  keyboardType="numeric"
+                />
+                <View style={createEventStyles.inputAccent} />
+              </View>
             </View>
           </View>
 
           {/* Organizer Name */}
           <View style={createEventStyles.inputGroup}>
             <Text style={createEventStyles.label}>Organizer Name</Text>
-            <TextInput
-              style={createEventStyles.input}
-              placeholder="Your name or organization"
-              value={formData.organizerName}
-              onChangeText={(value) => handleInputChange('organizerName', value)}
-              maxLength={100}
-            />
+            <View style={createEventStyles.inputContainer}>
+              <TextInput
+                style={createEventStyles.input}
+                placeholder="Your name or organization"
+                value={formData.organizerName}
+                onChangeText={(value) => handleInputChange('organizerName', value)}
+                maxLength={100}
+              />
+              <View style={createEventStyles.inputAccent} />
+            </View>
           </View>
 
           {/* Important Information */}
           <View style={createEventStyles.inputGroup}>
             <Text style={createEventStyles.label}>Important Information (Optional)</Text>
-            <TextInput
-              style={[createEventStyles.input, createEventStyles.textArea]}
-              placeholder="Add any important notes for attendees (e.g., arrival time, dress code, refund policy)..."
-              value={formData.importantInfo}
-              onChangeText={(value) => handleInputChange('importantInfo', value)}
-              multiline
-              numberOfLines={4}
-              maxLength={500}
-            />
+            <View style={createEventStyles.inputContainer}>
+              <TextInput
+                style={[createEventStyles.input, createEventStyles.textArea]}
+                placeholder="Add any important notes for attendees (e.g., arrival time, dress code, Identification required, etc.)..."
+                value={formData.importantInfo}
+                onChangeText={(value) => handleInputChange('importantInfo', value)}
+                multiline
+                numberOfLines={4}
+                maxLength={500}
+              />
+              <View style={createEventStyles.inputAccent} />
+            </View>
           </View>
 
           {/* Featured Toggle */}

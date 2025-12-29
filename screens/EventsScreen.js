@@ -74,7 +74,7 @@ const loadCachedFirstPageEvents = async () => {
 const renderEmptyComponent = () => (
   <View style={styles.emptyContainer}>
     <Text style={styles.emptyText}>No events available</Text>
-    <Text style={styles.emptySubtext}>Please check your connection or try again later.</Text>
+    <Text style={styles.emptySubtext}>Try selecting a different category or check back later.</Text>
   </View>
 );
 

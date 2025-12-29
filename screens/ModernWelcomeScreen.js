@@ -96,7 +96,7 @@ export default function ModernWelcomeScreen({ navigation }) {
             </View>
             <View style={styles.featureTextCol}>
               <Text style={styles.featureTitle}>Discover</Text>
-              <Text style={styles.featureDesc}>Find events near you</Text>
+              <Text style={styles.featureDesc}>Discover events</Text>
             </View>
           </View>
           <View style={styles.featureRowDivider} />
