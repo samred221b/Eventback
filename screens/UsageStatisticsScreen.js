@@ -10,7 +10,7 @@ import { logger } from '../utils/logger';
 
 export default function UsageStatisticsScreen({ navigation }) {
   const { user, organizerProfile } = useAuth();
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   const [isLoading, setIsLoading] = useState(true);
   const [statistics, setStatistics] = useState({
     totalEvents: 0,

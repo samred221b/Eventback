@@ -24,6 +24,7 @@ import EnhancedSearch from '../components/EnhancedSearch';
 import homeStyles from '../styles/homeStyles';
 import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
 import { logger } from '../utils/logger';
+import { standardizeEventForDetails } from '../utils/dataProcessor';
 
 const EVENTS_CACHE_KEY = '@eventopia_events';
 
@@ -127,7 +128,7 @@ const EventsScreen = ({ navigation }) => {
     { key: 'name', label: 'Name (A-Z)', icon: 'type' },
   ];
 
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
 
   useEffect(() => {
     // Debounce search - only search after user stops typing for 500ms
@@ -341,9 +342,16 @@ const EventsScreen = ({ navigation }) => {
       },
       price: event.price || 0,
       currency: event.currency || 'ETB',
+      // Add new pricing fields
+      vipPrice: event.vipPrice,
+      vvipPrice: event.vvipPrice,
+      earlyBirdPrice: event.earlyBirdPrice,
+      onDoorPrice: event.onDoorPrice,
+      ticketsAvailableAt: event.ticketsAvailableAt,
       category: event.category,
       mode: event.mode,
       organizer: event.organizerId?.name || event.organizer || 'Unknown Organizer',
+      organizerId: event.organizerId, // Preserve organizerId
       attendeeCount: event.attendeeCount || 0,
       likeCount: event.likeCount || 0,
       views: event.views || 0,
@@ -741,8 +749,15 @@ const EventsScreen = ({ navigation }) => {
               columnWrapperStyle={{ justifyContent: 'space-between' }}
               contentContainerStyle={styles.eventsContainer}
               showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
+                  colors={['#0277BD', '#01579B']}
+                  tintColor="#0277BD"
+                  progressBackgroundColor="#FFFFFF"
+                />
+              }
               ListEmptyComponent={renderEmptyComponent}
             />
           )}

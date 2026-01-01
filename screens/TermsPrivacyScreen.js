@@ -2,11 +2,31 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import homeStyles from '../styles/homeStyles';
 
 export default function TermsPrivacyScreen({ navigation }) {
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F8FF' }}>
+      {/* Decorative Background Shapes */}
+      <View style={homeStyles.creativeBlobBlue} />
+      <View style={homeStyles.creativeBlobGreen} />
+      <View style={homeStyles.creativeBlobYellow} />
+      <View style={homeStyles.decorativeShape1} />
+      <View style={homeStyles.decorativeShape2} />
+      <View style={homeStyles.decorativeShape3} />
+      <View style={homeStyles.decorativeShape4} />
+      <View style={homeStyles.decorativeShape5} />
+      <View style={homeStyles.decorativeShape6} />
+      <View style={homeStyles.decorativeShape7} />
+      <View style={homeStyles.decorativeShape8} />
+      <View style={homeStyles.decorativeShape9} />
+      <View style={homeStyles.decorativeShape10} />
+      <View style={homeStyles.largeCurvedWave} />
+      <View style={homeStyles.vibrantAccentRing1} />
+      <View style={homeStyles.vibrantAccentRing2} />
+
       <StatusBar style="light" backgroundColor="#FFFFFF" />
       
       {/* Header - Home Style */}
@@ -49,7 +69,7 @@ export default function TermsPrivacyScreen({ navigation }) {
         </LinearGradient>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 20 }}>
         {/* Terms of Service */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📋 Terms of Service</Text>

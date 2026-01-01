@@ -265,6 +265,17 @@ const createEventStyles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 14,
   },
+  readOnlyInput: {
+    backgroundColor: '#F8FAFC',
+    color: '#64748B',
+  },
+  inputHelperText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontStyle: 'italic',
+    marginTop: 4,
+    marginLeft: 2,
+  },
   inputAccent: {
     position: 'absolute',
     bottom: 0,
@@ -519,6 +530,96 @@ const createEventStyles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  // Additional styles for pricing section
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  // Enhanced Pricing Section Styles
+  pricingSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  pricingSectionExpanded: {
+    shadowColor: 'rgba(2, 119, 189, 0.15)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  pricingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 0, // Remove horizontal padding to match inputGroup
+    paddingVertical: 16,
+    backgroundColor: '#F8FAFC',
+  },
+  pricingHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  pricingIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 20, // Add left margin to match inputContainer padding
+    marginRight: 12,
+  },
+  pricingHeaderText: {
+    flex: 1,
+  },
+  pricingTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  pricingSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  pricingChevron: {
+    marginLeft: 12,
+    marginRight: 20, // Add right margin to match inputContainer padding
+  },
+  pricingContent: {
+    paddingHorizontal: 0, // Remove horizontal padding to match inputGroup
+    paddingBottom: 0,
+  },
+  pricingLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 20, // Add horizontal padding to match inputContainer
+  },
+  // Remove old card-based styles since we're using full-width layout now
 });
 
 export default createEventStyles;

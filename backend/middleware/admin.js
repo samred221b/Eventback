@@ -1,15 +1,19 @@
 const admin = require('firebase-admin');
-const serviceAccount = require('../config/firebase');
+const { initializeFirebase } = require('../config/firebase');
 
 // Initialize Firebase Admin if not already done
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-}
+initializeFirebase();
 
 const isAdmin = async (req, res, next) => {
   try {
+    // Development bypass for testing
+    if (process.env.NODE_ENV === 'development' && 
+        req.user?.email?.toLowerCase() === 'samred221b@gmail.com') {
+      console.log('🚧 Development admin bypass for:', req.user.email);
+      req.user.isAdmin = true;
+      return next();
+    }
+
     if (!req.user || !req.user.uid) {
       return res.status(403).json({
         success: false,
@@ -41,6 +45,15 @@ const isAdmin = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Admin check error:', error);
+    
+    // Development fallback - if Firebase fails, check email directly
+    if (process.env.NODE_ENV === 'development' && 
+        req.user?.email?.toLowerCase() === 'samred221b@gmail.com') {
+      console.log('🚧 Development fallback admin access for:', req.user.email);
+      req.user.isAdmin = true;
+      return next();
+    }
+    
     return res.status(500).json({
       success: false,
       error: 'Server error',

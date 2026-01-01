@@ -272,6 +272,10 @@ class ApiService {
     return this.put('/organizers/profile', profileData, { requireAuth: true });
   }
 
+  async deleteOrganizerAccount() {
+    return this.delete('/organizers/account', { requireAuth: true });
+  }
+
   async getOrganizerStats() {
     return this.get('/organizers/profile/stats', { requireAuth: true });
   }
@@ -419,12 +423,10 @@ export const {
   updateEvent,
   deleteEvent,
   registerForEvent,
-  unregisterFromEvent,
   likeEvent,
   getFeaturedEvents,
   getNearbyEvents,
   getEventsByCategory,
-  getOrganizers,
   getOrganizer,
   updateOrganizerProfile,
   getOrganizerStats,

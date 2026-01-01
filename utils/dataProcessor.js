@@ -25,6 +25,12 @@ export const parseEvent = (rawEvent) => {
     },
     // Convert string numbers to actual numbers
     price: typeof rawEvent.price === 'string' ? parseFloat(rawEvent.price) : rawEvent.price,
+    // Convert new pricing fields to numbers if they're strings
+    vipPrice: rawEvent.vipPrice ? (typeof rawEvent.vipPrice === 'string' ? parseFloat(rawEvent.vipPrice) : rawEvent.vipPrice) : undefined,
+    vvipPrice: rawEvent.vvipPrice ? (typeof rawEvent.vvipPrice === 'string' ? parseFloat(rawEvent.vvipPrice) : rawEvent.vvipPrice) : undefined,
+    earlyBirdPrice: rawEvent.earlyBirdPrice ? (typeof rawEvent.earlyBirdPrice === 'string' ? parseFloat(rawEvent.earlyBirdPrice) : rawEvent.earlyBirdPrice) : undefined,
+    onDoorPrice: rawEvent.onDoorPrice ? (typeof rawEvent.onDoorPrice === 'string' ? parseFloat(rawEvent.onDoorPrice) : rawEvent.onDoorPrice) : undefined,
+    ticketsAvailableAt: rawEvent.ticketsAvailableAt || undefined,
     
     // ✅ CRITICAL: Convert string booleans to actual booleans for map/component props
     featured: rawEvent.featured === 'true', // "true" -> true, "false" -> false
@@ -183,5 +189,67 @@ export const parseNumber = (value, defaultValue = 0) => {
  */
 export const makeEventSerializable = (event) => {
   const { parsedDate, ...serializableEvent } = event;
+  
+  // Ensure organizerId is preserved
+  if (event.organizerId) {
+    serializableEvent.organizerId = event.organizerId;
+  }
+  
   return serializableEvent;
+};
+
+/**
+ * Standardizes event data for EventDetailsScreen
+ * Ensures all required fields are present for consistent display
+ */
+export const standardizeEventForDetails = (event) => {
+  const serializable = makeEventSerializable(event);
+  
+  // Add missing fields that EventDetailsScreen expects
+  return {
+    ...serializable,
+    // Basic info
+    id: event.id || event._id,
+    title: event.title || '',
+    description: event.description || '',
+    date: event.date,
+    time: event.time || '',
+    
+    // Location
+    location: event.location || {},
+    
+    // Pricing - ensure all pricing fields are present
+    price: event.price || 0,
+    vipPrice: event.vipPrice || null,
+    vvipPrice: event.vvipPrice || null,
+    earlyBirdPrice: event.earlyBirdPrice || null,
+    onDoorPrice: event.onDoorPrice || null,
+    ticketsAvailableAt: event.ticketsAvailableAt || null,
+    currency: event.currency || 'ETB',
+    
+    // Event details
+    category: event.category || '',
+    featured: event.featured || false,
+    capacity: event.capacity || null,
+    imageUrl: event.imageUrl || event.image || null,
+    
+    // Organizer info
+    organizerName: event.organizerName || event.organizer || '',
+    organizerId: event.organizerId || null,
+    
+    // Additional info
+    importantInfo: event.importantInfo || '',
+    
+    // Status
+    status: event.status || 'published',
+    
+    // Mode
+    mode: event.mode || 'In-person',
+    
+    // Registration
+    requiresRegistration: event.requiresRegistration || false,
+    
+    // Online/Offline
+    isOnline: event.isOnline || false,
+  };
 };

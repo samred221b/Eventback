@@ -157,6 +157,27 @@ const eventSchema = new mongoose.Schema({
     default: 0
   },
   
+  // Additional pricing options (optional)
+  vipPrice: {
+    type: Number,
+    min: 0
+  },
+  
+  vvipPrice: {
+    type: Number,
+    min: 0
+  },
+  
+  onDoorPrice: {
+    type: Number,
+    min: 0
+  },
+  
+  earlyBirdPrice: {
+    type: Number,
+    min: 0
+  },
+  
   currency: {
     type: String,
     default: 'ETB',
@@ -175,6 +196,13 @@ const eventSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: 500
+  },
+
+  // Tickets Available At (optional)
+  ticketsAvailableAt: {
+    type: String,
+    trim: true,
+    maxlength: 200
   },
   
   // Status

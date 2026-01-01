@@ -7,6 +7,7 @@ import {
   Alert,
   TouchableOpacity,
   Image,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,7 +29,7 @@ const CreateEventScreen = ({ navigation, route }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'conference',
+    category: 'music',
     mode: 'In-person',
     address: '',
     city: 'Addis Ababa',
@@ -39,12 +40,38 @@ const CreateEventScreen = ({ navigation, route }) => {
     time: '',
     capacity: '',
     price: '0',
+    vipPrice: '',
+    vvipPrice: '',
+    onDoorPrice: '',
+    earlyBirdPrice: '',
     featured: false,
     imageUrl: null,
     organizerName: '',
     importantInfo: '',
+    ticketsAvailableAt: '', // New field for where tickets can be purchased
   });
   const [imageUri, setImageUri] = useState(null);
+  const [isPricingExpanded, setIsPricingExpanded] = useState(false);
+  
+  // Animation values
+  const pricingHeight = useState(new Animated.Value(0))[0];
+  const pricingOpacity = useState(new Animated.Value(0))[0];
+  const iconRotation = useState(new Animated.Value(0))[0];
+
+  // Auto-populate organizer name from profile
+  useEffect(() => {
+    if (organizerProfile && organizerProfile.name) {
+      setFormData(prev => ({
+        ...prev,
+        organizerName: organizerProfile.name
+      }));
+    } else if (user && user.displayName) {
+      setFormData(prev => ({
+        ...prev,
+        organizerName: user.displayName
+      }));
+    }
+  }, [organizerProfile, user]);
 
   // Populate form when editing an event
   useEffect(() => {
@@ -53,7 +80,7 @@ const CreateEventScreen = ({ navigation, route }) => {
       setFormData({
         title: event.title || '',
         description: event.description || '',
-        category: event.category || 'conference',
+        category: event.category || 'music',
         mode: event.mode || 'In-person',
         address: event.address || '',
         city: event.city || 'Addis Ababa',
@@ -64,14 +91,64 @@ const CreateEventScreen = ({ navigation, route }) => {
         time: event.time || '',
         capacity: event.capacity || '',
         price: event.price || '0',
+        vipPrice: event.vipPrice || '',
+        vvipPrice: event.vvipPrice || '',
+        onDoorPrice: event.onDoorPrice || '',
+        earlyBirdPrice: event.earlyBirdPrice || '',
         featured: event.featured || false,
         imageUrl: event.imageUrl || null,
         organizerName: event.organizerName || '',
         importantInfo: event.importantInfo || '',
+        ticketsAvailableAt: event.ticketsAvailableAt || '',
       });
       setImageUri(event.imageUrl || null);
     }
   }, [route?.params?.editEvent]);
+
+  // Animation functions
+  const togglePricingSection = () => {
+    setIsPricingExpanded(!isPricingExpanded);
+    
+    if (!isPricingExpanded) {
+      // Expand animation
+      Animated.parallel([
+        Animated.timing(pricingHeight, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(pricingOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(iconRotation, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Collapse animation
+      Animated.parallel([
+        Animated.timing(pricingHeight, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(pricingOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(iconRotation, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  };
 
   const categories = [
     'music', 'culture', 'education', 'sports', 'art', 'business', 
@@ -283,16 +360,25 @@ const CreateEventScreen = ({ navigation, route }) => {
           coordinates: {
             lat: parseFloat(formData.lat),
             lng: parseFloat(formData.lng)
+          },
+          geo: {
+            type: 'Point',
+            coordinates: [parseFloat(formData.lng), parseFloat(formData.lat)]
           }
         },
         date: new Date(`${formData.date}T00:00:00.000Z`).toISOString(),
         time: formData.time,
         capacity: formData.capacity ? parseInt(formData.capacity) : undefined,
         price: parseFloat(formData.price) || 0,
+        vipPrice: formData.vipPrice ? parseFloat(formData.vipPrice) : undefined,
+        vvipPrice: formData.vvipPrice ? parseFloat(formData.vvipPrice) : undefined,
+        onDoorPrice: formData.onDoorPrice ? parseFloat(formData.onDoorPrice) : undefined,
+        earlyBirdPrice: formData.earlyBirdPrice ? parseFloat(formData.earlyBirdPrice) : undefined,
         featured: formData.featured,
         image: formData.imageUrl || undefined,  // Backend uses 'image' not 'imageUrl'
         organizerName: formData.organizerName.trim(),
-        importantInfo: formData.importantInfo.trim() || undefined  // Optional field
+        importantInfo: formData.importantInfo.trim() || undefined,  // Optional field
+        ticketsAvailableAt: formData.ticketsAvailableAt.trim() || undefined  // Optional field
       };
 
       const response = await apiService.createEvent(eventData);
@@ -309,7 +395,7 @@ const CreateEventScreen = ({ navigation, route }) => {
                 setFormData({
                   title: '',
                   description: '',
-                  category: 'conference',
+                  category: 'music',
                   address: '',
                   city: 'Addis Ababa',
                   country: 'Ethiopia',
@@ -319,10 +405,15 @@ const CreateEventScreen = ({ navigation, route }) => {
                   time: '',
                   capacity: '',
                   price: '0',
+                  vipPrice: '',
+                  vvipPrice: '',
+                  onDoorPrice: '',
+                  earlyBirdPrice: '',
                   featured: false,
                   imageUrl: null,
                   organizerName: '',
                   importantInfo: '',
+                  ticketsAvailableAt: '',
                 });
                 setImageUri(null);
                 // Navigate back to dashboard (this will trigger refresh)
@@ -406,18 +497,6 @@ const CreateEventScreen = ({ navigation, route }) => {
       <ScrollView style={createEventStyles.scrollView} showsVerticalScrollIndicator={false}>
 
         <View style={createEventStyles.form}>
-          {/* Progress Indicator */}
-          <View style={createEventStyles.progressContainer}>
-            <View style={createEventStyles.progressBar}>
-              <LinearGradient
-                colors={['#0277BD', '#01579B']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[createEventStyles.progressFill, { width: '20%' }]}
-              />
-            </View>
-            <Text style={createEventStyles.progressText}>Step 1 of 5</Text>
-          </View>
 
           {/* Event Title */}
           <View style={createEventStyles.inputGroup}>
@@ -587,31 +666,40 @@ const CreateEventScreen = ({ navigation, route }) => {
 
           {/* Mode Picker */}
           <View style={createEventStyles.inputGroup}>
-            <Text style={createEventStyles.label}>Mode *</Text>
-            <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
+            <View style={createEventStyles.labelContainer}>
+              <View style={createEventStyles.iconContainer}>
+                <Feather name="wifi" size={18} color="#FFFFFF" />
+              </View>
+              <Text style={createEventStyles.label}>Mode *</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={createEventStyles.categoryScroll}>
               {['In-person', 'Online'].map(option => (
                 <TouchableOpacity
                   key={option}
                   style={[
-                    {
-                      paddingVertical: 12,
-                      paddingHorizontal: 24,
-                      borderRadius: 20,
-                      borderWidth: 2,
-                      marginRight: 8,
-                      borderColor: formData.mode === option ? '#0277BD' : '#E5E7EB',
-                      backgroundColor: formData.mode === option ? '#0277BD' : '#fff',
-                    }
+                    createEventStyles.categoryButton,
+                    formData.mode === option && createEventStyles.categoryButtonActive
                   ]}
                   onPress={() => handleInputChange('mode', option)}
-                  activeOpacity={0.85}
+                  activeOpacity={0.8}
                 >
-                  <Text style={{ color: formData.mode === option ? '#fff' : '#1F2937', fontWeight: '700', fontSize: 16 }}>
-                    {option}
-                  </Text>
+                  {formData.mode === option ? (
+                    <LinearGradient
+                      colors={['#0277BD', '#01579B']}
+                      style={createEventStyles.categoryGradient}
+                    >
+                      <Text style={createEventStyles.categoryTextActive}>
+                        {option}
+                      </Text>
+                    </LinearGradient>
+                  ) : (
+                    <Text style={createEventStyles.categoryText}>
+                      {option}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
           {/* Location */}
@@ -755,16 +843,156 @@ const CreateEventScreen = ({ navigation, route }) => {
             </View>
           </View>
 
+          {/* Additional Pricing Options - Collapsible */}
+          <View style={[createEventStyles.pricingSection, isPricingExpanded && createEventStyles.pricingSectionExpanded]}>
+            <TouchableOpacity 
+              style={createEventStyles.pricingHeader}
+              onPress={togglePricingSection}
+              activeOpacity={0.8}
+            >
+              <View style={createEventStyles.pricingHeaderLeft}>
+                <LinearGradient
+                  colors={['#0277BD', '#01579B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={createEventStyles.pricingIconContainer}
+                >
+                  <Feather name="tag" size={16} color="#FFFFFF" />
+                </LinearGradient>
+                <View style={createEventStyles.pricingHeaderText}>
+                  <Text style={createEventStyles.pricingTitle}>Additional Pricing Options</Text>
+                  <Text style={createEventStyles.pricingSubtitle}>VIP, VVIP, Early Bird & On Door pricing</Text>
+                </View>
+              </View>
+              <Animated.View
+                style={[
+                  createEventStyles.pricingChevron,
+                  {
+                    transform: [{
+                      rotate: iconRotation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '180deg']
+                      })
+                    }]
+                  }
+                ]}
+              >
+                <Feather name="chevron-down" size={20} color="#64748B" />
+              </Animated.View>
+            </TouchableOpacity>
+
+            <Animated.View
+              style={[
+                createEventStyles.pricingContent,
+                {
+                  height: pricingHeight.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 400] // Adjust height for full-width layout
+                  }),
+                  opacity: pricingOpacity
+                }
+              ]}
+            >
+              {/* VIP Price */}
+              <View style={createEventStyles.inputGroup}>
+                <View style={createEventStyles.pricingLabelContainer}>
+                  <Feather name="star" size={16} color="#F59E0B" />
+                  <Text style={createEventStyles.label}>VIP Price (ETB)</Text>
+                </View>
+                <View style={createEventStyles.inputContainer}>
+                  <TextInput
+                    style={createEventStyles.input}
+                    placeholder="0"
+                    value={formData.vipPrice}
+                    onChangeText={(value) => handleInputChange('vipPrice', value)}
+                    keyboardType="numeric"
+                  />
+                  <View style={createEventStyles.inputAccent} />
+                </View>
+              </View>
+
+              {/* VVIP Price */}
+              <View style={createEventStyles.inputGroup}>
+                <View style={createEventStyles.pricingLabelContainer}>
+                  <Feather name="award" size={16} color="#8B5CF6" />
+                  <Text style={createEventStyles.label}>VVIP Price (ETB)</Text>
+                </View>
+                <View style={createEventStyles.inputContainer}>
+                  <TextInput
+                    style={createEventStyles.input}
+                    placeholder="0"
+                    value={formData.vvipPrice}
+                    onChangeText={(value) => handleInputChange('vvipPrice', value)}
+                    keyboardType="numeric"
+                  />
+                  <View style={createEventStyles.inputAccent} />
+                </View>
+              </View>
+
+              {/* Early Bird Price */}
+              <View style={createEventStyles.inputGroup}>
+                <View style={createEventStyles.pricingLabelContainer}>
+                  <Feather name="zap" size={16} color="#10B981" />
+                  <Text style={createEventStyles.label}>Early Bird Price (ETB)</Text>
+                </View>
+                <View style={createEventStyles.inputContainer}>
+                  <TextInput
+                    style={createEventStyles.input}
+                    placeholder="0"
+                    value={formData.earlyBirdPrice}
+                    onChangeText={(value) => handleInputChange('earlyBirdPrice', value)}
+                    keyboardType="numeric"
+                  />
+                  <View style={createEventStyles.inputAccent} />
+                </View>
+              </View>
+
+              {/* On Door Price */}
+              <View style={createEventStyles.inputGroup}>
+                <View style={createEventStyles.pricingLabelContainer}>
+                  <Feather name="clock" size={16} color="#EF4444" />
+                  <Text style={createEventStyles.label}>On Door Price (ETB)</Text>
+                </View>
+                <View style={createEventStyles.inputContainer}>
+                  <TextInput
+                    style={createEventStyles.input}
+                    placeholder="0"
+                    value={formData.onDoorPrice}
+                    onChangeText={(value) => handleInputChange('onDoorPrice', value)}
+                    keyboardType="numeric"
+                  />
+                  <View style={createEventStyles.inputAccent} />
+                </View>
+              </View>
+            </Animated.View>
+          </View>
+
           {/* Organizer Name */}
           <View style={createEventStyles.inputGroup}>
             <Text style={createEventStyles.label}>Organizer Name</Text>
             <View style={createEventStyles.inputContainer}>
               <TextInput
-                style={createEventStyles.input}
+                style={[createEventStyles.input, createEventStyles.readOnlyInput]}
                 placeholder="Your name or organization"
                 value={formData.organizerName}
-                onChangeText={(value) => handleInputChange('organizerName', value)}
+                editable={false}
                 maxLength={100}
+              />
+              <View style={createEventStyles.inputAccent} />
+              <Text style={createEventStyles.inputHelperText}>From your organizer profile</Text>
+            </View>
+          </View>
+
+          {/* Tickets Available At */}
+          <View style={createEventStyles.inputGroup}>
+            <Text style={createEventStyles.label}>Tickets Available At</Text>
+            <View style={createEventStyles.inputContainer}>
+              <TextInput
+                style={createEventStyles.input}
+                placeholder="e.g., Eventopia App, Venue Box Office, Online at www.example.com"
+                value={formData.ticketsAvailableAt}
+                onChangeText={(value) => handleInputChange('ticketsAvailableAt', value)}
+                maxLength={200}
               />
               <View style={createEventStyles.inputAccent} />
             </View>

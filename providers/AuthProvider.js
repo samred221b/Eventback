@@ -342,6 +342,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Delete organizer account
+  const deleteOrganizerAccount = async () => {
+    try {
+      setIsLoading(true);
+      
+      if (!backendConnected) {
+        throw new Error('Backend not available');
+      }
+      
+      const response = await apiService.deleteOrganizerAccount();
+      
+      if (response.success) {
+        // Clear local state
+        setOrganizerProfile(null);
+        return { success: true };
+      }
+      
+      return { success: false, error: 'Failed to delete account' };
+    } catch (error) {
+      return { success: false, error: error.message || 'An error occurred while deleting account' };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Get organizer statistics
   const getOrganizerStats = async () => {
     try {
@@ -395,6 +420,7 @@ export const AuthProvider = ({ children }) => {
     
     // Profile methods
     updateOrganizerProfile,
+    deleteOrganizerAccount,
     getOrganizerStats,
     
     // Utility methods

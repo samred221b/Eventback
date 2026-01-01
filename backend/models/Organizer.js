@@ -31,6 +31,24 @@ const organizerSchema = new mongoose.Schema({
     trim: true
   },
   
+  // Business Information
+  organization: {
+    type: String,
+    maxlength: 100,
+    trim: true
+  },
+  
+  website: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return !v || /^https?:\/\/.+\..+/.test(v);
+      },
+      message: 'Invalid website URL format'
+    }
+  },
+  
   phone: {
     type: String,
     trim: true,
@@ -75,12 +93,12 @@ const organizerSchema = new mongoose.Schema({
   
   // Profile Information
   profileImage: {
-    type: String, // URL to profile image
+    type: String, // URL to profile image or file URI
     validate: {
       validator: function(v) {
-        return !v || /^https?:\/\/.+/.test(v);
+        return !v || /^https?:\/\/.+/.test(v) || /^file:\/\//.test(v) || /^data:image\/.*/.test(v);
       },
-      message: 'Invalid image URL'
+      message: 'Invalid image format - must be URL, file URI, or data URI'
     }
   },
   

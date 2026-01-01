@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../providers/AuthProvider';
 
 export default function VerificationScreen({ navigation }) {
   const { user, organizerProfile } = useAuth();
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   const [isLoading, setIsLoading] = useState(false);
   const [applicationData, setApplicationData] = useState({
     organizationName: '',
     organizationType: 'individual',
     website: '',
     socialMedia: '',
-    experience: '',
     eventTypes: [],
     documents: [],
-    reason: '',
   });
 
   const organizationTypes = [
@@ -38,11 +40,6 @@ export default function VerificationScreen({ navigation }) {
   const handleSubmitApplication = () => {
     if (!applicationData.organizationName.trim()) {
       Alert.alert('Missing Information', 'Please enter your organization name');
-      return;
-    }
-
-    if (!applicationData.reason.trim()) {
-      Alert.alert('Missing Information', 'Please explain why you want verification');
       return;
     }
 
@@ -73,15 +70,54 @@ export default function VerificationScreen({ navigation }) {
     return (
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Verification Status</Text>
-        </View>
+        <LinearGradient
+          colors={['#0277BD', '#01579B']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            paddingTop: insets.top,
+            paddingBottom: 16,
+            paddingHorizontal: 20
+          }}
+        >
+          <View style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            width: '100%'
+          }}>
+            <TouchableOpacity 
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+              onPress={() => navigation.goBack()}
+            >
+              <Feather name="arrow-left" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <Text style={{ 
+              fontSize: 18, 
+              fontWeight: '700', 
+              color: '#FFFFFF' 
+            }}>
+              Verification Status
+            </Text>
+            
+            <View style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }} />
+          </View>
+        </LinearGradient>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Verified Status */}
@@ -149,15 +185,54 @@ export default function VerificationScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Get Verified</Text>
-      </View>
+      <LinearGradient
+        colors={['#0277BD', '#01579B']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          paddingTop: insets.top,
+          paddingBottom: 16,
+          paddingHorizontal: 20
+        }}
+      >
+        <View style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          width: '100%'
+        }}>
+          <TouchableOpacity 
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
+            onPress={() => navigation.goBack()}
+          >
+            <Feather name="arrow-left" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <Text style={{ 
+            fontSize: 18, 
+            fontWeight: '700', 
+            color: '#FFFFFF' 
+          }}>
+            Get Verified
+          </Text>
+          
+          <View style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }} />
+        </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Why Get Verified */}
@@ -264,34 +339,6 @@ export default function VerificationScreen({ navigation }) {
               ))}
             </View>
           </View>
-
-          {/* Experience */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Experience & Background</Text>
-            <TextInput
-              style={[styles.formInput, styles.textArea]}
-              value={applicationData.experience}
-              onChangeText={(text) => setApplicationData({...applicationData, experience: text})}
-              placeholder="Tell us about your experience organizing events..."
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </View>
-
-          {/* Reason for Verification */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Why do you want to be verified? *</Text>
-            <TextInput
-              style={[styles.formInput, styles.textArea]}
-              value={applicationData.reason}
-              onChangeText={(text) => setApplicationData({...applicationData, reason: text})}
-              placeholder="Explain why verification is important for your events and attendees..."
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </View>
         </View>
 
         {/* Requirements */}
@@ -344,34 +391,7 @@ export default function VerificationScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a2e',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: 50,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#ffffff',
+    backgroundColor: '#F8FAFC',
   },
   content: {
     flex: 1,
@@ -478,9 +498,10 @@ const styles = StyleSheet.create({
   },
   formInput: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#e5e7eb',
     borderRadius: 8,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 14,
     color: '#1f2937',
     backgroundColor: '#ffffff',

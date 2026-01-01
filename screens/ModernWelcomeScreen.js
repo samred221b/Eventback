@@ -85,7 +85,7 @@ export default function ModernWelcomeScreen({ navigation }) {
             resizeMode="contain"
           />
           <Text style={styles.appName}>Eventopia</Text>
-          <Text style={styles.tagline}>Where Extraordinary Moments Happen</Text>
+          <Text style={styles.tagline}>Bringing All the Events to Your Fingertips in One App.</Text>
         </View>
 
         {/* Features */}

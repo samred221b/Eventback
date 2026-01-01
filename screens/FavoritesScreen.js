@@ -25,14 +25,20 @@ import EnhancedSearch from '../components/EnhancedSearch';
 import { logger } from '../utils/logger';
 
 const makeEventSerializable = (event) => {
-  const { parsedDate, ...rest } = event;
-  return rest;
+  const { parsedDate, ...serializableEvent } = event;
+  
+  // Ensure organizerId is preserved
+  if (event.organizerId) {
+    serializableEvent.organizerId = event.organizerId;
+  }
+  
+  return serializableEvent;
 };
 
 const EVENTS_CACHE_KEY = '@eventopia_events';
 
 const FavoritesScreen = ({ navigation }) => {
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const styles = favStyles; // alias once at top
   const [favoriteEvents, setFavoriteEvents] = useState([]);
@@ -206,9 +212,20 @@ const FavoritesScreen = ({ navigation }) => {
             colors={['#E0E7FF', '#C7D2FE']}
             style={styles.eventPlaceholder}
           >
-            <Feather name="image" size={24} color="#6366F1" />
+            <Feather name="image" size={16} color="#6366F1" />
           </LinearGradient>
         )}
+        <View style={styles.eventOverlay}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>{item.category || 'General'}</Text>
+          </View>
+          {item.featured && (
+            <View style={styles.featuredBadge}>
+              <Feather name="star" size={8} color="#FFFFFF" />
+              <Text style={styles.featuredBadgeText}>Featured</Text>
+            </View>
+          )}
+        </View>
       </View>
 
       <View style={styles.eventContent}>
@@ -218,16 +235,28 @@ const FavoritesScreen = ({ navigation }) => {
           </Text>
           <TouchableOpacity
             onPress={() => toggleFavorite(item.id)}
-            style={styles.heartButton}
+            style={[styles.heartButton, isFavorite(item.id) && styles.heartButtonActive]}
             activeOpacity={0.8}
           >
-            <Feather name="heart" size={18} color="#EF4444" fill="#EF4444" />
+            <Feather 
+              name="heart" 
+              size={14} 
+              color={isFavorite(item.id) ? "#FFFFFF" : "#EF4444"} 
+              fill={isFavorite(item.id) ? "#FFFFFF" : "none"}
+            />
           </TouchableOpacity>
         </View>
 
         <View style={styles.eventMeta}>
           <View style={styles.metaItem}>
-            <Feather name="calendar" size={14} color="#64748B" />
+            <LinearGradient
+              colors={['#0277BD', '#01579B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.metaIconGradient}
+            >
+              <Feather name="calendar" size={10} color="#FFFFFF" />
+            </LinearGradient>
             <Text style={styles.metaText}>
               {new Date(item.date).toLocaleDateString('en-US', {
                 month: 'short',
@@ -236,23 +265,42 @@ const FavoritesScreen = ({ navigation }) => {
             </Text>
           </View>
           <View style={styles.metaItem}>
-            <Feather name="clock" size={14} color="#64748B" />
+            <LinearGradient
+              colors={['#0277BD', '#01579B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.metaIconGradient}
+            >
+              <Feather name="clock" size={10} color="#FFFFFF" />
+            </LinearGradient>
             <Text style={styles.metaText}>{item.time || 'TBD'}</Text>
           </View>
         </View>
 
         <View style={styles.eventFooter}>
           <View style={styles.locationItem}>
-            <Feather name="map-pin" size={14} color="#64748B" />
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.locationIconGradient}
+            >
+              <Feather name="map-pin" size={10} color="#FFFFFF" />
+            </LinearGradient>
             <Text style={styles.locationText} numberOfLines={1}>
               {typeof item.location === 'string' ? item.location : item.location?.name || 'Location TBA'}
             </Text>
           </View>
-          <View style={styles.priceBadge}>
+          <LinearGradient
+            colors={item.price === 0 ? ['#10B981', '#059669'] : ['#F59E0B', '#D97706']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.priceBadge}
+          >
             <Text style={styles.priceText}>
               {item.price === 0 ? 'Free' : `${item.currency} ${item.price}`}
             </Text>
-          </View>
+          </LinearGradient>
         </View>
       </View>
     </SafeTouchableOpacity>
@@ -286,7 +334,6 @@ const FavoritesScreen = ({ navigation }) => {
             <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
             <Text style={homeStyles.homeHeaderMetaText}>Share Moments</Text>
           </View>
-
         </LinearGradient>
       </View>
 
@@ -302,6 +349,42 @@ const FavoritesScreen = ({ navigation }) => {
               setShowSearch(false);
             }}
           />
+        </View>
+      )}
+
+      {/* Favorites Statistics */}
+      {favoriteEvents.length > 0 && (
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              style={styles.statCardGradient}
+            >
+              <Feather name="heart" size={24} color="#FFFFFF" />
+              <Text style={styles.statNumber}>{favoriteEvents.length}</Text>
+              <Text style={styles.statLabel}>Favorites</Text>
+            </LinearGradient>
+          </View>
+          <View style={styles.statCard}>
+            <LinearGradient
+              colors={['#F59E0B', '#D97706']}
+              style={styles.statCardGradient}
+            >
+              <Feather name="star" size={24} color="#FFFFFF" />
+              <Text style={styles.statNumber}>{favoriteEvents.filter(e => e.featured).length}</Text>
+              <Text style={styles.statLabel}>Featured</Text>
+            </LinearGradient>
+          </View>
+          <View style={styles.statCard}>
+            <LinearGradient
+              colors={['#EF4444', '#DC2626']}
+              style={styles.statCardGradient}
+            >
+              <Feather name="gift" size={24} color="#FFFFFF" />
+              <Text style={styles.statNumber}>{favoriteEvents.filter(e => e.price === 0).length}</Text>
+              <Text style={styles.statLabel}>Free</Text>
+            </LinearGradient>
+          </View>
         </View>
       )}
     </View>
@@ -321,7 +404,7 @@ const FavoritesScreen = ({ navigation }) => {
     : { paddingTop: 0, paddingBottom: insets.bottom + 40 };
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <View style={{ flex: 1, backgroundColor: '#F4F8FF' }}>
       <FlatList
         data={filteredEvents}
         keyExtractor={item => item.id}
@@ -334,19 +417,35 @@ const FavoritesScreen = ({ navigation }) => {
           hasInitialLoad ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconContainer}>
-                <Feather name="heart" size={48} color="#E0E7FF" />
+                <LinearGradient
+                  colors={['#EF4444', '#DC2626']}
+                  style={styles.emptyIconGradient}
+                >
+                  <Feather name="heart" size={48} color="#FFFFFF" />
+                </LinearGradient>
               </View>
               <Text style={styles.emptyTitle}>No Favorites Yet</Text>
               <Text style={styles.emptyDescription}>
                 Start exploring events and tap the heart icon to save your favorites here
               </Text>
-              <TouchableOpacity 
-                style={styles.exploreButton}
-                onPress={() => navigation.navigate('Home')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.exploreButtonText}>Explore Events</Text>
-              </TouchableOpacity>
+              <View style={styles.emptyActions}>
+                <TouchableOpacity 
+                  style={styles.exploreButton}
+                  onPress={() => navigation.navigate('Home')}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="compass" size={16} color="#FFFFFF" />
+                  <Text style={styles.exploreButtonText}>Explore Events</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.browseButton}
+                  onPress={() => navigation.navigate('Events')}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="grid" size={16} color="#0277BD" />
+                  <Text style={styles.browseButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
             <View style={{ paddingVertical: 16 }} />

@@ -35,6 +35,9 @@ import AdminEventsScreen from './screens/AdminEventsScreen';
 import AdminOrganizersScreen from './screens/AdminOrganizersScreen';
 import AdminOrganizerDetailsScreen from './screens/AdminOrganizerDetailsScreen';
 import UsageStatisticsScreen from './screens/UsageStatisticsScreen';
+import OrganizerProfileScreen from './screens/OrganizerProfileScreen';
+import Organprofilescreenforusers from './screens/Organprofilescreenforusers';
+import OrganizerEventsScreen from './screens/OrganizerEventsScreen';
 
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
@@ -78,6 +81,9 @@ function HomeStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
+      <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
+      <Stack.Screen name="Organprofilescreenforusers" component={Organprofilescreenforusers} />
+      <Stack.Screen name="OrganizerEvents" component={OrganizerEventsScreen} />
     </Stack.Navigator>
   );
 }
@@ -87,6 +93,9 @@ function EventsStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="EventsList" component={EventsScreen} />
       <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
+      <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
+      <Stack.Screen name="Organprofilescreenforusers" component={Organprofilescreenforusers} />
+      <Stack.Screen name="OrganizerEvents" component={OrganizerEventsScreen} />
     </Stack.Navigator>
   );
 }
@@ -96,6 +105,9 @@ function CalendarStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CalendarList" component={CalendarScreen} />
       <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
+      <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
+      <Stack.Screen name="Organprofilescreenforusers" component={Organprofilescreenforusers} />
+      <Stack.Screen name="OrganizerEvents" component={OrganizerEventsScreen} />
     </Stack.Navigator>
   );
 }
@@ -105,6 +117,9 @@ function FavoritesStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="FavoritesList" component={FavoritesScreen} />
       <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
+      <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
+      <Stack.Screen name="Organprofilescreenforusers" component={Organprofilescreenforusers} />
+      <Stack.Screen name="OrganizerEvents" component={OrganizerEventsScreen} />
     </Stack.Navigator>
   );
 }
@@ -223,6 +238,9 @@ function App() {
             <Stack.Screen name="Welcome" component={ModernWelcomeScreen} />
             <Stack.Screen name="Main" component={MainTabs} />
             <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
+            <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
+            <Stack.Screen name="Organprofilescreenforusers" component={Organprofilescreenforusers} />
+            <Stack.Screen name="OrganizerEvents" component={OrganizerEventsScreen} />
             <Stack.Screen name="AdminEvents" component={AdminEventsScreen} />
             <Stack.Screen name="AdminAnalytics" component={AdminAnalyticsScreen} />
             <Stack.Screen name="AdminOrganizers" component={AdminOrganizersScreen} />

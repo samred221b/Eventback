@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { authenticateToken, optionalAuth } = require('../middleware/auth');
 const { optionalAdmin } = require('../middleware/admin');
 const { validate, organizerSchemas } = require('../middleware/validation');
@@ -67,7 +68,18 @@ router.get('/', optionalAuth, async (req, res) => {
 // @access  Public
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
-    const organizer = await Organizer.findById(req.params.id)
+    // Validate ObjectId format
+    const { id } = req.params;
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid organizer ID format'
+      });
+    }
+
+    console.log('Fetching organizer with ID:', id);
+    
+    const organizer = await Organizer.findById(id)
       .select('-firebaseUid -lastLoginAt')
       .populate({
         path: 'events',
@@ -76,7 +88,17 @@ router.get('/:id', optionalAuth, async (req, res) => {
         options: { sort: { date: 1 }, limit: 10 }
       });
 
-    if (!organizer || !organizer.isActive) {
+    console.log('Found organizer:', organizer);
+
+    if (!organizer) {
+      return res.status(404).json({
+        success: false,
+        error: 'Organizer not found'
+      });
+    }
+
+    // Check if organizer is active (if the field exists)
+    if (organizer.isActive === false) {
       return res.status(404).json({
         success: false,
         error: 'Organizer not found'
@@ -98,6 +120,15 @@ router.get('/:id', optionalAuth, async (req, res) => {
 
   } catch (error) {
     console.error('Get organizer error:', error);
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid organizer ID format'
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Failed to fetch organizer',
@@ -123,18 +154,51 @@ router.put('/profile',
         });
       }
 
-      // Update allowed fields
-      const allowedUpdates = ['name', 'bio', 'phone', 'location', 'profileImage', 'socialLinks'];
+      // Update allowed fields (email is not updatable - comes from Firebase)
       const updates = {};
 
-      allowedUpdates.forEach(field => {
-        if (req.body[field] !== undefined) {
-          updates[field] = req.body[field];
+      // Basic fields
+      if (req.body.name !== undefined) updates.name = req.body.name;
+      if (req.body.bio !== undefined) updates.bio = req.body.bio;
+      if (req.body.phone !== undefined) updates.phone = req.body.phone;
+      if (req.body.profileImage !== undefined) {
+        // Only update if it's a valid URL or empty string
+        if (!req.body.profileImage || /^https?:\/\/.+/.test(req.body.profileImage)) {
+          updates.profileImage = req.body.profileImage;
+        } else {
+          // If it's a file URI, skip updating (image should be uploaded first)
+          logger.warn('Skipping profileImage update - invalid URL format:', req.body.profileImage);
         }
-      });
+      }
+      if (req.body.organization !== undefined) updates.organization = req.body.organization;
+      if (req.body.website !== undefined) updates.website = req.body.website;
+      
+      // Explicitly ignore email field - it's managed by Firebase
+      delete req.body.email;
+
+      // Handle nested location updates
+      if (req.body.address !== undefined || req.body.city !== undefined || req.body.country !== undefined) {
+        updates.location = organizer.location || {};
+        if (req.body.address !== undefined) updates.location.address = req.body.address;
+        if (req.body.city !== undefined) updates.location.city = req.body.city;
+        if (req.body.country !== undefined) updates.location.country = req.body.country;
+      }
+      
+      // Handle nested location object if sent
+      if (req.body.location) {
+        updates.location = { ...organizer.location, ...req.body.location };
+      }
 
       Object.assign(organizer, updates);
       await organizer.save();
+
+      // Update all events for this organizer with the new name
+      if (updates.name) {
+        await Event.updateMany(
+          { organizerId: organizer._id },
+          { organizerName: updates.name }
+        );
+      }
 
       res.json({
         success: true,
@@ -298,6 +362,79 @@ router.get('/profile/events', authenticateToken, async (req, res) => {
       success: false,
       error: 'Failed to fetch events',
       message: error.message
+    });
+  }
+});
+
+// @route   DELETE /api/organizers/account
+// @desc    Delete organizer account and all associated data
+// @access  Private
+router.delete('/account', authenticateToken, async (req, res) => {
+  try {
+    const organizer = await Organizer.findByFirebaseUid(req.user.uid);
+
+    if (!organizer) {
+      return res.status(404).json({
+        success: false,
+        error: 'Organizer not found'
+      });
+    }
+
+    // Start a session for transaction
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // 1. Cancel all upcoming events for this organizer
+      await Event.updateMany(
+        { 
+          organizerId: organizer._id,
+          date: { $gte: new Date() },
+          status: { $ne: 'cancelled' }
+        },
+        { 
+          status: 'cancelled',
+          cancellationReason: 'Organizer account deleted'
+        },
+        { session }
+      );
+
+      // 2. Remove organizer from all events (as a reference)
+      await Event.updateMany(
+        { organizerId: organizer._id },
+        { $unset: { organizerId: 1 } },
+        { session }
+      );
+
+      // 3. Delete the organizer document
+      await Organizer.findByIdAndDelete(organizer._id, { session });
+
+      // 4. Delete Firebase user (optional - you might want to keep Firebase user for recovery)
+      // This would require Firebase Admin SDK
+      // await admin.auth().deleteUser(organizer.firebaseUid);
+
+      // Commit the transaction
+      await session.commitTransaction();
+
+      res.json({
+        success: true,
+        message: 'Account and all associated data deleted successfully'
+      });
+
+    } catch (transactionError) {
+      // Abort transaction on error
+      await session.abortTransaction();
+      throw transactionError;
+    } finally {
+      // End session
+      session.endSession();
+    }
+
+  } catch (error) {
+    logger.error('Delete organizer account error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete account'
     });
   }
 });

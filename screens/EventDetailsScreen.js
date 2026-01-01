@@ -36,6 +36,52 @@ export default function EventDetailsScreen({ route, navigation }) {
     }
   };
 
+  const handleOrganizerPress = () => {
+    // Debug: Log the entire event object to see what we have
+    console.log('Event data:', JSON.stringify(event, null, 2));
+    console.log('organizerId:', event.organizerId);
+    console.log('organizerId type:', typeof event.organizerId);
+    console.log('organizerId._id:', event.organizerId?._id);
+    console.log('organizerId.toString():', event.organizerId?.toString());
+    
+    // Check if organizerId exists and is valid
+    if (!event.organizerId) {
+      Alert.alert('Organizer Info', 'No organizer information available');
+      return;
+    }
+    
+    // Handle different formats of organizerId
+    let organizerId;
+    
+    if (typeof event.organizerId === 'string') {
+      organizerId = event.organizerId;
+    } else if (event.organizerId._id) {
+      organizerId = event.organizerId._id.toString();
+    } else if (event.organizerId.toString) {
+      organizerId = event.organizerId.toString();
+    } else {
+      organizerId = String(event.organizerId);
+    }
+    
+    console.log('Final organizerId to navigate with:', organizerId);
+    
+    // Validate the organizerId
+    if (!organizerId || organizerId === 'undefined' || organizerId === 'null' || organizerId === '[object Object]') {
+      Alert.alert('Organizer Info', 'Invalid organizer ID format');
+      return;
+    }
+    
+    // Check if it's a valid MongoDB ObjectId (24 character hex string)
+    const objectIdPattern = /^[0-9a-fA-F]{24}$/;
+    if (!objectIdPattern.test(organizerId)) {
+      console.log('Invalid ObjectId format:', organizerId);
+      Alert.alert('Organizer Info', 'Invalid organizer ID format');
+      return;
+    }
+    
+    navigation.navigate('Organprofilescreenforusers', { organizerId });
+  };
+
   const handleGetDirections = () => {
     try {
       // Check if location and coordinates exist and are valid
@@ -132,21 +178,21 @@ export default function EventDetailsScreen({ route, navigation }) {
 
   const essentialDetails = [
     {
-      key: 'schedule',
+      key: 'date',
       icon: 'calendar',
-      label: 'Schedule',
-      value: `${formatDate(event.date)}${event.time ? ` • ${formatTime(event.time)}` : ''}`,
+      label: 'Date',
+      value: formatDate(event.date),
     },
     {
-      key: 'mode',
-      icon: event.mode === 'Online' ? 'wifi' : 'map',
-      label: 'Mode',
-      value: event.mode || 'In-person',
+      key: 'time',
+      icon: 'clock',
+      label: 'Time',
+      value: formatTime(event.time),
     },
     {
-      key: 'venue',
+      key: 'location',
       icon: 'map-pin',
-      label: 'Venue',
+      label: 'Location',
       value: event.location?.address || event.location?.city || event.location?.name || 'Location TBA',
     },
     {
@@ -155,12 +201,54 @@ export default function EventDetailsScreen({ route, navigation }) {
       label: 'Entrance',
       value: formatPrice(event.price, event.currency),
     },
-    {
-      key: 'host',
-      icon: 'user',
-      label: 'Organizer',
-      value: event.organizerName || event.organizer || 'To be announced',
-    },
+    ...(event.capacity ? [{
+      key: 'capacity',
+      icon: 'users',
+      label: 'Capacity',
+      value: `${event.capacity} attendees`
+    }] : []),
+  ];
+
+  // Compact pricing grid - 2x2 layout
+  const pricingGrid = [
+    ...(event.vipPrice ? [{
+      key: 'vip',
+      icon: 'star',
+      label: 'VIP',
+      value: formatPrice(event.vipPrice, event.currency),
+      color: '#8B5CF6'
+    }] : []),
+    ...(event.vvipPrice ? [{
+      key: 'vvip',
+      icon: 'award',
+      label: 'VVIP',
+      value: formatPrice(event.vvipPrice, event.currency),
+      color: '#7C3AED'
+    }] : []),
+    ...(event.earlyBirdPrice ? [{
+      key: 'earlyBird',
+      icon: 'zap',
+      label: 'Early Bird',
+      value: formatPrice(event.earlyBirdPrice, event.currency),
+      color: '#10B981'
+    }] : []),
+    ...(event.onDoorPrice ? [{
+      key: 'onDoor',
+      icon: 'clock',
+      label: 'On Door',
+      value: formatPrice(event.onDoorPrice, event.currency),
+      color: '#F59E0B'
+    }] : []),
+  ];
+
+  // Additional info
+  const additionalInfo = [
+    ...(event.ticketsAvailableAt ? [{
+      key: 'ticketsAvailableAt',
+      icon: 'shopping-bag',
+      label: 'Tickets Available At',
+      value: event.ticketsAvailableAt,
+    }] : []),
   ];
 
   const vibeBadges = [
@@ -173,18 +261,28 @@ export default function EventDetailsScreen({ route, navigation }) {
   // Function to get related hashtags based on category
   const getRelatedHashtags = (category) => {
     const hashtags = {
-      education: ['#Learning', '#Knowledge', '#EducationMatters'],
-      food: ['#Foodie', '#Delicious', '#Culinary'],
-      music: ['#Concert', '#LiveMusic', '#MusicLovers'],
-      sports: ['#Fitness', '#Athlete', '#SportsEvent'],
-      art: ['#Artistic', '#Creative', '#ArtExhibition'],
-      technology: ['#TechTalk', '#Innovation', '#Future'],
-      business: ['#Networking', '#Entrepreneur', '#BusinessGrowth'],
-      health: ['#Wellness', '#HealthyLiving', '#HealthCare'],
-      religious: ['#Faith', '#Spiritual', '#ReligiousEvent'],
+      education: ['Learning', 'Knowledge', 'EducationMatters'],
+      food: ['Foodie', 'Delicious', 'Culinary'],
+      music: ['Concert', 'LiveMusic', 'MusicLovers'],
+      sports: ['Fitness', 'Athlete', 'SportsEvent'],
+      art: ['Artistic', 'Creative', 'ArtExhibition'],
+      technology: ['TechTalk', 'Innovation', 'Future'],
+      business: ['Networking', 'Entrepreneur', 'BusinessGrowth'],
+      health: ['Wellness', 'HealthyLiving', 'HealthCare'],
+      religious: ['Faith', 'Spiritual', 'ReligiousEvent'],
+      conference: ['Conference', 'Professional', 'Networking'],
+      culture: ['Cultural', 'Heritage', 'Tradition'],
+      workshop: ['Workshop', 'HandsOn', 'Learning'],
+      networking: ['Networking', 'Connections', 'Community'],
+      photography: ['Photography', 'Visual', 'Creative'],
+      gaming: ['Gaming', 'Esports', 'Competition'],
+      automotive: ['Automotive', 'Cars', 'Showcase'],
+      charity: ['Charity', 'Giving', 'Community'],
+      travel: ['Travel', 'Adventure', 'Exploration'],
+      fashion: ['Fashion', 'Style', 'Trends'],
       // Add more categories as needed
     };
-    return hashtags[category.toLowerCase()] || ['#Eventopia'];
+    return hashtags[category.toLowerCase()] || ['Eventopia'];
   };
 
   return (
@@ -234,17 +332,107 @@ export default function EventDetailsScreen({ route, navigation }) {
           </View>
 
           <View style={styles.essentialsCard}>
-            <Text style={styles.cardTitle}>Key Details</Text>
-            {essentialDetails.map((detail, index) => (
-              <View key={detail.key} style={[styles.detailListItem, index === essentialDetails.length - 1 && { borderBottomWidth: 0 }]}>
-                <Feather name={detail.icon} size={20} color="#0284C7" style={styles.detailListItemIcon} />
-                <View style={styles.detailListItemTextWrapper}>
-                  <Text style={styles.detailListItemLabel}>{detail.label}</Text>
-                  <Text style={styles.detailListItemValue}>{detail.value}</Text>
+            <View style={styles.essentialsHeader}>
+              <LinearGradient
+                colors={['#0277BD', '#01579B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.essentialsHeaderGradient}
+              >
+                <Feather name="info" size={20} color="#FFFFFF" />
+                <Text style={styles.essentialsHeaderText}>Key Details</Text>
+              </LinearGradient>
+            </View>
+            <View style={styles.essentialsContent}>
+              {essentialDetails.map((detail, index) => (
+                <View key={detail.key} style={[styles.detailItem, index === essentialDetails.length - 1 && styles.detailItemLast]}>
+                  <View style={styles.detailIconContainer}>
+                    <LinearGradient
+                      colors={['#0277BD', '#01579B']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.detailIconGradient}
+                    >
+                      <Feather name={detail.icon} size={16} color="#FFFFFF" />
+                    </LinearGradient>
+                  </View>
+                  <View style={styles.detailContent}>
+                    <Text style={styles.detailLabel}>{detail.label}</Text>
+                    <Text style={styles.detailValue}>{detail.value}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Compact Pricing Grid - Only show if there are pricing options */}
+          {pricingGrid.length > 0 && (
+            <View style={styles.essentialsCard}>
+              <View style={styles.essentialsHeader}>
+                <LinearGradient
+                  colors={['#0277BD', '#01579B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.essentialsHeaderGradient}
+                >
+                  <Feather name="tag" size={20} color="#FFFFFF" />
+                  <Text style={styles.essentialsHeaderText}>Pricing Options</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.pricingGridContent}>
+                <View style={styles.pricingGrid}>
+                  {pricingGrid.map((item, index) => (
+                    <View key={item.key} style={[styles.pricingGridItem, { borderLeftColor: item.color }]}>
+                      <View style={[styles.pricingGridIconContainer, { backgroundColor: item.color + '20' }]}>
+                        <Feather name={item.icon} size={14} color={item.color} />
+                      </View>
+                      <View style={styles.pricingGridTextContainer}>
+                        <Text style={[styles.pricingGridLabel, { color: item.color }]}>{item.label}</Text>
+                        <Text style={styles.pricingGridValue}>{item.value}</Text>
+                      </View>
+                    </View>
+                  ))}
                 </View>
               </View>
-            ))}
-          </View>
+            </View>
+          )}
+
+          {/* Additional Info Section */}
+          {additionalInfo.length > 0 && (
+            <View style={styles.essentialsCard}>
+              <View style={styles.essentialsHeader}>
+                <LinearGradient
+                  colors={['#0277BD', '#01579B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.essentialsHeaderGradient}
+                >
+                  <Feather name="info" size={20} color="#FFFFFF" />
+                  <Text style={styles.essentialsHeaderText}>Ticket Information</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.essentialsContent}>
+                {additionalInfo.map((detail, index) => (
+                  <View key={detail.key} style={[styles.detailItem, styles.detailItemLast]}>
+                    <View style={styles.detailIconContainer}>
+                      <LinearGradient
+                        colors={['#0277BD', '#01579B']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.detailIconGradient}
+                      >
+                        <Feather name={detail.icon} size={16} color="#FFFFFF" />
+                      </LinearGradient>
+                    </View>
+                    <View style={styles.detailContent}>
+                      <Text style={styles.detailLabel}>{detail.label}</Text>
+                      <Text style={styles.detailValue}>{detail.value}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           {(event.importantInfo || event.importantinfo) && (
             <View style={{
@@ -265,6 +453,53 @@ export default function EventDetailsScreen({ route, navigation }) {
               </View>
             </View>
           )}
+
+          {/* Organizer Section - Minimal */}
+          <TouchableOpacity 
+            style={styles.minimalOrganizerCard}
+            onPress={handleOrganizerPress}
+          >
+            <View style={styles.minimalOrganizerInfo}>
+              <View style={styles.minimalOrganizerProfileContainer}>
+                {event.organizerId?.profileImage ? (
+                  <View>
+                    <Image source={{ uri: event.organizerId.profileImage }} style={styles.minimalOrganizerProfileImage} />
+                    {event.organizerId?.isVerified && (
+                      <View style={styles.verifiedOverlay}>
+                        <Feather name="check-circle" size={16} color="#FFFFFF" />
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <View style={styles.minimalOrganizerProfilePlaceholder}>
+                    <Feather name="user" size={20} color="#9ca3af" />
+                    {event.organizerId?.isVerified && (
+                      <View style={styles.verifiedOverlayPlaceholder}>
+                        <Feather name="check-circle" size={14} color="#FFFFFF" />
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+              <View style={styles.minimalOrganizerDetails}>
+                <View style={styles.minimalOrganizerNameRow}>
+                  <Text style={styles.minimalOrganizerName}>
+                    {event.organizerName || event.organizer || 'To be announced'}
+                  </Text>
+                  {event.organizerId?.isVerified && (
+                    <View style={styles.verifiedBadge}>
+                      <Feather name="check-circle" size={12} color="#FFFFFF" />
+                      <Text style={styles.verifiedBadgeText}>Verified</Text>
+                    </View>
+                  )}
+                </View>
+                {event.organizerId?.isVerified && (
+                  <Text style={styles.verifiedOrganizerText}>Verified Organizer</Text>
+                )}
+              </View>
+              <Feather name="chevron-right" size={16} color="#6b7280" />
+            </View>
+          </TouchableOpacity>
 
           <View style={styles.ctaCard}>
             <Text style={styles.ctaHeadline}>Get Involved</Text>
@@ -399,9 +634,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   essentialsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 24,
-    padding: 24,
     marginBottom: 24,
     shadowColor: 'rgba(0, 0, 0, 0.1)',
     shadowOffset: { width: 0, height: 8 },
@@ -411,33 +645,69 @@ const styles = StyleSheet.create({
     backdropFilter: 'blur(15px)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.4)',
+    overflow: 'hidden',
   },
-  detailListItem: {
+  essentialsHeader: {
+    marginBottom: 0,
+  },
+  essentialsHeaderGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  essentialsHeaderText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  essentialsContent: {
+    padding: 20,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(2, 119, 189, 0.15)',
+    borderBottomColor: 'rgba(2, 119, 189, 0.1)',
+    gap: 16,
   },
-  detailListItemIcon: {
-    marginRight: 16,
+  detailItemLast: {
+    borderBottomWidth: 0,
+    paddingBottom: 0,
   },
-  detailListItemTextWrapper: {
+  detailIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  detailIconGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailContent: {
     flex: 1,
   },
-  detailListItemLabel: {
+  detailLabel: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0277BD',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
-  detailListItemValue: {
+  detailValue: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1E293B',
     lineHeight: 22,
+  },
+  clickableValue: {
+    color: '#0277BD',
+    textDecorationLine: 'underline',
   },
   noticeCard: {
     backgroundColor: 'transparent',
@@ -537,5 +807,150 @@ const styles = StyleSheet.create({
     color: '#92400E',
     fontSize: 13,
     fontWeight: '600',
+  },
+  // Compact Pricing Grid Styles (using essentialsCard for consistency)
+  pricingGridContent: {
+    padding: 20,
+  },
+  pricingGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  pricingGridItem: {
+    width: '48%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#6366F1',
+    marginBottom: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  pricingGridIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  pricingGridTextContainer: {
+    alignItems: 'center',
+  },
+  pricingGridLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  pricingGridValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  // Minimal Organizer Section Styles
+  minimalOrganizerCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  minimalOrganizerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  minimalOrganizerProfileContainer: {
+    marginRight: 12,
+  },
+  minimalOrganizerProfileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+  },
+  minimalOrganizerProfilePlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  minimalOrganizerDetails: {
+    flex: 1,
+  },
+  minimalOrganizerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  minimalOrganizerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginRight: 8,
+    flex: 1,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  verifiedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  verifiedOrganizerText: {
+    color: '#10b981',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  verifiedOverlay: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#10b981',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  verifiedOverlayPlaceholder: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#10b981',
+    borderRadius: 12,
+    width: 22,
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#f3f4f6',
   },
 });

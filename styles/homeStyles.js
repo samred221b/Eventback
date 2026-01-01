@@ -40,6 +40,42 @@ const homeStyles = StyleSheet.create({
     paddingBottom: 16,
     paddingHorizontal: 7,
   },
+  modernHeaderContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modernHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modernHeaderTextGroup: {
+    flexDirection: 'column',
+    gap: 2,
+  },
+  modernHeaderTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  modernHeaderSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  modernHeaderSearchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   homeHeaderContainer: {
     paddingHorizontal: 10,
     paddingTop: 14,
@@ -402,6 +438,7 @@ const homeStyles = StyleSheet.create({
   promotionalBannersSection: {
     marginTop: 10,
     marginBottom: 20,
+    
   },
   featuredEventsSection: {
     paddingHorizontal: 20,
@@ -446,13 +483,19 @@ const homeStyles = StyleSheet.create({
     right: 0,
     zIndex: 10,
   },
+  premiumFeaturedBadgeLeft: {
+    position: 'absolute',
+    top: -2,
+    left: -15,
+    zIndex: 10,
+  },
   premiumBadgeGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 5,
     paddingHorizontal: 10,
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
   },
   premiumBadgeText: {
     color: 'rgba(255, 255, 255, 1)',
@@ -644,6 +687,13 @@ const homeStyles = StyleSheet.create({
     padding: 16,
     height: 200,
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#c7bbbbff',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   heroBannerContent: {
     flexDirection: 'row',
@@ -777,7 +827,7 @@ const homeStyles = StyleSheet.create({
     gap: 12,
   },
   trendingEventCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     shadowColor: 'rgba(0, 0, 0, 0.15)',
     shadowOffset: { width: 0, height: 4 },
@@ -787,6 +837,8 @@ const homeStyles = StyleSheet.create({
     overflow: 'hidden',
     width: 280,
     marginVertical: 4,
+    borderWidth: 1,
+    borderColor: '#a19c9c94',
   },
   trendingEventImageContainer: {
     width: '100%',

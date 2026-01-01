@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../providers/AuthProvider';
 import apiService from '../services/api';
 import { adminEventsStyles } from '../styles/adminStyles';
+import { makeEventSerializable } from '../utils/dataProcessor';
 
 const AdminEventsScreen = ({ navigation }) => {
   const [events, setEvents] = useState([]);
@@ -150,7 +151,37 @@ const AdminEventsScreen = ({ navigation }) => {
   };
 
   const handleEditEvent = (event) => {
-    navigation.navigate('CreateEvent', { editEvent: event });
+    // Create a clean, serializable event object for navigation
+    const cleanEvent = {
+      _id: event._id || event.id,
+      title: event.title || '',
+      description: event.description || '',
+      date: event.date,
+      time: event.time || '',
+      location: typeof event.location === 'string' ? event.location : event.location?.address || '',
+      category: event.category || '',
+      mode: event.mode || 'In-person',
+      price: event.price || 0,
+      currency: event.currency || 'ETB',
+      featured: event.featured || false,
+      imageUrl: event.image || event.imageUrl || '',
+      organizerId: event.organizerId?._id || event.organizerId?.id || event.organizerId,
+      organizerName: event.organizerName || event.organizer || '',
+      status: event.status || 'draft',
+      tags: Array.isArray(event.tags) ? event.tags : [],
+      capacity: event.capacity || null,
+      vipPrice: event.vipPrice || null,
+      vvipPrice: event.vvipPrice || null,
+      earlyBirdPrice: event.earlyBirdPrice || null,
+      onDoorPrice: event.onDoorPrice || null,
+      ticketsAvailableAt: event.ticketsAvailableAt || null,
+      importantInfo: event.importantInfo || '',
+      requiresRegistration: event.requiresRegistration || false,
+      isOnline: event.isOnline || false,
+    };
+    
+    console.log('Navigating to CreateEvent with clean event data:', JSON.stringify(cleanEvent, null, 2));
+    navigation.navigate('CreateEvent', { editEvent: cleanEvent });
   };
 
   const getStatusColor = (status) => {

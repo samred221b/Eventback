@@ -61,7 +61,7 @@ export default function CalendarScreen({ navigation }) {
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all'); // New filter state
 
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
 
   const loadEvents = async (isRefresh = false) => {
     setIsLoading(!isRefresh);
@@ -280,8 +280,15 @@ export default function CalendarScreen({ navigation }) {
       location: event.location,
       price: event.price,
       currency: event.currency,
+      // Add new pricing fields
+      vipPrice: event.vipPrice,
+      vvipPrice: event.vvipPrice,
+      earlyBirdPrice: event.earlyBirdPrice,
+      onDoorPrice: event.onDoorPrice,
+      ticketsAvailableAt: event.ticketsAvailableAt,
       category: event.category,
       imageUrl: event.imageUrl || event.image,
+      organizerId: event.organizerId, // Preserve organizerId
     };
   };
 

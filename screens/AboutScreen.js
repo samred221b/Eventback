@@ -107,10 +107,10 @@ export default function AboutScreen({ navigation }) {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              © 2024 Eventopia. All rights reserved.
+              © 2025 Eventopia. All rights reserved.
             </Text>
             <Text style={styles.footerText}>
-              Made with ❤️ for event enthusiasts
+              Sam Tech.
             </Text>
           </View>
         </View>

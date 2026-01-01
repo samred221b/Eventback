@@ -22,7 +22,7 @@ import EnhancedSearch from '../components/EnhancedSearch';
 import ConnectionErrorBanner from '../components/ConnectionErrorBanner';
 
 import homeStyles from '../styles/homeStyles';
-import { makeEventSerializable, formatPrice } from '../utils/dataProcessor';
+import { makeEventSerializable, formatPrice, standardizeEventForDetails } from '../utils/dataProcessor';
 import apiService from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
@@ -70,7 +70,7 @@ const loadHomeBannersFromCache = async () => {
 };
 
 export default function HomeScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   const { isFavorite, toggleFavorite } = useFavorites();
 
   const [processedEvents, setProcessedEvents] = useState([]);
@@ -167,13 +167,29 @@ export default function HomeScreen({ navigation }) {
               date: event.date,
               time: event.time,
               location: event.location,
+              // Pricing fields
               price: event.price || 0,
+              vipPrice: event.vipPrice || null,
+              vvipPrice: event.vvipPrice || null,
+              earlyBirdPrice: event.earlyBirdPrice || null,
+              onDoorPrice: event.onDoorPrice || null,
+              ticketsAvailableAt: event.ticketsAvailableAt || null,
               currency: event.currency || 'ETB',
+              // Event details
               category: event.category,
               featured: event.featured || false,
+              capacity: event.capacity || null,
               imageUrl: event.imageUrl || event.image || null,
+              // Organizer info
               organizerName: event.organizerName || event.organizer || '',
+              organizerId: event.organizerId || null,
+              // Additional info
               importantInfo: event.importantInfo || '',
+              // Status and mode
+              status: event.status || 'published',
+              mode: event.mode || 'In-person',
+              requiresRegistration: event.requiresRegistration || false,
+              isOnline: event.isOnline || false,
             }));
 
           setProcessedEvents(transformedEvents);
@@ -267,16 +283,16 @@ export default function HomeScreen({ navigation }) {
       setIsRefreshing(true);
       lastRefreshTime.current = now;
       await loadEventsFromBackend({ isRefresh: true });
+    } catch (error) {
+      logger.error('Refresh error:', error);
     } finally {
       setIsRefreshing(false);
     }
   };
 
   const handleEventPress = (event) => {
-    const serializable = makeEventSerializable(event);
-    serializable.organizerName = event.organizerName || event.organizer || '';
-    serializable.importantInfo = event.importantInfo || '';
-    navigation.navigate('EventDetails', { event: serializable });
+    const standardizedEvent = standardizeEventForDetails(event);
+    navigation.navigate('EventDetails', { event: standardizedEvent });
   };
 
   const formatDateTimeShort = (dateString, timeString) => {
@@ -390,9 +406,10 @@ export default function HomeScreen({ navigation }) {
             disabled={isLoadingRef.current}
           />
         )}
-        <View style={homeStyles.homeHeaderContainer}>
+        
+<View style={homeStyles.homeHeaderContainer}>
           <LinearGradient
-            colors={['#0277BD', '#01579B']}
+            colors={['#0367a1ff', '#01579B']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={homeStyles.homeHeaderCard}
@@ -488,6 +505,21 @@ export default function HomeScreen({ navigation }) {
                     )}
                   </View>
 
+                  {/* Featured Badge for Trending Events */}
+                  {event.featured && (
+                    <View style={homeStyles.premiumFeaturedBadgeLeft}>
+                      <LinearGradient
+                        colors={['#FFD700', '#FFA500']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={homeStyles.premiumBadgeGradient}
+                      >
+                        <Feather name="star" size={10} color="#FFFFFF" />
+                        <Text style={homeStyles.premiumBadgeText}>FEATURED</Text>
+                      </LinearGradient>
+                    </View>
+                  )}
+
                   <View style={homeStyles.trendingEventContent}>
                     <View style={homeStyles.trendingEventHeader}>
                       <Text style={homeStyles.trendingEventTitle} numberOfLines={2}>
@@ -582,7 +614,10 @@ export default function HomeScreen({ navigation }) {
 
         <View style={homeStyles.featuredEventsSection}>
           <View style={homeStyles.featuredEventsHeader}>
-            <Text style={homeStyles.featuredEventsTitle}>Featured Events</Text>
+            <View style={homeStyles.trendingTitleContainer}>
+              <Feather name="star" size={20} color="#FFD700" />
+              <Text style={homeStyles.featuredEventsTitle}>Featured Events</Text>
+            </View>
             <SafeTouchableOpacity onPress={() => navigation.navigate('Events')}>
               <Text style={homeStyles.seeAllLink}>See All</Text>
             </SafeTouchableOpacity>
@@ -596,18 +631,6 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => handleEventPress(event)}
                 activeOpacity={0.95}
               >
-                <View style={homeStyles.premiumFeaturedBadge}>
-                  <LinearGradient
-                    colors={['#FFD700', '#FFA500']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={homeStyles.premiumBadgeGradient}
-                  >
-                    <Feather name="star" size={10} color="#FFFFFF" />
-                    <Text style={homeStyles.premiumBadgeText}>FEATURED</Text>
-                  </LinearGradient>
-                </View>
-
                 <View style={homeStyles.horizontalEventImageContainer}>
                   {event.imageUrl ? (
                     <Image
@@ -627,6 +650,19 @@ export default function HomeScreen({ navigation }) {
                       <Feather name="image" size={24} color="rgba(255,255,255,0.7)" />
                     </LinearGradient>
                   )}
+                  
+                  {/* Featured Badge on Left Side */}
+                  <View style={homeStyles.premiumFeaturedBadgeLeft}>
+                    <LinearGradient
+                      colors={['#FFD700', '#FFA500']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={homeStyles.premiumBadgeGradient}
+                    >
+                      <Feather name="star" size={10} color="#FFFFFF" />
+                      <Text style={homeStyles.premiumBadgeText}>FEATURED</Text>
+                    </LinearGradient>
+                  </View>
                 </View>
 
                 <View style={homeStyles.horizontalEventDetailsContainer}>
@@ -671,7 +707,10 @@ export default function HomeScreen({ navigation }) {
 
         <View style={homeStyles.featuredEventsSection}>
           <View style={homeStyles.featuredEventsHeader}>
-            <Text style={homeStyles.featuredEventsTitle}>Upcoming Events</Text>
+            <View style={homeStyles.trendingTitleContainer}>
+              <Feather name="calendar" size={20} color="#3B82F6" />
+              <Text style={homeStyles.featuredEventsTitle}>Upcoming Events</Text>
+            </View>
             <SafeTouchableOpacity onPress={() => navigation.navigate('Events')}>
               <Text style={homeStyles.seeAllLink}>See All</Text>
             </SafeTouchableOpacity>

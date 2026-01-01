@@ -6,12 +6,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { logger } from '../utils/logger';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../providers/AuthProvider';
+import apiService from '../services/api';
 import homeStyles from '../styles/homeStyles';
 
 export default function UpdateProfileScreen({ navigation }) {
-  const { user, organizerProfile, updateProfile } = useAuth();
-  const insets = useSafeAreaInsets();
+  const { user, organizerProfile, updateOrganizerProfile, deleteOrganizerAccount, signOut } = useAuth();
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -49,21 +51,71 @@ export default function UpdateProfileScreen({ navigation }) {
     }
   }, [organizerProfile, user]);
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account? This action cannot be undone and will:\n\n• Delete your profile information\n• Cancel all your upcoming events\n• Remove all your data from our system\n\nThis action is irreversible.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: confirmDeleteAccount,
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsLoading(true);
+    
+    try {
+      const result = await deleteOrganizerAccount();
+      
+      if (result.success) {
+        Alert.alert(
+          'Account Deleted',
+          'Your account has been successfully deleted. You will now be logged out.',
+          [
+            {
+              text: 'OK',
+              onPress: async () => {
+                // Sign out and navigate to welcome screen
+                await signOut();
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Welcome' }],
+                });
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', result.error || 'Failed to delete account');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred while deleting your account');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleUpdateProfile = async () => {
     if (!profileData.name.trim()) {
       Alert.alert('Validation Error', 'Name is required');
       return;
     }
 
-    if (!profileData.email.trim()) {
-      Alert.alert('Validation Error', 'Email is required');
-      return;
-    }
+    // Email is no longer required for validation (comes from Firebase)
+    // All other fields are optional
 
     setIsLoading(true);
 
     try {
-      const result = await updateProfile(profileData);
+      const result = await updateOrganizerProfile(profileData);
       
       if (result.success) {
         Alert.alert(
@@ -106,14 +158,36 @@ export default function UpdateProfileScreen({ navigation }) {
 
       if (!result.canceled && result.assets[0]) {
         const imageUri = result.assets[0].uri;
-        setProfileData(prev => ({
-          ...prev,
-          profileImage: imageUri
-        }));
+        
+        // Show loading state
+        setIsUploadingImage(true);
+        
+        try {
+          // Upload image to server
+          const uploadResult = await apiService.uploadImage(imageUri);
+          
+          if (uploadResult.success) {
+            // Use the returned URL from server
+            const imageUrl = uploadResult.url || uploadResult.data?.url;
+            setProfileData(prev => ({
+              ...prev,
+              profileImage: imageUrl
+            }));
+            Alert.alert('Success', 'Profile image uploaded successfully!');
+          } else {
+            Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload image');
+          }
+        } catch (uploadError) {
+          logger.error('Error uploading image:', uploadError);
+          Alert.alert('Upload Error', 'Failed to upload image to server');
+        } finally {
+          setIsUploadingImage(false);
+        }
       }
     } catch (error) {
       logger.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image');
+      setIsUploadingImage(false);
     }
   };
 
@@ -169,8 +243,16 @@ export default function UpdateProfileScreen({ navigation }) {
       >
         {/* Profile Picture Section */}
         <View style={styles.profileImageSection}>
-          <TouchableOpacity style={styles.profileImageContainer} onPress={handleImagePicker}>
-            {profileData.profileImage ? (
+          <TouchableOpacity 
+            style={styles.profileImageContainer} 
+            onPress={handleImagePicker}
+            disabled={isUploadingImage}
+          >
+            {isUploadingImage ? (
+              <View style={[styles.profileImage, styles.uploadingContainer]}>
+                <Text style={styles.uploadingText}>Uploading...</Text>
+              </View>
+            ) : profileData.profileImage ? (
               <Image source={{ uri: profileData.profileImage }} style={styles.profileImage} />
             ) : (
               <View style={styles.profileImagePlaceholder}>
@@ -178,7 +260,7 @@ export default function UpdateProfileScreen({ navigation }) {
               </View>
             )}
             <View style={styles.editImageBadge}>
-              <Text style={styles.editImageIcon}>📷</Text>
+              <Text style={styles.editImageIcon}>{isUploadingImage ? '⏳' : '📷'}</Text>
             </View>
           </TouchableOpacity>
           <Text style={styles.profileImageText}>Tap to change profile picture</Text>
@@ -311,16 +393,10 @@ export default function UpdateProfileScreen({ navigation }) {
             <Text style={styles.actionButtonArrow}>→</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonIcon}>🔔</Text>
-            <View style={styles.actionButtonContent}>
-              <Text style={styles.actionButtonTitle}>Notification Settings</Text>
-              <Text style={styles.actionButtonSubtitle}>Manage your notification preferences</Text>
-            </View>
-            <Text style={styles.actionButtonArrow}>→</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.actionButton, styles.dangerButton]}>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.dangerButton]}
+            onPress={handleDeleteAccount}
+          >
             <Text style={styles.actionButtonIcon}>🗑️</Text>
             <View style={styles.actionButtonContent}>
               <Text style={[styles.actionButtonTitle, styles.dangerText]}>Delete Account</Text>
@@ -443,6 +519,16 @@ const styles = StyleSheet.create({
   },
   profileImageText: {
     fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  uploadingContainer: {
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadingText: {
+    fontSize: 12,
     color: '#6b7280',
     fontWeight: '500',
   },
