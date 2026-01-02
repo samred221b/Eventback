@@ -619,6 +619,124 @@ const createEventStyles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 20, // Add horizontal padding to match inputContainer
   },
+  
+  // Template Selection Styles
+  templateButtonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  templateButton: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  templateButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  templateButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  templateHelperText: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    width: '92%',
+    maxHeight: '65%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  templateList: {
+    maxHeight: 350,
+    paddingHorizontal: 20,
+  },
+  templateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  templateContent: {
+    flex: 1,
+  },
+  templateName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  templateDescription: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  templateFeatures: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  templateFeatureText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
   // Remove old card-based styles since we're using full-width layout now
 });
 

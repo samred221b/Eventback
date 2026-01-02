@@ -24,6 +24,7 @@ import EventDetailsScreen from './screens/EventDetailsScreen';
 import OrganizerLoginScreen from './screens/OrganizerLoginScreen';
 import OrganizerDashboardScreen from './screens/OrganizerDashboard';
 import CreateEventScreen from './screens/CreateEventScreen';
+import AnalyticsScreen from './screens/AnalyticsScreen';
 import UpdateProfileScreen from './screens/UpdateProfileScreen';
 import VerificationScreen from './screens/VerificationScreen';
 import HelpSupportScreen from './screens/HelpSupportScreen';
@@ -52,7 +53,25 @@ Sentry.init({
   tracesSampleRate: 1.0,
 });
 
-Sentry.captureMessage('Hello, Sentry!');
+Sentry.addBreadcrumb({
+  message: 'App launched',
+  category: 'app',
+  level: 'info',
+  timestamp: new Date()
+});
+
+Sentry.setUser({
+  id: 'anonymous',
+  username: 'eventopia_user',
+  ip_address: '{{auto}}'
+});
+
+Sentry.captureMessage('User session started', {
+  tags: {
+    section: 'user_tracking',
+    action: 'session_start'
+  }
+});
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -62,8 +81,9 @@ function OrganizerStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="OrganizerLogin" component={OrganizerLoginScreen} />
-      <Stack.Screen name="Pricing" component={PricingScreen} />
       <Stack.Screen name="OrganizerDashboard" component={OrganizerDashboardScreen} />
+      <Stack.Screen name="Analytics" component={AnalyticsScreen} />
+      <Stack.Screen name="Pricing" component={PricingScreen} />
       <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
       <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} />
       <Stack.Screen name="Verification" component={VerificationScreen} />
@@ -203,7 +223,6 @@ function App() {
         // Preload critical assets
         await Asset.loadAsync([
           require('./assets/Logo.png'),
-          require('./assets/vip.png'),
         ]);
       } catch (e) {
         console.warn('App prepare error:', e);

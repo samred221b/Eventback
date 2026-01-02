@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  Alert,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
@@ -13,25 +12,27 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../providers/AuthProvider';
 import apiService from '../services/api';
 import { adminAnalyticsStyles } from '../styles/adminStyles';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
+import { APP_ERROR_SEVERITY, toAppError } from '../utils/appError';
 
 const AdminAnalyticsScreen = ({ navigation }) => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await apiService.get('/admin/analytics', { requireAuth: true });
       
       if (response.success) {
         setAnalytics(response.data);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch analytics');
-      if (__DEV__) {
-        console.error('Admin fetch analytics error:', error);
-      }
+      setError(toAppError(error, { fallbackMessage: 'Failed to fetch analytics' }));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -119,13 +120,21 @@ const AdminAnalyticsScreen = ({ navigation }) => {
     fetchAnalytics();
   }, []);
 
-  if (loading && !analytics) {
+  if (loading) {
     return (
       <SafeAreaView style={adminAnalyticsStyles.container}>
         <View style={adminAnalyticsStyles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0277BD" />
+          <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={adminAnalyticsStyles.loadingText}>Loading analytics...</Text>
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && error.severity === APP_ERROR_SEVERITY.ERROR) {
+    return (
+      <SafeAreaView style={adminAnalyticsStyles.container}>
+        <AppErrorState error={error} onRetry={fetchAnalytics} />
       </SafeAreaView>
     );
   }
@@ -155,11 +164,12 @@ const AdminAnalyticsScreen = ({ navigation }) => {
       </View>
 
       <ScrollView
-        style={adminAnalyticsStyles.container}
+        style={adminAnalyticsStyles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
+        <AppErrorBanner error={error} onRetry={fetchAnalytics} disabled={loading || refreshing} />
         {/* Overview Section */}
         <View style={adminAnalyticsStyles.analyticsSection}>
           <Text style={adminAnalyticsStyles.sectionTitle}>Platform Overview</Text>

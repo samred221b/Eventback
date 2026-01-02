@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -8,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
-  Alert,
   ActivityIndicator,
   Image,
   FlatList,
@@ -20,18 +18,22 @@ import { useFavorites } from '../providers/FavoritesProvider';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import apiService from '../services/api';
+import cacheService, { TTL } from '../utils/cacheService';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
 import EnhancedSearch from '../components/EnhancedSearch';
 import homeStyles from '../styles/homeStyles';
 import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
 import { logger } from '../utils/logger';
 import { standardizeEventForDetails } from '../utils/dataProcessor';
+import { APP_ERROR_SEVERITY, toAppError, createOfflineCachedNotice } from '../utils/appError';
 
-const EVENTS_CACHE_KEY = '@eventopia_events';
-
+const EVENTS_CACHE_KEY = 'events:all';
+const EVENTS_FIRST_PAGE_CACHE_KEY = 'events:firstPage';
 
 const cacheEvents = async (events) => {
   try {
-    await AsyncStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(events));
+    await cacheService.set(EVENTS_CACHE_KEY, events, { ttlMs: TTL.ONE_HOUR });
   } catch (e) {
     // Silent fail
   }
@@ -39,9 +41,8 @@ const cacheEvents = async (events) => {
 
 const loadEventsFromCache = async () => {
   try {
-    const cached = await AsyncStorage.getItem(EVENTS_CACHE_KEY);
-    const parsedEvents = cached ? JSON.parse(cached) : [];
-    return parsedEvents;
+    const { data } = await cacheService.get(EVENTS_CACHE_KEY);
+    return Array.isArray(data) ? data : [];
   } catch (e) {
     return [];
   }
@@ -49,11 +50,7 @@ const loadEventsFromCache = async () => {
 
 const cacheFirstPageEvents = async (events) => {
   try {
-    const cacheData = {
-      timestamp: new Date().toISOString(),
-      events: events.slice(0, 20), // Cache only the first 20 events
-    };
-    await AsyncStorage.setItem('@events_cache', JSON.stringify(cacheData));
+    await cacheService.set(EVENTS_FIRST_PAGE_CACHE_KEY, events.slice(0, 20), { ttlMs: TTL.ONE_HOUR });
   } catch (e) {
     // Silent fail
   }
@@ -61,11 +58,8 @@ const cacheFirstPageEvents = async (events) => {
 
 const loadCachedFirstPageEvents = async () => {
   try {
-    const cached = await AsyncStorage.getItem('@events_cache');
-    if (cached) {
-      const { events } = JSON.parse(cached);
-      return events;
-    }
+    const { data } = await cacheService.get(EVENTS_FIRST_PAGE_CACHE_KEY);
+    return Array.isArray(data) ? data : [];
   } catch (e) {
     // Silent fail
   }
@@ -79,7 +73,7 @@ const renderEmptyComponent = () => (
   </View>
 );
 
-const EventsScreen = ({ navigation }) => {
+const EventsScreen = ({ navigation, route }) => {
   const { backendConnected } = useAuth();
   const [events, setEvents] = useState([]);
   const [allEvents, setAllEvents] = useState([]); // Store all events for overall stats
@@ -130,6 +124,25 @@ const EventsScreen = ({ navigation }) => {
 
   const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
 
+  const appliedInitialParamsRef = useRef(false);
+
+  useEffect(() => {
+    if (appliedInitialParamsRef.current) return;
+    const initialEventType = route?.params?.initialEventType;
+    const initialSortBy = route?.params?.initialSortBy;
+
+    if (typeof initialEventType === 'string') {
+      setSelectedEventType(initialEventType);
+    }
+    if (typeof initialSortBy === 'string') {
+      setSortBy(initialSortBy);
+    }
+
+    if (initialEventType || initialSortBy) {
+      appliedInitialParamsRef.current = true;
+    }
+  }, [route?.params?.initialEventType, route?.params?.initialSortBy]);
+
   useEffect(() => {
     // Debounce search - only search after user stops typing for 500ms
     if (searchQuery.trim().length === 0) {
@@ -154,6 +167,11 @@ const EventsScreen = ({ navigation }) => {
     // Initial load
     loadEvents();
   }, []);
+
+  useEffect(() => {
+    // Keep list sorted whenever sort changes
+    applySorting(sortBy);
+  }, [sortBy]);
 
   useEffect(() => {
     // Reload when event type changes (not category)
@@ -197,9 +215,9 @@ const EventsScreen = ({ navigation }) => {
     if (!netInfo.isConnected) {
       fetchedEvents = await loadEventsFromCache();
       if (fetchedEvents.length > 0) {
-        setError('Offline: Showing cached events');
+        setError(createOfflineCachedNotice());
       } else {
-        setError('Failed to load events. Please check your connection.');
+        setError(toAppError(new Error('Failed to load events. Please check your connection.')));
       }
       setEvents(fetchedEvents);
       isLoadingRef.current = false;
@@ -224,8 +242,7 @@ const EventsScreen = ({ navigation }) => {
       const isTimeout = error?.name === 'AbortError' || messageLower.includes('timeout');
       if (isTimeout) {
         timeoutOccurred = true;
-        setError('Request Timeout: The server is taking too long to respond. Please check your internet connection or try again later.');
-        Alert.alert('Request Timeout', 'The server is taking too long to respond. Please check your internet connection or try again later.');
+        setError(toAppError(error));
       } else {
         backendFailed = true;
         logger.error('EventsScreen loadEvents error:', error);
@@ -235,9 +252,9 @@ const EventsScreen = ({ navigation }) => {
     if (backendFailed && !timeoutOccurred) {
       fetchedEvents = await loadEventsFromCache();
       if (fetchedEvents.length > 0) {
-        setError('Offline: Showing cached events');
+        setError(createOfflineCachedNotice());
       } else {
-        setError('Failed to load events. Please check your connection.');
+        setError(toAppError(new Error('Failed to load events. Please check your connection.')));
       }
       setEvents(fetchedEvents);
     }
@@ -409,17 +426,17 @@ const EventsScreen = ({ navigation }) => {
     return `${price} ${currency}`;
   };
 
-  const getDaysLeft = (dateString) => {
-    const eventDate = new Date(dateString);
-    const today = new Date();
-    const diffTime = eventDate - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return 'Past Event';
-    if (diffDays === 0) return 'Live Now';
-    if (diffDays === 1) return '1 Day Left';
-    return `${diffDays} Days Left`;
-  };
+  // const getDaysLeft = (dateString) => {
+  //   const eventDate = new Date(dateString);
+  //   const today = new Date();
+  //   const diffTime = eventDate - today;
+  //   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  //   
+  //   if (diffDays < 0) return 'Past Event';
+  //   if (diffDays === 0) return 'Live Now';
+  //   if (diffDays === 1) return '1 Day Left';
+  //   return `${diffDays} Days Left`;
+  // };
 
   const isFavorite = (eventId) => {
     return favorites.some(fav => fav.id === eventId || fav._id === eventId);
@@ -458,14 +475,14 @@ const EventsScreen = ({ navigation }) => {
           </View>
         )}
         {/* Top Right Days Left Badge */}
-        <View style={styles.eventOverlay}>
+        {/* <View style={styles.eventOverlay}>
           <View style={[
             styles.eventStatusBadge,
             getDaysLeft(event.date) === 'Live Now' && styles.liveNowBadge
           ]}>
             <Text style={styles.eventStatusText}>{getDaysLeft(event.date)}</Text>
           </View>
-        </View>
+        </View> */}
       </TouchableOpacity>
 
       {/* Text Section */}
@@ -725,21 +742,14 @@ const EventsScreen = ({ navigation }) => {
 
         {/* Events Content */}
         <View style={styles.eventsContent}>
-          {/* Offline banner */}
-          {error === 'Offline: Showing cached events' && (
-            <View style={styles.offlineBanner}>
-              <Text style={styles.offlineText}>{error}</Text>
-            </View>
-          )}
+          <AppErrorBanner
+            error={error}
+            onRetry={() => loadEvents()}
+            disabled={isLoadingRef.current}
+          />
 
-          {/* Fatal error */}
-          {error && error !== 'Offline: Showing cached events' ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>⚠️ {error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={() => loadEvents()}>
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
+          {error && error.severity === APP_ERROR_SEVERITY.ERROR ? (
+            <AppErrorState error={error} onRetry={() => loadEvents()} />
           ) : (
             <FlatList
               data={events}
@@ -842,16 +852,16 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   // Events Content
-  offlineBanner: {
-    backgroundColor: '#FEF3C7',
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  offlineText: {
-    color: '#92400E',
-    fontSize: 13,
-    fontWeight: '600',
-  },
+  // offlineBanner: {
+  //   backgroundColor: '#FEF3C7',
+  //   paddingVertical: 6,
+  //   alignItems: 'center',
+  // },
+  // offlineText: {
+  //   color: '#92400E',
+  //   fontSize: 13,
+  //   fontWeight: '600',
+  // },
   eventsContent: {
     flex: 1,
     backgroundColor: 'transparent',
@@ -923,21 +933,21 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     letterSpacing: 0.5,
   },
-  eventStatusBadge: {
-    backgroundColor: 'rgba(2, 119, 189, 0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderTopRightRadius: 20, // Match parent card's radius
-    borderBottomLeftRadius: 12,
-  },
-  liveNowBadge: {
-    backgroundColor: 'rgba(220, 38, 38, 0.9)',
-  },
-  eventStatusText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
-  },
+  // eventStatusBadge: {
+  //   backgroundColor: 'rgba(2, 119, 189, 0.9)',
+  //   paddingHorizontal: 8,
+  //   paddingVertical: 4,
+  //   borderTopRightRadius: 20, // Match parent card's radius
+  //   borderBottomLeftRadius: 12,
+  // },
+  // liveNowBadge: {
+  //   backgroundColor: 'rgba(220, 38, 38, 0.9)',
+  // },
+  // eventStatusText: {
+  //   color: '#FFFFFF',
+  //   fontSize: 10,
+  //   fontWeight: '700',
+  // },
   eventContent: {
     padding: 12,
     flex: 1,
@@ -1005,27 +1015,27 @@ const styles = StyleSheet.create({
     borderColor: '#0277BD',
     backgroundColor: '#E3F2FD',
   },
-  errorContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#dc2626',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  retryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  // errorContainer: {
+  //   padding: 40,
+  //   alignItems: 'center',
+  // },
+  // errorText: {
+  //   fontSize: 16,
+  //   color: '#dc2626',
+  //   textAlign: 'center',
+  //   marginBottom: 16,
+  // },
+  // retryButton: {
+  //   backgroundColor: '#3b82f6',
+  //   paddingHorizontal: 20,
+  //   paddingVertical: 10,
+  //   borderRadius: 6,
+  // },
+  // retryButtonText: {
+  //   color: '#ffffff',
+  //   fontSize: 14,
+  //   fontWeight: '600',
+  // },
   emptyContainer: {
     padding: 40,
     alignItems: 'center',

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  Alert,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
@@ -13,11 +12,15 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../providers/AuthProvider';
 import apiService from '../services/api';
 import { adminOrganizersStyles } from '../styles/adminStyles';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
+import { APP_ERROR_SEVERITY, toAppError } from '../utils/appError';
 
 const AdminOrganizersScreen = ({ navigation }) => {
   const [organizers, setOrganizers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     status: 'all',
     verified: '',
@@ -35,6 +38,7 @@ const AdminOrganizersScreen = ({ navigation }) => {
         setLoading(true);
         setOrganizers([]);
       }
+      if (page === 1) setError(null);
 
       const params = {
         page,
@@ -60,10 +64,7 @@ const AdminOrganizersScreen = ({ navigation }) => {
         setPagination(response.pagination);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch organizers');
-      if (__DEV__) {
-        console.error('Admin fetch organizers error:', error);
-      }
+      setError(toAppError(error, { fallbackMessage: 'Failed to fetch organizers' }));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -90,13 +91,9 @@ const AdminOrganizersScreen = ({ navigation }) => {
             ? { ...organizer, isVerified: response.data.isVerified }
             : organizer
         ));
-        Alert.alert('Success', `Organizer ${response.data.isVerified ? 'verified' : 'unverified'} successfully`);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update organizer');
-      if (__DEV__) {
-        console.error('Admin verify organizer error:', error);
-      }
+      setError(toAppError(error, { fallbackMessage: 'Failed to update organizer' }));
     }
   };
 
@@ -109,27 +106,20 @@ const AdminOrganizersScreen = ({ navigation }) => {
             ? { ...organizer, isActive: response.data.isActive }
             : organizer
         ));
-        Alert.alert('Success', `Organizer ${isActive ? 'activated' : 'deactivated'} successfully`);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update organizer status');
-      if (__DEV__) {
-        console.error('Admin update organizer status error:', error);
-      }
+      setError(toAppError(error, { fallbackMessage: 'Failed to update organizer status' }));
     }
   };
 
   const handleViewDetails = async (organizerId) => {
     try {
-      const response = await apiService.get(`/organizers/${organizerId}/admin-details`, { requireAuth: true });
+      const response = await apiService.get(`/admin/organizers/${organizerId}`, { requireAuth: true });
       if (response.success) {
         navigation.navigate('AdminOrganizerDetails', { organizer: response.data });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch organizer details');
-      if (__DEV__) {
-        console.error('Admin organizer details error:', error);
-      }
+      setError(toAppError(error, { fallbackMessage: 'Failed to fetch organizer details' }));
     }
   };
 
@@ -237,6 +227,14 @@ const AdminOrganizersScreen = ({ navigation }) => {
     );
   }
 
+  if (error && error.severity === APP_ERROR_SEVERITY.ERROR && organizers.length === 0) {
+    return (
+      <SafeAreaView style={adminOrganizersStyles.container}>
+        <AppErrorState error={error} onRetry={() => fetchOrganizers(1, true)} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={adminOrganizersStyles.container}>
       <View style={adminOrganizersStyles.header}>
@@ -296,6 +294,7 @@ const AdminOrganizersScreen = ({ navigation }) => {
         }}
         scrollEventThrottle={400}
       >
+        <AppErrorBanner error={error} onRetry={() => fetchOrganizers(1, true)} disabled={loading || refreshing} />
         {organizers.length === 0 ? (
           <View style={adminOrganizersStyles.emptyContainer}>
             <Feather name="users" size={48} color="#9CA3AF" />

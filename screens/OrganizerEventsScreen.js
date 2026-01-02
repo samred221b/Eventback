@@ -13,39 +13,29 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import apiService from '../services/api';
 import { logger } from '../utils/logger';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import cacheService from '../utils/cacheService';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
+import { APP_ERROR_SEVERITY, toAppError, createOfflineCachedNotice } from '../utils/appError';
 
-const ORGANIZER_EVENTS_CACHE_KEY = (organizerId) => `organizer_all_events_${organizerId}`;
-const CACHE_EXPIRY_TIME = 5 * 60 * 1000; // 5 minutes
+const ORGANIZER_EVENTS_CACHE_KEY = (organizerId) => `organizer:events:${organizerId}`;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 const cacheEventsData = async (organizerId, eventsData) => {
   try {
-    const cacheData = {
-      events: eventsData,
-      timestamp: Date.now()
-    };
-    await AsyncStorage.setItem(ORGANIZER_EVENTS_CACHE_KEY(organizerId), JSON.stringify(cacheData));
-  } catch (error) {
-    logger.warn('Failed to cache organizer events:', error);
+    await cacheService.set(ORGANIZER_EVENTS_CACHE_KEY(organizerId), eventsData, { ttlMs: CACHE_TTL_MS });
+  } catch (e) {
+    logger.warn('Failed to cache organizer events:', e);
   }
 };
 
 const getCachedEventsData = async (organizerId) => {
   try {
-    const cachedData = await AsyncStorage.getItem(ORGANIZER_EVENTS_CACHE_KEY(organizerId));
-    if (!cachedData) return null;
-    
-    const { events, timestamp } = JSON.parse(cachedData);
-    
-    // Check if cache is expired
-    if (Date.now() - timestamp > CACHE_EXPIRY_TIME) {
-      await AsyncStorage.removeItem(ORGANIZER_EVENTS_CACHE_KEY(organizerId));
-      return null;
-    }
-    
-    return events;
-  } catch (error) {
-    logger.warn('Failed to get cached events data:', error);
+    const { data, isExpired } = await cacheService.get(ORGANIZER_EVENTS_CACHE_KEY(organizerId));
+    if (!Array.isArray(data)) return null;
+    return { events: data, isExpired };
+  } catch (e) {
+    logger.warn('Failed to get cached organizer events:', e);
     return null;
   }
 };
@@ -72,11 +62,11 @@ function OrganizerEventsScreen({ route, navigation }) {
 
       // Try to get cached data first (unless force refresh)
       if (!forceRefresh) {
-        const cachedEvents = await getCachedEventsData(organizerId);
-        if (cachedEvents) {
-          console.log('Using cached events data');
-          setEvents(cachedEvents);
+        const cached = await getCachedEventsData(organizerId);
+        if (cached?.events?.length) {
+          setEvents(cached.events);
           setIsFromCache(true);
+          setError(createOfflineCachedNotice('Showing cached organizer events'));
           if (!refreshing) {
             setLoading(false);
           }
@@ -84,23 +74,17 @@ function OrganizerEventsScreen({ route, navigation }) {
         }
       }
 
-      // Reset cache indicator when fetching fresh data
       setIsFromCache(false);
 
-      // Fetch all events for this organizer
-      const response = await apiService.get(`/events?organizerId=${organizerId}&limit=100`);
+      const response = await apiService.get(`/events?organizerId=${organizerId}`);
       const eventsData = response.data.success ? response.data.data : response.data;
-      
       setEvents(eventsData);
-      
-      // Cache the events data
+
       await cacheEventsData(organizerId, eventsData);
-      console.log('Events data cached successfully');
 
     } catch (err) {
-      console.error('Error fetching organizer events:', err);
       logger.error('Error fetching organizer events:', err);
-      setError('Failed to load events');
+      setError(toAppError(err, { fallbackMessage: 'Failed to load events' }));
     } finally {
       if (!refreshing) {
         setLoading(false);
@@ -300,7 +284,7 @@ function OrganizerEventsScreen({ route, navigation }) {
     );
   }
 
-  if (error) {
+  if (error && error.severity === APP_ERROR_SEVERITY.ERROR) {
     return (
       <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
         <LinearGradient
@@ -351,25 +335,7 @@ function OrganizerEventsScreen({ route, navigation }) {
             }} />
           </View>
         </LinearGradient>
-        
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Feather name="alert-circle" size={64} color="#9CA3AF" />
-          <Text style={{ marginTop: 16, fontSize: 18, fontWeight: '600', color: '#374151' }}>
-            {error}
-          </Text>
-          <TouchableOpacity 
-            style={{
-              marginTop: 16,
-              paddingHorizontal: 20,
-              paddingVertical: 10,
-              backgroundColor: '#0277BD',
-              borderRadius: 8
-            }}
-            onPress={() => fetchEvents(true)}
-          >
-            <Text style={{ color: '#FFFFFF', fontWeight: '500' }}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+        <AppErrorState error={error} onRetry={() => fetchEvents(true)} />
       </View>
     );
   }
@@ -424,6 +390,12 @@ function OrganizerEventsScreen({ route, navigation }) {
           }} />
         </View>
       </LinearGradient>
+
+      <AppErrorBanner
+        error={error}
+        onRetry={() => fetchEvents(true)}
+        disabled={loading || refreshing}
+      />
 
       <FlatList
         data={events}
@@ -484,7 +456,7 @@ function OrganizerEventsScreen({ route, navigation }) {
                 color: '#FFFFFF',
                 fontWeight: '500'
               }}>
-                Cached data from {new Date(Date.now() - CACHE_EXPIRY_TIME).toLocaleTimeString()}
+                Cached data from {new Date(Date.now() - CACHE_TTL_MS).toLocaleTimeString()}
               </Text>
             </View>
           )

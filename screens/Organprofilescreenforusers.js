@@ -80,7 +80,7 @@ function Organprofilescreenforusers({ route, navigation }) {
     if (organizerId) {
       fetchOrganizerProfile();
     } else {
-      setError('No organizer ID provided');
+      setError('Organizer ID not provided');
       setLoading(false);
     }
   }, [organizerId]);
@@ -94,23 +94,17 @@ function Organprofilescreenforusers({ route, navigation }) {
 
   const fetchOrganizerProfile = async (forceRefresh = false) => {
     try {
-      // Only show loading spinner for initial load, not for refresh
       if (!refreshing) {
         setLoading(true);
       }
       setError(null);
 
-      console.log('Fetching organizer profile for ID:', organizerId);
-      console.log('Force refresh:', forceRefresh);
-      
-      // Try to get cached data first (unless force refresh)
       if (!forceRefresh) {
         const cachedData = await getCachedOrganizerData(organizerId);
         if (cachedData) {
-          console.log('Using cached organizer data');
           setOrganizer(cachedData.organizer);
           setEvents(cachedData.events);
-          setIsFromCache(true); // Set cache indicator
+          setIsFromCache(true);
           if (!refreshing) {
             setLoading(false);
           }
@@ -118,64 +112,32 @@ function Organprofilescreenforusers({ route, navigation }) {
         }
       }
 
-      // Reset cache indicator when fetching fresh data
       setIsFromCache(false);
 
-      // Fetch organizer details from API
       const organizerResponse = await apiService.get(`/organizers/${organizerId}`);
-      console.log('Organizer API response:', organizerResponse);
-      console.log('Response status:', organizerResponse.status);
-      console.log('Response data:', organizerResponse.data);
-      console.log('Response data.success:', organizerResponse.data?.success);
-      console.log('Response data.data:', organizerResponse.data?.data);
-      
-      // The API returns the organizer data in response.data.data with success flag
       const organizerData = organizerResponse.data.success ? organizerResponse.data.data : organizerResponse.data;
       
-      console.log('Final organizer data:', organizerData);
-
       if (!organizerData) {
-        console.log('Organizer not found in response');
         setError('Organizer not found');
         return;
       }
-
-      console.log('Organizer data found:', organizerData);
-      console.log('Organizer phone:', organizerData.phone);
-      console.log('Organizer email:', organizerData.email);
-      
-      // Debug contact info in render
-      console.log('=== CONTACT INFO DEBUG ===');
-      console.log('Organizer object:', organizerData);
-      console.log('Email exists:', !!organizerData?.email);
-      console.log('Phone exists:', !!organizerData?.phone);
-      console.log('Email value:', organizerData?.email);
-      console.log('Phone value:', organizerData?.phone);
-      console.log('========================');
       
       setOrganizer(organizerData);
 
-      // Fetch organizer's events
       let eventsData = [];
       try {
         const eventsResponse = await apiService.get(`/events?organizerId=${organizerId}&limit=10`);
         eventsData = eventsResponse.data.success ? eventsResponse.data.data : eventsResponse.data;
         setEvents(eventsData);
       } catch (eventsError) {
-        console.log('Failed to fetch events:', eventsError);
-        // Continue without events - not critical
+        logger.warn('Failed to fetch events:', eventsError);
       }
 
-      // Cache the data
       await cacheOrganizerData(organizerId, organizerData, eventsData);
-      console.log('Organizer data cached successfully');
 
     } catch (err) {
-      console.error('Error fetching organizer profile:', err);
-      console.error('Error details:', err.response?.data);
       logger.error('Error fetching organizer profile:', err);
       
-      // Provide more specific error messages
       if (err.response?.status === 404) {
         setError('Organizer not found');
       } else if (err.response?.status === 400) {
@@ -688,18 +650,6 @@ function Organprofilescreenforusers({ route, navigation }) {
           }}>
             Contact Information
           </Text>
-          
-          {/* Debug: Log contact info in render */}
-          {(() => {
-            console.log('=== RENDER CONTACT INFO ===');
-            console.log('Organizer in render:', organizer);
-            console.log('Email in render:', organizer?.email);
-            console.log('Phone in render:', organizer?.phone);
-            console.log('Email type:', typeof organizer?.email);
-            console.log('Phone type:', typeof organizer?.phone);
-            console.log('========================');
-            return null;
-          })()}
           
           {/* Email */}
           <View style={{ 

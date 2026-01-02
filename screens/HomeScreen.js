@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
-  Alert,
   Text,
+  Modal,
   ScrollView,
   TouchableOpacity,
   Image,
@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,21 +20,22 @@ import { Feather } from '@expo/vector-icons';
 import { useFavorites } from '../providers/FavoritesProvider';
 import { SafeScrollView, SafeTouchableOpacity } from '../components/SafeComponents';
 import EnhancedSearch from '../components/EnhancedSearch';
-import ConnectionErrorBanner from '../components/ConnectionErrorBanner';
+import AppErrorBanner from '../components/AppErrorBanner';
 
 import homeStyles from '../styles/homeStyles';
 import { makeEventSerializable, formatPrice, standardizeEventForDetails } from '../utils/dataProcessor';
 import apiService from '../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import cacheService, { TTL } from '../utils/cacheService';
 import NetInfo from '@react-native-community/netinfo';
 import { logger } from '../utils/logger';
+import { toAppError, createOfflineCachedNotice } from '../utils/appError';
 
-
-const HOME_EVENTS_CACHE_KEY = '@eventopia_home_events';
+const HOME_EVENTS_CACHE_KEY = 'home:events';
+const HOME_BANNERS_CACHE_KEY = 'home:banners';
 
 const cacheHomeEvents = async (events) => {
   try {
-    await AsyncStorage.setItem(HOME_EVENTS_CACHE_KEY, JSON.stringify(events));
+    await cacheService.set(HOME_EVENTS_CACHE_KEY, events, { ttlMs: TTL.ONE_DAY });
   } catch (e) {
     logger.error('Failed to cache home events:', e);
   }
@@ -41,19 +43,17 @@ const cacheHomeEvents = async (events) => {
 
 const loadHomeEventsFromCache = async () => {
   try {
-    const cached = await AsyncStorage.getItem(HOME_EVENTS_CACHE_KEY);
-    return cached ? JSON.parse(cached) : [];
+    const { data } = await cacheService.get(HOME_EVENTS_CACHE_KEY);
+    return Array.isArray(data) ? data : [];
   } catch (e) {
     logger.error('Failed to load cached home events:', e);
     return [];
   }
 };
 
-const HOME_BANNERS_CACHE_KEY = '@eventopia_home_banners';
-
 const cacheHomeBanners = async (banners) => {
   try {
-    await AsyncStorage.setItem(HOME_BANNERS_CACHE_KEY, JSON.stringify(banners));
+    await cacheService.set(HOME_BANNERS_CACHE_KEY, banners, { ttlMs: TTL.ONE_DAY });
   } catch (e) {
     logger.error('Failed to cache home banners:', e);
   }
@@ -61,8 +61,8 @@ const cacheHomeBanners = async (banners) => {
 
 const loadHomeBannersFromCache = async () => {
   try {
-    const cached = await AsyncStorage.getItem(HOME_BANNERS_CACHE_KEY);
-    return cached ? JSON.parse(cached) : [];
+    const { data } = await cacheService.get(HOME_BANNERS_CACHE_KEY);
+    return Array.isArray(data) ? data : [];
   } catch (e) {
     logger.error('Failed to load cached home banners:', e);
     return [];
@@ -79,17 +79,27 @@ export default function HomeScreen({ navigation }) {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [showRecentEventsModal, setShowRecentEventsModal] = useState(false);
+  const [recentEventsAnchor, setRecentEventsAnchor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isLoadingRef = useRef(false);
   const lastRefreshTime = useRef(Date.now());
-  const [backendError, setBackendError] = useState({
-    message: '',
-    details: '',
-    type: 'error', // 'error', 'warning', 'info'
-    showRefresh: true
-  });
+  const loadingBellAnchorRef = useRef(null);
+  const bellAnchorRef = useRef(null);
+
+  const [error, setError] = useState(null);
+
+  const backgroundImageStyle = {
+    position: 'absolute',
+    top: -10,
+    left: 10,
+    right: 0,
+    bottom: 0,
+    width: 800,
+    height: '100%',
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -110,6 +120,26 @@ export default function HomeScreen({ navigation }) {
     loadEventsFromBackend({ background: true });
   }, []);
 
+  const handleBellPress = () => {
+    const anchorRef = hasInitialLoad ? bellAnchorRef : loadingBellAnchorRef;
+    const anchorNode = anchorRef?.current;
+
+    if (anchorNode && typeof anchorNode.measureInWindow === 'function') {
+      anchorNode.measureInWindow((x, y, width, height) => {
+        setRecentEventsAnchor({ x, y, width, height });
+        setShowRecentEventsModal(true);
+      });
+      return;
+    }
+
+    setRecentEventsAnchor(null);
+    setShowRecentEventsModal(true);
+  };
+
+  const handleCloseRecentEventsModal = () => {
+    setShowRecentEventsModal(false);
+  };
+
   const loadEventsFromBackend = async ({ isRefresh = false, background = false } = {}) => {
     try {
       isLoadingRef.current = true;
@@ -120,7 +150,7 @@ export default function HomeScreen({ navigation }) {
 
       // Only clear errors for user-initiated actions
       if (!background) {
-        setBackendError(null);
+        setError(null);
       }
 
       // Prefill from cache for instant UI
@@ -128,13 +158,13 @@ export default function HomeScreen({ navigation }) {
       if (cachedEventsPrefill.length > 0) {
         setProcessedEvents(cachedEventsPrefill);
         setFeaturedEvents(cachedEventsPrefill.filter(e => e.featured).slice(0, 6));
-        
+
         const nowPrefill = new Date();
         const upcomingPrefill = cachedEventsPrefill
           .filter(event => new Date(event.date) >= nowPrefill)
           .sort((a, b) => new Date(a.date) - new Date(b.date));
         setUpcomingEvents(upcomingPrefill.slice(0, 3));
-        
+
         // Set trending events to ALL upcoming events
         setTrendingEvents(upcomingPrefill);
       }
@@ -143,12 +173,11 @@ export default function HomeScreen({ navigation }) {
       const netInfo = await NetInfo.fetch();
       if (!netInfo.isConnected) {
         if (!background) {
-          setBackendError({
-            message: 'You appear to be offline',
-            details: 'Showing cached events if available',
-            type: 'error',
-            showRefresh: true
-          });
+          if (cachedEventsPrefill.length > 0) {
+            setError(createOfflineCachedNotice('Showing cached events if available'));
+          } else {
+            setError(toAppError(new Error('You appear to be offline')));
+          }
         }
         return;
       }
@@ -194,56 +223,25 @@ export default function HomeScreen({ navigation }) {
 
           setProcessedEvents(transformedEvents);
           setFeaturedEvents(transformedEvents.filter(e => e.featured).slice(0, 6));
-          
+
           const now = new Date();
           const upcoming = transformedEvents
             .filter(event => new Date(event.date) >= now)
             .sort((a, b) => new Date(a.date) - new Date(b.date));
           setUpcomingEvents(upcoming.slice(0, 3));
-          
+
           // Set trending events to ALL upcoming events
           setTrendingEvents(upcoming);
 
           await cacheHomeEvents(transformedEvents);
-          setBackendError(null); 
+          setError(null);
         }
       } catch (apiError) {
         logger.error('API Error:', apiError);
-        
-        // Format a user-friendly error message
-        let errorMessage = 'Failed to load events';
-        let errorDetails = 'Please try again later';
-        let errorType = 'error';
-        
-        const messageLower = String(apiError?.message || '').toLowerCase();
-        const isTimeout = apiError?.name === 'AbortError' || messageLower.includes('timeout');
-        if (isTimeout) {
-          errorMessage = 'Request Timeout';
-          errorDetails = 'The server is taking too long to respond. Please check your internet connection or try again later.';
-          // Show a user-friendly alert
-          Alert.alert('Request Timeout', 'The server is taking too long to respond. Please check your internet connection or try again later.');
-        } else if (apiError.message.includes('Network request failed')) {
-          errorMessage = 'Network Error';
-          errorDetails = 'Unable to connect to the server';
-        }
-        
-        setBackendError({
-          message: errorMessage,
-          details: errorDetails,
-          type: errorType,
-          showRefresh: true
-        });
-        
-        // Only show error if this isn't a background refresh and we have a network-related error
-        if (!background && (errorType === 'error' || errorMessage.includes('Network'))) {
-          setBackendError({
-            message: errorMessage,
-            details: errorDetails,
-            type: 'error',
-            showRefresh: true
-          });
-          
-          // If we don't have any cached data, clear the UI
+
+        if (!background) {
+          setError(toAppError(apiError, { fallbackMessage: 'Failed to load events' }));
+
           if (cachedEventsPrefill.length === 0) {
             setProcessedEvents([]);
             setFeaturedEvents([]);
@@ -253,12 +251,9 @@ export default function HomeScreen({ navigation }) {
       }
     } catch (error) {
       logger.error('Unexpected error in loadEventsFromBackend:', error);
-      setBackendError({
-        message: 'An unexpected error occurred',
-        details: 'Please try again later',
-        type: 'error',
-        showRefresh: true
-      });
+      if (!background) {
+        setError(toAppError(error, { fallbackMessage: 'An unexpected error occurred' }));
+      }
     } finally {
       isLoadingRef.current = false;
       setIsLoading(false);
@@ -309,6 +304,35 @@ export default function HomeScreen({ navigation }) {
       )
     : processedEvents;
 
+  const recentEventsForModal = [...processedEvents]
+    .filter(e => e?.date)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 10);
+
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const popoverWidth = Math.min(280, Math.max(240, screenWidth - 40));
+  const popoverMaxHeight = Math.min(380, Math.max(240, screenHeight * 0.48));
+  const popoverMargin = 12;
+
+  const popoverLeft = (() => {
+    if (!recentEventsAnchor) return (screenWidth - popoverWidth) / 2;
+    const preferredLeft = recentEventsAnchor.x + recentEventsAnchor.width - popoverWidth;
+    return Math.max(popoverMargin, Math.min(preferredLeft, screenWidth - popoverWidth - popoverMargin));
+  })();
+
+  const popoverTop = (() => {
+    if (!recentEventsAnchor) return 110;
+    const preferredTop = recentEventsAnchor.y + recentEventsAnchor.height + 10;
+    return Math.max(popoverMargin, Math.min(preferredTop, screenHeight - popoverMaxHeight - popoverMargin));
+  })();
+
+  const arrowLeft = (() => {
+    if (!recentEventsAnchor) return popoverWidth - 40;
+    const bellCenterX = recentEventsAnchor.x + recentEventsAnchor.width / 2;
+    const raw = bellCenterX - popoverLeft - 7;
+    return Math.max(18, Math.min(raw, popoverWidth - 32));
+  })();
+
   if (isLoading && !isRefreshing && hasInitialLoad) {
     return (
       <View style={{ flex: 1, backgroundColor: 'transparent' }}>
@@ -338,6 +362,18 @@ export default function HomeScreen({ navigation }) {
                 >
                   <Feather name="search" size={20} color="rgba(255, 255, 255, 1)" />
                 </SafeTouchableOpacity>
+                <View ref={loadingBellAnchorRef} collapsable={false}>
+                  <SafeTouchableOpacity
+                    style={homeStyles.homeHeaderIconButton}
+                    onPress={handleBellPress}
+                  >
+                    <Feather
+                      name="bell"
+                      size={20}
+                      color={'rgba(255, 255, 255, 1)'}
+                    />
+                  </SafeTouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -389,25 +425,151 @@ export default function HomeScreen({ navigation }) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-
-      <SafeScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom, flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+    <SafeScrollView
+      style={{ flex: 1, backgroundColor: 'transparent' }}
+      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom, flexGrow: 1 }}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+    >
+      <Modal
+        visible={showRecentEventsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseRecentEventsModal}
       >
-        {backendError && (
-          <ConnectionErrorBanner
-            message={"We couldn't reach the server."}
-            details={backendError}
-            retryIn={10}
-            onRetry={handleRetry}
-            disabled={isLoadingRef.current}
-          />
-        )}
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={handleCloseRecentEventsModal}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.42)',
+          }}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {}}
+            style={{
+              position: 'absolute',
+              top: popoverTop,
+              left: popoverLeft,
+              width: popoverWidth,
+              maxHeight: popoverMaxHeight,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 20,
+              shadowColor: '#0277BD',
+              shadowOpacity: 0.28,
+              shadowRadius: 24,
+              shadowOffset: { width: 0, height: 12 },
+              elevation: 16,
+              transform: [{ scale: showRecentEventsModal ? 1 : 0.9 }],
+            }}
+          >
+            <View
+              style={{
+                position: 'absolute',
+                top: -8,
+                left: arrowLeft,
+                width: 16,
+                height: 16,
+                backgroundColor: '#FFFFFF',
+                transform: [{ rotate: '45deg' }],
+                shadowColor: '#0277BD',
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 8,
+              }}
+            />
+
+            <LinearGradient
+              colors={['#0277BD', '#01579B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
+                <Feather name="bell" size={14} color="#FFFFFF" />
+              </View>
+              <View style={{ width: 8 }} />
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
+                Recently Listed
+              </Text>
+              <TouchableOpacity
+                onPress={handleCloseRecentEventsModal}
+                style={{ marginLeft: 'auto', padding: 4 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Feather name="x" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </LinearGradient>
+
+            <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+              <View style={{ height: 8 }} />
+
+              {recentEventsForModal.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingTop: 24 }}>
+                  <Feather name="calendar" size={32} color="#CBD5E1" />
+                  <Text style={{ color: '#64748B', marginTop: 8, fontSize: 13 }}>No events available yet.</Text>
+                </View>
+              ) : (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {recentEventsForModal.map((event, index) => (
+                    <TouchableOpacity
+                      key={event.id}
+                      onPress={() => {
+                        handleCloseRecentEventsModal();
+                        handleEventPress(event);
+                      }}
+                      activeOpacity={0.84}
+                      style={{
+                        paddingVertical: 10,
+                        paddingHorizontal: 10,
+                        borderRadius: 12,
+                        backgroundColor: '#F8FAFC',
+                        marginBottom: 6,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A', marginBottom: 2 }} numberOfLines={1}>
+                        {event.title || 'Untitled Event'}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Feather name="tag" size={11} color="#64748B" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 11, color: '#64748B', textTransform: 'capitalize' }}>
+                          {event.category || 'General'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      <ImageBackground
+        source={require('../assets/3.png')}
+        style={backgroundImageStyle}
+        resizeMode="cover"
+      />
+
+      <View style={{ flex: 1 }}>
+        <AppErrorBanner
+          error={error}
+          onRetry={handleRetry}
+          disabled={isLoadingRef.current}
+        />
         
-<View style={homeStyles.homeHeaderContainer}>
+        <View style={homeStyles.homeHeaderContainer}>
           <LinearGradient
             colors={['#0367a1ff', '#01579B']}
             start={{ x: 0, y: 0 }}
@@ -433,6 +595,18 @@ export default function HomeScreen({ navigation }) {
                 >
                   <Feather name="search" size={20} color="rgba(255, 255, 255, 1)" />
                 </SafeTouchableOpacity>
+                <View ref={bellAnchorRef} collapsable={false}>
+                  <SafeTouchableOpacity
+                    style={homeStyles.homeHeaderIconButton}
+                    onPress={handleBellPress}
+                  >
+                    <Feather
+                      name="bell"
+                      size={20}
+                      color={'rgba(255, 255, 255, 1)'}
+                    />
+                  </SafeTouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -647,10 +821,9 @@ export default function HomeScreen({ navigation }) {
                       }
                       style={homeStyles.horizontalEventImagePlaceholder}
                     >
-                      <Feather name="image" size={24} color="rgba(255,255,255,0.7)" />
+                      <Feather name="image" size={24} color="#FFFFFF" />
                     </LinearGradient>
                   )}
-                  
                   {/* Featured Badge on Left Side */}
                   <View style={homeStyles.premiumFeaturedBadgeLeft}>
                     <LinearGradient
@@ -842,9 +1015,8 @@ export default function HomeScreen({ navigation }) {
             </LinearGradient>
           </View>
         </View>
-      </SafeScrollView>
-
-    </View>
+      </View>
+    </SafeScrollView>
   );
 }
 

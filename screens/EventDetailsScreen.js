@@ -16,6 +16,8 @@ export default function EventDetailsScreen({ route, navigation }) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [offline, setOffline] = useState(false); // State to track offline status
+  const [userResponse, setUserResponse] = useState(null); // Track user response: 'interested', 'going', 'maybe'
+  const [isPricingExpanded, setIsPricingExpanded] = useState(false); // State for pricing dropdown
 
   useEffect(() => {
     const checkNetworkStatus = async () => {
@@ -36,50 +38,38 @@ export default function EventDetailsScreen({ route, navigation }) {
     }
   };
 
+  const handleResponse = (response) => {
+    if (offline) {
+      Alert.alert('Offline', 'You need an internet connection to respond to events.');
+      return;
+    }
+    
+    setUserResponse(response);
+    // Here you would typically save this to your backend
+    // Enhanced feedback with animation potential
+    Alert.alert(
+      'Response Recorded',
+      `You marked yourself as "${response.charAt(0).toUpperCase() + response.slice(1)}" for this event.`,
+      [{ text: 'Awesome!' }]
+    );
+  };
+
+  const getResponseStats = () => {
+    // Mock stats - in real app, these would come from backend
+    return {
+      going: Math.floor(Math.random() * 50) + 10,
+      interested: Math.floor(Math.random() * 30) + 5,
+      maybe: Math.floor(Math.random() * 20) + 3,
+    };
+  };
+
   const handleOrganizerPress = () => {
-    // Debug: Log the entire event object to see what we have
-    console.log('Event data:', JSON.stringify(event, null, 2));
-    console.log('organizerId:', event.organizerId);
-    console.log('organizerId type:', typeof event.organizerId);
-    console.log('organizerId._id:', event.organizerId?._id);
-    console.log('organizerId.toString():', event.organizerId?.toString());
-    
-    // Check if organizerId exists and is valid
-    if (!event.organizerId) {
-      Alert.alert('Organizer Info', 'No organizer information available');
-      return;
+    if (event.organizerId) {
+      navigation.navigate('OrganizerProfile', { 
+        organizerId: event.organizerId._id || event.organizerId.id,
+        organizerName: event.organizerName || event.organizer
+      });
     }
-    
-    // Handle different formats of organizerId
-    let organizerId;
-    
-    if (typeof event.organizerId === 'string') {
-      organizerId = event.organizerId;
-    } else if (event.organizerId._id) {
-      organizerId = event.organizerId._id.toString();
-    } else if (event.organizerId.toString) {
-      organizerId = event.organizerId.toString();
-    } else {
-      organizerId = String(event.organizerId);
-    }
-    
-    console.log('Final organizerId to navigate with:', organizerId);
-    
-    // Validate the organizerId
-    if (!organizerId || organizerId === 'undefined' || organizerId === 'null' || organizerId === '[object Object]') {
-      Alert.alert('Organizer Info', 'Invalid organizer ID format');
-      return;
-    }
-    
-    // Check if it's a valid MongoDB ObjectId (24 character hex string)
-    const objectIdPattern = /^[0-9a-fA-F]{24}$/;
-    if (!objectIdPattern.test(organizerId)) {
-      console.log('Invalid ObjectId format:', organizerId);
-      Alert.alert('Organizer Info', 'Invalid organizer ID format');
-      return;
-    }
-    
-    navigation.navigate('Organprofilescreenforusers', { organizerId });
   };
 
   const handleGetDirections = () => {
@@ -241,7 +231,7 @@ export default function EventDetailsScreen({ route, navigation }) {
     }] : []),
   ];
 
-  // Additional info
+  // Additional info - now merged with essential details
   const additionalInfo = [
     ...(event.ticketsAvailableAt ? [{
       key: 'ticketsAvailableAt',
@@ -250,6 +240,9 @@ export default function EventDetailsScreen({ route, navigation }) {
       value: event.ticketsAvailableAt,
     }] : []),
   ];
+
+  // Merge essential details with ticketing information
+  const allDetails = [...essentialDetails, ...additionalInfo];
 
   const vibeBadges = [
     event.category,
@@ -344,8 +337,8 @@ export default function EventDetailsScreen({ route, navigation }) {
               </LinearGradient>
             </View>
             <View style={styles.essentialsContent}>
-              {essentialDetails.map((detail, index) => (
-                <View key={detail.key} style={[styles.detailItem, index === essentialDetails.length - 1 && styles.detailItemLast]}>
+              {allDetails.map((detail, index) => (
+                <View key={detail.key} style={[styles.detailItem, index === allDetails.length - 1 && styles.detailItemLast]}>
                   <View style={styles.detailIconContainer}>
                     <LinearGradient
                       colors={['#0277BD', '#01579B']}
@@ -368,7 +361,11 @@ export default function EventDetailsScreen({ route, navigation }) {
           {/* Compact Pricing Grid - Only show if there are pricing options */}
           {pricingGrid.length > 0 && (
             <View style={styles.essentialsCard}>
-              <View style={styles.essentialsHeader}>
+              <TouchableOpacity 
+                style={styles.essentialsHeader}
+                onPress={() => setIsPricingExpanded(!isPricingExpanded)}
+                activeOpacity={0.8}
+              >
                 <LinearGradient
                   colors={['#0277BD', '#01579B']}
                   start={{ x: 0, y: 0 }}
@@ -377,141 +374,180 @@ export default function EventDetailsScreen({ route, navigation }) {
                 >
                   <Feather name="tag" size={20} color="#FFFFFF" />
                   <Text style={styles.essentialsHeaderText}>Pricing Options</Text>
+                  <Feather 
+                    name={isPricingExpanded ? "chevron-up" : "chevron-down"} 
+                    size={20} 
+                    color="#FFFFFF" 
+                    style={{ marginLeft: 'auto' }}
+                  />
                 </LinearGradient>
-              </View>
-              <View style={styles.pricingGridContent}>
-                <View style={styles.pricingGrid}>
-                  {pricingGrid.map((item, index) => (
-                    <View key={item.key} style={[styles.pricingGridItem, { borderLeftColor: item.color }]}>
-                      <View style={[styles.pricingGridIconContainer, { backgroundColor: item.color + '20' }]}>
-                        <Feather name={item.icon} size={14} color={item.color} />
+              </TouchableOpacity>
+              
+              {isPricingExpanded && (
+                <View style={styles.pricingGridContent}>
+                  <View style={styles.pricingGrid}>
+                    {pricingGrid.map((item, index) => (
+                      <View key={item.key} style={[styles.pricingGridItem, { borderLeftColor: item.color }]}>
+                        <View style={[styles.pricingGridIconContainer, { backgroundColor: item.color + '20' }]}>
+                          <Feather name={item.icon} size={14} color={item.color} />
+                        </View>
+                        <View style={styles.pricingGridTextContainer}>
+                          <Text style={[styles.pricingGridLabel, { color: item.color }]}>{item.label}</Text>
+                          <Text style={styles.pricingGridValue}>{item.value}</Text>
+                        </View>
                       </View>
-                      <View style={styles.pricingGridTextContainer}>
-                        <Text style={[styles.pricingGridLabel, { color: item.color }]}>{item.label}</Text>
-                        <Text style={styles.pricingGridValue}>{item.value}</Text>
-                      </View>
-                    </View>
-                  ))}
+                    ))}
+                  </View>
                 </View>
-              </View>
+              )}
             </View>
           )}
 
           {/* Additional Info Section */}
-          {additionalInfo.length > 0 && (
-            <View style={styles.essentialsCard}>
-              <View style={styles.essentialsHeader}>
-                <LinearGradient
-                  colors={['#0277BD', '#01579B']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.essentialsHeaderGradient}
-                >
-                  <Feather name="info" size={20} color="#FFFFFF" />
-                  <Text style={styles.essentialsHeaderText}>Ticket Information</Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.essentialsContent}>
-                {additionalInfo.map((detail, index) => (
-                  <View key={detail.key} style={[styles.detailItem, styles.detailItemLast]}>
-                    <View style={styles.detailIconContainer}>
-                      <LinearGradient
-                        colors={['#0277BD', '#01579B']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.detailIconGradient}
-                      >
-                        <Feather name={detail.icon} size={16} color="#FFFFFF" />
-                      </LinearGradient>
-                    </View>
-                    <View style={styles.detailContent}>
-                      <Text style={styles.detailLabel}>{detail.label}</Text>
-                      <Text style={styles.detailValue}>{detail.value}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
           {(event.importantInfo || event.importantinfo) && (
             <View style={{
-              backgroundColor: '#DBEAFE',
+              backgroundColor: '#FEE2E2',
               borderRadius: 16,
               padding: 18,
               marginBottom: 18,
               borderLeftWidth: 5,
-              borderLeftColor: '#2563EB',
+              borderLeftColor: '#DC2626',
               flexDirection: 'row',
               alignItems: 'flex-start',
               gap: 12,
             }}>
-              <Feather name="info" size={22} color="#2563EB" style={{ marginTop: 2 }} />
+              <Feather name="info" size={22} color="#DC2626" style={{ marginTop: 2 }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#1E40AF', fontWeight: '700', fontSize: 16, marginBottom: 2 }}>Important Information</Text>
+                <Text style={{ color: '#991B1B', fontWeight: '700', fontSize: 16, marginBottom: 2 }}>Important Information</Text>
                 <Text style={{ color: '#1E293B', fontSize: 14 }}>{event.importantInfo || event.importantinfo}</Text>
               </View>
             </View>
           )}
 
-          {/* Organizer Section - Minimal */}
-          <TouchableOpacity 
-            style={styles.minimalOrganizerCard}
-            onPress={handleOrganizerPress}
-          >
-            <View style={styles.minimalOrganizerInfo}>
-              <View style={styles.minimalOrganizerProfileContainer}>
-                {event.organizerId?.profileImage ? (
-                  <View>
-                    <Image source={{ uri: event.organizerId.profileImage }} style={styles.minimalOrganizerProfileImage} />
+          {/* User Response Card */}
+          <View style={styles.advancedResponseCard}>
+            {/* User Response Section */}
+            <View style={styles.userResponseSection}>
+              {/* Organizer Info Above Response Question */}
+              <TouchableOpacity style={styles.organizerNameContainer} onPress={handleOrganizerPress}>
+                <View style={styles.organizerNameRow}>
+                  <View style={styles.organizerAvatarSmall}>
+                    {event.organizerId?.profileImage ? (
+                      <Image 
+                        source={{ uri: event.organizerId.profileImage }} 
+                        style={styles.organizerAvatarImageSmall}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Feather name="user" size={20} color="#FFFFFF" />
+                    )}
                     {event.organizerId?.isVerified && (
-                      <View style={styles.verifiedOverlay}>
-                        <Feather name="check-circle" size={16} color="#FFFFFF" />
+                      <View style={styles.verifiedOverlaySmall}>
+                        <Feather name="check-circle" size={12} color="#FFFFFF" />
                       </View>
                     )}
                   </View>
-                ) : (
-                  <View style={styles.minimalOrganizerProfilePlaceholder}>
-                    <Feather name="user" size={20} color="#9ca3af" />
+                  <View style={styles.organizerNameInfo}>
+                    <Text style={styles.organizerNameText}>
+                      {event.organizerName || event.organizer || 'To be announced'}
+                    </Text>
                     {event.organizerId?.isVerified && (
-                      <View style={styles.verifiedOverlayPlaceholder}>
-                        <Feather name="check-circle" size={14} color="#FFFFFF" />
+                      <View style={styles.verifiedBadgeSmall}>
+                        <Feather name="check-circle" size={10} color="#FFFFFF" />
+                        <Text style={styles.verifiedBadgeTextSmall}>Verified</Text>
                       </View>
                     )}
                   </View>
-                )}
-              </View>
-              <View style={styles.minimalOrganizerDetails}>
-                <View style={styles.minimalOrganizerNameRow}>
-                  <Text style={styles.minimalOrganizerName}>
-                    {event.organizerName || event.organizer || 'To be announced'}
-                  </Text>
-                  {event.organizerId?.isVerified && (
-                    <View style={styles.verifiedBadge}>
-                      <Feather name="check-circle" size={12} color="#FFFFFF" />
-                      <Text style={styles.verifiedBadgeText}>Verified</Text>
-                    </View>
-                  )}
+                  <Feather name="chevron-right" size={16} color="#6b7280" />
                 </View>
-                {event.organizerId?.isVerified && (
-                  <Text style={styles.verifiedOrganizerText}>Verified Organizer</Text>
-                )}
+              </TouchableOpacity>
+              
+              <Text style={styles.userResponseQuestion}>Your Response?</Text>
+              
+              <View style={styles.advancedResponseButtons}>
+                <TouchableOpacity 
+                  style={[
+                    styles.advancedResponseButton, 
+                    styles.goingAdvancedButton,
+                    userResponse === 'going' && styles.advancedResponseButtonActive
+                  ]} 
+                  onPress={() => handleResponse('going')}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={userResponse === 'going' ? ['#10B981', '#059669'] : ['#D1FAE5', '#A7F3D0']}
+                    style={styles.advancedButtonGradient}
+                  >
+                    <Feather name="check-circle" size={18} color={userResponse === 'going' ? '#FFFFFF' : '#10B981'} />
+                    <Text style={[
+                      styles.advancedButtonText,
+                      userResponse === 'going' && styles.advancedButtonTextActive
+                    ]}>Going</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.advancedResponseButton, 
+                    styles.interestedAdvancedButton,
+                    userResponse === 'interested' && styles.advancedResponseButtonActive
+                  ]} 
+                  onPress={() => handleResponse('interested')}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={userResponse === 'interested' ? ['#F59E0B', '#D97706'] : ['#FEF3C7', '#FDE68A']}
+                    style={styles.advancedButtonGradient}
+                  >
+                    <Feather name="star" size={18} color={userResponse === 'interested' ? '#FFFFFF' : '#F59E0B'} />
+                    <Text style={[
+                      styles.advancedButtonText,
+                      userResponse === 'interested' && styles.advancedButtonTextActive
+                    ]}>Interested</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.advancedResponseButton, 
+                    styles.maybeAdvancedButton,
+                    userResponse === 'maybe' && styles.advancedResponseButtonActive
+                  ]} 
+                  onPress={() => handleResponse('maybe')}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={userResponse === 'maybe' ? ['#6B7280', '#4B5563'] : ['#F3F4F6', '#E5E7EB']}
+                    style={styles.advancedButtonGradient}
+                  >
+                    <Feather name="help-circle" size={18} color={userResponse === 'maybe' ? '#FFFFFF' : '#6B7280'} />
+                    <Text style={[
+                      styles.advancedButtonText,
+                      userResponse === 'maybe' && styles.advancedButtonTextActive
+                    ]}>Maybe</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
               </View>
-              <Feather name="chevron-right" size={16} color="#6b7280" />
             </View>
-          </TouchableOpacity>
 
-          <View style={styles.ctaCard}>
-            <Text style={styles.ctaHeadline}>Get Involved</Text>
-            <View style={styles.ctaButtonRow}>
-              <TouchableOpacity style={styles.ctaPrimaryButton} onPress={handleGetDirections}>
-                <Feather name="navigation" size={16} color="#FFFFFF" />
-                <Text style={styles.ctaPrimaryText}>Directions</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.ctaSecondaryButton} onPress={handleShare}>
-                <Feather name="share-2" size={16} color="#0369A1" />
-                <Text style={styles.ctaSecondaryText}>Share</Text>
-              </TouchableOpacity>
+            {/* Action Buttons */}
+            <View style={styles.actionSection}>
+              <Text style={styles.actionSectionTitle}>Get Involved</Text>
+              <View style={styles.actionButtonsRow}>
+                <TouchableOpacity style={styles.actionPrimaryButton} onPress={handleGetDirections}>
+                  <LinearGradient colors={['#0277BD', '#01579B']} style={styles.actionButtonGradient}>
+                    <Feather name="navigation" size={18} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Directions</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.actionSecondaryButton} onPress={handleShare}>
+                  <View style={styles.actionSecondaryButtonInner}>
+                    <Feather name="share-2" size={18} color="#0277BD" />
+                    <Text style={styles.actionSecondaryButtonText}>Share</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -952,5 +988,228 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#f3f4f6',
+  },
+  // Advanced Response & Actions Card Styles
+  advancedResponseCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  responseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  responseHeaderLeft: {
+    flex: 1,
+  },
+  responseHeadline: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  responseSubtext: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  responseStats: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statBadge: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 10,
+    minWidth: 45,
+  },
+  statNumber: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1F2937',
+    lineHeight: 16,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#6B7280',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  userResponseSection: {
+    marginBottom: 20,
+  },
+  userResponseQuestion: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  advancedResponseButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  advancedResponseButton: {
+    flex: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  advancedButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    gap: 6,
+    minHeight: 52,
+  },
+  advancedButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  advancedButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  advancedResponseButtonActive: {
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  actionSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 16,
+  },
+  actionSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionPrimaryButton: {
+    flex: 2,
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  actionButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  actionButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  actionSecondaryButton: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  actionSecondaryButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  actionSecondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0277BD',
+  },
+  // Organizer Name Styles
+  organizerNameContainer: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  organizerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  organizerAvatarSmall: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  organizerAvatarImageSmall: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
+  },
+  verifiedOverlaySmall: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#10b981',
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  organizerNameInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  organizerNameText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  verifiedBadgeSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+    alignSelf: 'flex-start',
+  },
+  verifiedBadgeTextSmall: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

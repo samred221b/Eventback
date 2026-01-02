@@ -72,10 +72,6 @@ export default function AboutScreen({ navigation }) {
                 <Text style={styles.featureText}>Save favorite events</Text>
               </View>
               <View style={styles.featureItem}>
-                <Feather name="map-pin" size={20} color="#0277BD" />
-                <Text style={styles.featureText}>Location-based recommendations</Text>
-              </View>
-              <View style={styles.featureItem}>
                 <Feather name="calendar" size={20} color="#0277BD" />
                 <Text style={styles.featureText}>Personalized event calendar</Text>
               </View>

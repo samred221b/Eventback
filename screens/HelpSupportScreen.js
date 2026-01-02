@@ -131,28 +131,8 @@ export default function HelpSupportScreen({ navigation }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F8FF' }}>
-      {/* Decorative Background Shapes */}
-      <View style={homeStyles.creativeBlobBlue} />
-      <View style={homeStyles.creativeBlobGreen} />
-      <View style={homeStyles.creativeBlobYellow} />
-      <View style={homeStyles.decorativeShape1} />
-      <View style={homeStyles.decorativeShape2} />
-      <View style={homeStyles.decorativeShape3} />
-      <View style={homeStyles.decorativeShape4} />
-      <View style={homeStyles.decorativeShape5} />
-      <View style={homeStyles.decorativeShape6} />
-      <View style={homeStyles.decorativeShape7} />
-      <View style={homeStyles.decorativeShape8} />
-      <View style={homeStyles.decorativeShape9} />
-      <View style={homeStyles.decorativeShape10} />
-      <View style={homeStyles.largeCurvedWave} />
-      <View style={homeStyles.vibrantAccentRing1} />
-      <View style={homeStyles.vibrantAccentRing2} />
-
-      <StatusBar style="light" backgroundColor="#FFFFFF" />
-      
       {/* Header - Home Style */}
-      <View style={homeStyles.homeHeaderContainer}>
+      <View style={[homeStyles.homeHeaderContainer, { paddingTop: insets.top }]}>
         <LinearGradient
           colors={['#0277BD', '#01579B']}
           start={{ x: 0, y: 0 }}
@@ -191,7 +171,7 @@ export default function HelpSupportScreen({ navigation }) {
         </LinearGradient>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 20 }}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* FAQ Categories */}
         <View style={styles.faqSection}>

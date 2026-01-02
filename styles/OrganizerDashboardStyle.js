@@ -4,7 +4,7 @@ const organizerDashboardStyles = StyleSheet.create({
   modernDashboardContainer: {
     flex: 1,
     backgroundColor: 'transparent',
-    paddingBottom: 16,
+    paddingBottom: 60,
   },
   modernDashboardHeader: {
     backgroundColor: '#01579B',
@@ -37,6 +37,12 @@ const organizerDashboardStyles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  modernDashboardAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
   },
   modernDashboardWelcome: {
     fontSize: 12,
@@ -47,6 +53,29 @@ const organizerDashboardStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  minimalStatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    marginTop: 1,
+  },
+  minimalStatItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  minimalStatNumber: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    lineHeight: 15,
+  },
+  minimalStatLabel: {
+    fontSize: 9,
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 11,
   },
   modernDashboardSettingsButton: {
     width: 40,

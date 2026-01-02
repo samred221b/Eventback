@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -8,39 +8,26 @@ import apiService from '../services/api';
 import EnhancedSearch from '../components/EnhancedSearch';
 import homeStyles from '../styles/homeStyles';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
 import { logger } from '../utils/logger';
-import { getWithTTL, setWithTTL, TTL } from '../utils/cacheUtils';
+import cacheService, { TTL } from '../utils/cacheService';
+import AppErrorBanner from '../components/AppErrorBanner';
+import { toAppError, createOfflineCachedNotice } from '../utils/appError';
 
-const CALENDAR_EVENTS_CACHE_KEY = '@eventopia_calendar_events';
+const CALENDAR_EVENTS_CACHE_KEY = 'calendar:events';
 
 const cacheCalendarEvents = async (events) => {
   try {
-    // Primary: cache with TTL for 6 hours
-    await setWithTTL(CALENDAR_EVENTS_CACHE_KEY, events, TTL.SIX_HOURS);
+    await cacheService.set(CALENDAR_EVENTS_CACHE_KEY, events, { ttlMs: TTL.SIX_HOURS });
   } catch (e) {
-    // Fallback: store raw for backward compatibility
-    try {
-      await AsyncStorage.setItem(CALENDAR_EVENTS_CACHE_KEY, JSON.stringify(events));
-    } catch (_) {
-      // Silent fail
-    }
+    // Silent fail
   }
 };
 
 const loadCalendarEventsFromCache = async () => {
-  // Try TTL cache first (return data even if expired for offline fallback)
   try {
-    const { data } = await getWithTTL(CALENDAR_EVENTS_CACHE_KEY);
-    if (Array.isArray(data)) return data;
-  } catch (e) {
-    // ignore and try raw cache
-  }
-  // Fallback to legacy raw cache
-  try {
-    const cached = await AsyncStorage.getItem(CALENDAR_EVENTS_CACHE_KEY);
-    return cached ? JSON.parse(cached) : [];
+    const { data } = await cacheService.get(CALENDAR_EVENTS_CACHE_KEY);
+    return Array.isArray(data) ? data : [];
   } catch (e) {
     return [];
   }
@@ -77,9 +64,9 @@ export default function CalendarScreen({ navigation }) {
     if (!netInfo.isConnected) {
       fetchedEvents = await loadCalendarEventsFromCache();
       if (fetchedEvents.length > 0) {
-        setError('Offline: Showing cached calendar events');
+        setError(createOfflineCachedNotice('Showing cached calendar events'));
       } else {
-        setError('Failed to load calendar events. Please check your connection.');
+        setError(toAppError(new Error('Failed to load calendar events. Please check your connection.')));
       }
       setAllEvents(fetchedEvents);
       filterEvents(fetchedEvents, searchQuery, activeFilter);
@@ -101,8 +88,7 @@ export default function CalendarScreen({ navigation }) {
       const isTimeout = error?.name === 'AbortError' || messageLower.includes('timeout');
       if (isTimeout) {
         timeoutOccurred = true;
-        setError('Request Timeout: The server is taking too long to respond. Please check your internet connection or try again later.');
-        Alert.alert('Request Timeout', 'The server is taking too long to respond. Please check your internet connection or try again later.');
+        setError(toAppError(error));
       } else {
         backendFailed = true;
         logger.error('CalendarScreen loadEvents error:', error);
@@ -112,9 +98,9 @@ export default function CalendarScreen({ navigation }) {
     if (backendFailed && !timeoutOccurred) {
       fetchedEvents = await loadCalendarEventsFromCache();
       if (fetchedEvents.length > 0) {
-        setError('Offline: Showing cached calendar events');
+        setError(createOfflineCachedNotice('Showing cached calendar events'));
       } else {
-        setError('Failed to load calendar events. Please check your connection.');
+        setError(toAppError(new Error('Failed to load calendar events. Please check your connection.')));
       }
     }
 
@@ -364,11 +350,7 @@ export default function CalendarScreen({ navigation }) {
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
       >
-        {error && (
-          <View style={styles.offlineBanner}>
-            <Text style={styles.offlineText}>{error}</Text>
-          </View>
-        )}
+        <AppErrorBanner error={error} onRetry={() => loadEvents(true)} disabled={isRefreshing} />
         <View style={[homeStyles.homeHeaderContainer, {  zIndex: 1 }]}> 
           <LinearGradient
             colors={['#0277BD', '#01579B']}

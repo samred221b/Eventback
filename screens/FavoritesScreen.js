@@ -1,6 +1,5 @@
 // src/screens/FavoritesScreen.js
 import React, { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -23,6 +22,7 @@ import favStyles from '../styles/Favouritescreenstyle';
 import homeStyles from '../styles/homeStyles';
 import EnhancedSearch from '../components/EnhancedSearch';
 import { logger } from '../utils/logger';
+import cacheService, { TTL } from '../utils/cacheService';
 
 const makeEventSerializable = (event) => {
   const { parsedDate, ...serializableEvent } = event;
@@ -35,7 +35,7 @@ const makeEventSerializable = (event) => {
   return serializableEvent;
 };
 
-const EVENTS_CACHE_KEY = '@eventopia_events';
+const EVENTS_CACHE_KEY = 'events:all';
 
 const FavoritesScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
@@ -51,7 +51,7 @@ const FavoritesScreen = ({ navigation }) => {
   // Fetch full event details for the user's favorite IDs
   const cacheEvents = async (events) => {
     try {
-      await AsyncStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(events));
+      await cacheService.set(EVENTS_CACHE_KEY, events, { ttlMs: TTL.ONE_HOUR });
     } catch (e) {
       // handle error
     }
@@ -59,10 +59,8 @@ const FavoritesScreen = ({ navigation }) => {
 
   const loadEventsFromCache = async () => {
     try {
-      const cached = await AsyncStorage.getItem(EVENTS_CACHE_KEY);
-      if (cached) {
-        return JSON.parse(cached);
-      }
+      const { data } = await cacheService.get(EVENTS_CACHE_KEY);
+      return Array.isArray(data) ? data : [];
     } catch (e) {
       // handle error
     }

@@ -9,28 +9,8 @@ export default function TermsPrivacyScreen({ navigation }) {
   const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F8FF' }}>
-      {/* Decorative Background Shapes */}
-      <View style={homeStyles.creativeBlobBlue} />
-      <View style={homeStyles.creativeBlobGreen} />
-      <View style={homeStyles.creativeBlobYellow} />
-      <View style={homeStyles.decorativeShape1} />
-      <View style={homeStyles.decorativeShape2} />
-      <View style={homeStyles.decorativeShape3} />
-      <View style={homeStyles.decorativeShape4} />
-      <View style={homeStyles.decorativeShape5} />
-      <View style={homeStyles.decorativeShape6} />
-      <View style={homeStyles.decorativeShape7} />
-      <View style={homeStyles.decorativeShape8} />
-      <View style={homeStyles.decorativeShape9} />
-      <View style={homeStyles.decorativeShape10} />
-      <View style={homeStyles.largeCurvedWave} />
-      <View style={homeStyles.vibrantAccentRing1} />
-      <View style={homeStyles.vibrantAccentRing2} />
-
-      <StatusBar style="light" backgroundColor="#FFFFFF" />
-      
       {/* Header - Home Style */}
-      <View style={homeStyles.homeHeaderContainer}>
+      <View style={[homeStyles.homeHeaderContainer, { paddingTop: insets.top }]}>
         <LinearGradient
           colors={['#0277BD', '#01579B']}
           start={{ x: 0, y: 0 }}
@@ -69,7 +49,7 @@ export default function TermsPrivacyScreen({ navigation }) {
         </LinearGradient>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 20 }}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Terms of Service */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📋 Terms of Service</Text>
@@ -174,31 +154,6 @@ export default function TermsPrivacyScreen({ navigation }) {
             🌐 Website: www.eventopia.com
           </Text>
         </View>
-
-        {/* Creative Footer */}
-        <View style={styles.creativeFooter}>
-          <View style={styles.footerGradient}>
-            <Text style={styles.footerIcon}>🛡️</Text>
-            <Text style={styles.footerTitle}>Your Privacy, Our Priority</Text>
-            <Text style={styles.footerSubtitle}>
-              Trusted by 10,000+ organizers worldwide
-            </Text>
-            <View style={styles.footerInfo}>
-              <View style={styles.footerInfoItem}>
-                <Text style={styles.footerInfoIcon}>📅</Text>
-                <Text style={styles.footerInfoText}>Updated Jan 2025</Text>
-              </View>
-              <View style={styles.footerInfoDivider} />
-              <View style={styles.footerInfoItem}>
-                <Text style={styles.footerInfoIcon}>🚀</Text>
-                <Text style={styles.footerInfoText}>v1.0.0 Premium</Text>
-              </View>
-            </View>
-            <Text style={styles.footerTagline}>
-              ✨ Building trust, one event at a time
-            </Text>
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -255,80 +210,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9ca3af',
     textAlign: 'center',
-  },
-  // Creative Footer Styles
-  creativeFooter: {
-    marginBottom: 20,
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  footerGradient: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    backgroundColor: '#667eea',
-    padding: 24,
-    alignItems: 'center',
-  },
-  footerIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  footerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#ffffff',
-    textAlign: 'center',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  footerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  footerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  footerInfoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-  },
-  footerInfoIcon: {
-    fontSize: 14,
-    marginRight: 6,
-  },
-  footerInfoText: {
-    fontSize: 12,
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  footerInfoDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    marginHorizontal: 12,
-  },
-  footerTagline: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    fontWeight: '500',
   },
 });

@@ -608,7 +608,15 @@ export default function OrganizerDashboard({ navigation }) {
         <View style={styles.modernDashboardHeaderTop}>
           <View style={styles.modernDashboardProfile}>
             <View style={styles.modernDashboardAvatar}>
-              <Feather name="user" size={28} color="#FFFFFF" />
+              {dashboardProfile.avatar ? (
+                <Image 
+                  source={{ uri: dashboardProfile.avatar }} 
+                  style={styles.modernDashboardAvatarImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Feather name="user" size={28} color="#FFFFFF" />
+              )}
             </View>
             <View style={styles.modernDashboardProfileInfo}>
               <Text style={styles.modernDashboardWelcome}>Welcome back,</Text>
@@ -625,29 +633,19 @@ export default function OrganizerDashboard({ navigation }) {
           </SafeTouchableOpacity>
         </View>
 
-        <View style={styles.modernDashboardStatsContainer}>
-          <View style={styles.modernDashboardStatCard}>
-            <View style={styles.modernDashboardStatIconContainer}>
-              <Feather name="calendar" size={20} color="#0277BD" />
-            </View>
-            <Text style={styles.modernDashboardStatNumber}>{dashboardProfile.totalEvents}</Text>
-            <Text style={styles.modernDashboardStatLabel}>Total Events</Text>
+        {/* Minimal Stats below header elements - full width */}
+        <View style={styles.minimalStatsContainer}>
+          <View style={styles.minimalStatItem}>
+            <Text style={styles.minimalStatNumber}>{dashboardProfile.totalEvents}</Text>
+            <Text style={styles.minimalStatLabel}>Events</Text>
           </View>
-
-          <View style={styles.modernDashboardStatCard}>
-            <View style={styles.modernDashboardStatIconContainer}>
-              <Feather name="activity" size={20} color="#0277BD" />
-            </View>
-            <Text style={styles.modernDashboardStatNumber}>{dashboardProfile.activeEvents}</Text>
-            <Text style={styles.modernDashboardStatLabel}>Active</Text>
+          <View style={styles.minimalStatItem}>
+            <Text style={styles.minimalStatNumber}>{dashboardProfile.totalAttendees || 0}</Text>
+            <Text style={styles.minimalStatLabel}>Attendees</Text>
           </View>
-
-          <View style={styles.modernDashboardStatCard}>
-            <View style={styles.modernDashboardStatIconContainer}>
-              <Feather name="heart" size={20} color="#EF4444" />
-            </View>
-            <Text style={styles.modernDashboardStatNumber}>{dashboardProfile.totalFavorites}</Text>
-            <Text style={styles.modernDashboardStatLabel}>Favorites</Text>
+          <View style={styles.minimalStatItem}>
+            <Text style={styles.minimalStatNumber}>{dashboardProfile.totalFavorites || 0}</Text>
+            <Text style={styles.minimalStatLabel}>Favorites</Text>
           </View>
         </View>
       </View>
@@ -712,164 +710,18 @@ export default function OrganizerDashboard({ navigation }) {
         )}
       </View>
 
-      <View style={styles.dashboardSection}>
-        <View style={styles.modernDashboardSectionHeader}>
-          <Text style={styles.modernDashboardSectionTitle}>Advanced Insights</Text>
-          <View style={styles.modernDashboardGrowthBadge}>
-            <Feather name="trending-up" size={14} color="#10B981" />
-            <Text style={styles.modernDashboardGrowthText}>+{insights.growthRate}%</Text>
+      {/* Analytics Button */}
+      <View style={styles.modernDashboardSection}>
+        <SafeTouchableOpacity 
+          style={styles.modernDashboardActionButton}
+          onPress={() => navigation.navigate('Analytics')}
+          activeOpacity={0.9}
+        >
+          <View style={[styles.modernDashboardActionGradient, { backgroundColor: '#0277BD' }]}>
+            <Feather name="bar-chart-2" size={22} color="#FFFFFF" />
+            <Text style={styles.modernDashboardActionText}>Analytics</Text>
           </View>
-        </View>
-
-        {/* Main Metrics Row */}
-        <View style={styles.advancedInsightsMainRow}>
-          <View style={[styles.advancedInsightCard, { backgroundColor: '#EBF5FF' }]}>
-            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#0277BD' }]}>
-              <Feather name="eye" size={20} color="#FFFFFF" />
-            </View>
-            <Text style={styles.advancedInsightValue}>{insights.totalViews.toLocaleString()}</Text>
-            <Text style={styles.advancedInsightLabel}>Total Views</Text>
-            <View style={styles.advancedInsightTrend}>
-              <Feather name="arrow-up" size={12} color="#10B981" />
-              <Text style={styles.advancedInsightTrendText}>+{insights.monthlyGrowth}%</Text>
-            </View>
-          </View>
-
-          <View style={[styles.advancedInsightCard, { backgroundColor: '#FEF2F2' }]}>
-            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#EF4444' }]}>
-              <Feather name="heart" size={20} color="#FFFFFF" />
-            </View>
-            <Text style={styles.advancedInsightValue}>{insights.totalLikes}</Text>
-            <Text style={styles.advancedInsightLabel}>Total Favorites</Text>
-            <View style={styles.advancedInsightTrend}>
-              <Feather name="users" size={12} color="#10B981" />
-              <Text style={styles.advancedInsightTrendText}>{insights.engagementRate}%</Text>
-            </View>
-          </View>
-
-          <View style={[styles.advancedInsightCard, { backgroundColor: '#FEF3C7' }]}>
-            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#F59E0B' }]}>
-              <Feather name="calendar" size={20} color="#FFFFFF" />
-            </View>
-            <Text style={styles.advancedInsightValue}>{insights.totalEvents}</Text>
-            <Text style={styles.advancedInsightLabel}>Total Events</Text>
-            <View style={styles.advancedInsightTrend}>
-              <Feather name="clock" size={12} color="#10B981" />
-              <Text style={styles.advancedInsightTrendText}>{insights.upcomingEvents} active</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Secondary Metrics Row */}
-        <View style={styles.advancedInsightsSecondaryRow}>
-          <View style={[styles.advancedInsightCard, { backgroundColor: '#F0FDF4' }]}>
-            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#10B981' }]}>
-              <Feather name="bar-chart" size={20} color="#FFFFFF" />
-            </View>
-            <Text style={styles.advancedInsightValue}>{insights.avgViewsPerEvent}</Text>
-            <Text style={styles.advancedInsightLabel}>Avg Views/Event</Text>
-            <View style={styles.advancedInsightMiniChart}>
-              <Text style={styles.advancedInsightMiniChartText}>▲</Text>
-            </View>
-          </View>
-
-          <View style={[styles.advancedInsightCard, { backgroundColor: '#F5F3FF' }]}>
-            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#8B5CF6' }]}>
-              <Feather name="award" size={20} color="#FFFFFF" />
-            </View>
-            <Text style={styles.advancedInsightValue}>{insights.topCategory}</Text>
-            <Text style={styles.advancedInsightLabel}>Top Category</Text>
-            <View style={styles.advancedInsightBadge}>
-              <Text style={styles.advancedInsightBadgeText}>Popular</Text>
-            </View>
-          </View>
-
-          <View style={[styles.advancedInsightCard, { backgroundColor: '#FDF4FF' }]}>
-            <View style={[styles.advancedInsightIconContainer, { backgroundColor: '#EC4899' }]}>
-              <Feather name="zap" size={20} color="#FFFFFF" />
-            </View>
-            <Text style={styles.advancedInsightValue}>{insights.recentActivity}</Text>
-            <Text style={styles.advancedInsightLabel}>This Week</Text>
-            <View style={styles.advancedInsightActivity}>
-              <Text style={styles.advancedInsightActivityText}>Active</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Best Performing Event Card */}
-        {insights.bestPerformingEvent && (
-          <View style={styles.bestPerformingEventCard}>
-            <View style={styles.bestPerformingEventHeader}>
-              <View style={styles.bestPerformingEventIconContainer}>
-                <Feather name="star" size={16} color="#F59E0B" />
-              </View>
-              <Text style={styles.bestPerformingEventTitle}>Best Performing Event</Text>
-            </View>
-            <View style={styles.bestPerformingEventContent}>
-              <Text style={styles.bestPerformingEventName} numberOfLines={1}>
-                {insights.bestPerformingEvent.title}
-              </Text>
-              <View style={styles.bestPerformingEventStats}>
-                <View style={styles.bestPerformingEventStat}>
-                  <Feather name="eye" size={14} color="#6B7280" />
-                  <Text style={styles.bestPerformingEventStatText}>
-                    {insights.bestPerformingEvent.views || 0} views
-                  </Text>
-                </View>
-                <View style={styles.bestPerformingEventStat}>
-                  <Feather name="heart" size={14} color="#6B7280" />
-                  <Text style={styles.bestPerformingEventStatText}>
-                    {insights.bestPerformingEvent.likes || 0} likes
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity 
-              style={styles.bestPerformingEventButton}
-              onPress={() => navigation.navigate('EventDetails', { event: insights.bestPerformingEvent })}
-            >
-              <Feather name="arrow-right" size={16} color="#0277BD" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Performance Overview */}
-        <View style={styles.performanceOverviewCard}>
-          <Text style={styles.performanceOverviewTitle}>Performance Overview</Text>
-          <View style={styles.performanceMetrics}>
-            <View style={styles.performanceMetric}>
-              <Text style={styles.performanceMetricValue}>{insights.pastEvents}</Text>
-              <Text style={styles.performanceMetricLabel}>Past Events</Text>
-              <View style={styles.performanceMetricBar}>
-                <View 
-                  style={[
-                    styles.performanceMetricBarFill, 
-                    { 
-                      width: `${insights.totalEvents > 0 ? (insights.pastEvents / insights.totalEvents) * 100 : 0}%`,
-                      backgroundColor: '#6B7280'
-                    }
-                  ]} 
-                />
-              </View>
-            </View>
-            
-            <View style={styles.performanceMetric}>
-              <Text style={styles.performanceMetricValue}>{insights.upcomingEvents}</Text>
-              <Text style={styles.performanceMetricLabel}>Upcoming</Text>
-              <View style={styles.performanceMetricBar}>
-                <View 
-                  style={[
-                    styles.performanceMetricBarFill, 
-                    { 
-                      width: `${insights.totalEvents > 0 ? (insights.upcomingEvents / insights.totalEvents) * 100 : 0}%`,
-                      backgroundColor: '#10B981'
-                    }
-                  ]} 
-                />
-              </View>
-            </View>
-          </View>
-        </View>
+        </SafeTouchableOpacity>
       </View>
 
       {/* Admin Panel - Only visible to admin */}
@@ -885,7 +737,7 @@ export default function OrganizerDashboard({ navigation }) {
                 onPress={() => navigation.navigate('AdminEvents')}
               >
                 <View style={styles.settingItemLeft}>
-                  <View style={[styles.settingIconContainer, { backgroundColor: '#dc2626' }]}>
+                  <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                     <Feather name="calendar" size={16} color="#FFFFFF" />
                   </View>
                   <View>
@@ -902,7 +754,7 @@ export default function OrganizerDashboard({ navigation }) {
                 onPress={() => navigation.navigate('AdminOrganizers')}
               >
                 <View style={styles.settingItemLeft}>
-                  <View style={[styles.settingIconContainer, { backgroundColor: '#7c3aed' }]}>
+                  <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                     <Feather name="users" size={16} color="#FFFFFF" />
                   </View>
                   <View>
@@ -919,7 +771,7 @@ export default function OrganizerDashboard({ navigation }) {
                 onPress={() => navigation.navigate('AdminAnalytics')}
               >
                 <View style={styles.settingItemLeft}>
-                  <View style={[styles.settingIconContainer, { backgroundColor: '#059669' }]}>
+                  <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                     <Feather name="bar-chart-2" size={16} color="#FFFFFF" />
                   </View>
                   <View>
@@ -938,14 +790,13 @@ export default function OrganizerDashboard({ navigation }) {
         <Text style={styles.dashboardSectionTitle}>Billing & Subscription</Text>
         <View style={styles.dashboardSettings}>
           <View style={styles.settingsGroup}>
-            <Text style={styles.settingsGroupTitle}>Current Plan</Text>
             <SafeTouchableOpacity 
               style={styles.dashboardSettingItem} 
               activeOpacity={0.7}
               onPress={() => navigation.navigate('Pricing')}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.settingIconContainer, { backgroundColor: '#10B981' }]}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                   <Feather name="credit-card" size={16} color="#FFFFFF" />
                 </View>
                 <View>
@@ -958,14 +809,13 @@ export default function OrganizerDashboard({ navigation }) {
           </View>
           
           <View style={styles.settingsGroup}>
-            <Text style={styles.settingsGroupTitle}>Usage</Text>
             <SafeTouchableOpacity 
               style={styles.dashboardSettingItem} 
               activeOpacity={0.7}
               onPress={() => navigation.navigate('UsageStatistics')}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.settingIconContainer, { backgroundColor: '#8B5CF6' }]}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                   <Feather name="bar-chart" size={16} color="#FFFFFF" />
                 </View>
                 <View>
@@ -978,14 +828,13 @@ export default function OrganizerDashboard({ navigation }) {
           </View>
           
           <View style={styles.settingsGroup}>
-            <Text style={styles.settingsGroupTitle}>Payment</Text>
             <SafeTouchableOpacity 
               style={styles.dashboardSettingItem} 
               activeOpacity={0.7}
               onPress={() => navigation.navigate('Pricing')}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.settingIconContainer, { backgroundColor: '#F59E0B' }]}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                   <Feather name="dollar-sign" size={16} color="#FFFFFF" />
                 </View>
                 <View>
@@ -1010,7 +859,7 @@ export default function OrganizerDashboard({ navigation }) {
               onPress={() => navigation.navigate('UpdateProfile')}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.settingIconContainer, { backgroundColor: '#3b82f6' }]}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                   <Feather name="user" size={16} color="#FFFFFF" />
                 </View>
                 <View>
@@ -1027,7 +876,7 @@ export default function OrganizerDashboard({ navigation }) {
               onPress={() => navigation.navigate('Verification')}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.settingIconContainer, { backgroundColor: '#8b5cf6' }]}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                   <Feather name="check-circle" size={16} color="#FFFFFF" />
                 </View>
                 <View>
@@ -1048,7 +897,7 @@ export default function OrganizerDashboard({ navigation }) {
               onPress={() => navigation.navigate('HelpSupport')}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.settingIconContainer, { backgroundColor: '#06b6d4' }]}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                   <Feather name="life-buoy" size={16} color="#FFFFFF" />
                 </View>
                 <View>
@@ -1065,7 +914,7 @@ export default function OrganizerDashboard({ navigation }) {
               onPress={() => { setIsBannersLoading(true); setShowBannerModal(true); }}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.settingIconContainer, { backgroundColor: '#22c55e' }]}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                   <Feather name="image" size={16} color="#FFFFFF" />
                 </View>
                 <View>
@@ -1082,7 +931,7 @@ export default function OrganizerDashboard({ navigation }) {
               onPress={() => navigation.navigate('TermsPrivacy')}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.settingIconContainer, { backgroundColor: '#6366f1' }]}>
+                <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                   <Feather name="file-text" size={16} color="#FFFFFF" />
                 </View>
                 <View>
@@ -1100,7 +949,7 @@ export default function OrganizerDashboard({ navigation }) {
             activeOpacity={0.7}
           >
             <View style={styles.settingItemLeft}>
-              <View style={[styles.settingIconContainer, { backgroundColor: '#ef4444' }]}>
+              <View style={[styles.settingIconContainer, { backgroundColor: '#0277BD' }]}>
                 <Feather name="log-out" size={16} color="#FFFFFF" />
               </View>
               <Text style={[styles.dashboardSettingText, { color: '#ef4444' }]}>Log Out</Text>

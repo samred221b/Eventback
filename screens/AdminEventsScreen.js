@@ -14,11 +14,15 @@ import { useAuth } from '../providers/AuthProvider';
 import apiService from '../services/api';
 import { adminEventsStyles } from '../styles/adminStyles';
 import { makeEventSerializable } from '../utils/dataProcessor';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
+import { APP_ERROR_SEVERITY, toAppError } from '../utils/appError';
 
 const AdminEventsScreen = ({ navigation }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     status: 'all',
     category: '',
@@ -38,6 +42,7 @@ const AdminEventsScreen = ({ navigation }) => {
         setLoading(true);
         setEvents([]);
       }
+      if (page === 1) setError(null);
 
       const params = {
         page,
@@ -63,10 +68,7 @@ const AdminEventsScreen = ({ navigation }) => {
         setPagination(response.pagination);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch events');
-      if (__DEV__) {
-        console.error('Admin fetch events error:', error);
-      }
+      setError(toAppError(error, { fallbackMessage: 'Failed to fetch events' }));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -93,13 +95,9 @@ const AdminEventsScreen = ({ navigation }) => {
             ? { ...event, featured: response.data.featured }
             : event
         ));
-        Alert.alert('Success', `Event ${response.data.featured ? 'featured' : 'unfeatured'} successfully`);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update event');
-      if (__DEV__) {
-        console.error('Admin feature event error:', error);
-      }
+      setError(toAppError(error, { fallbackMessage: 'Failed to update event' }));
     }
   };
 
@@ -112,13 +110,9 @@ const AdminEventsScreen = ({ navigation }) => {
             ? { ...event, status: response.data.status }
             : event
         ));
-        Alert.alert('Success', 'Event status updated successfully');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update event status');
-      if (__DEV__) {
-        console.error('Admin update status error:', error);
-      }
+      setError(toAppError(error, { fallbackMessage: 'Failed to update event status' }));
     }
   };
 
@@ -133,16 +127,13 @@ const AdminEventsScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
+              setError(null);
               const response = await apiService.delete(`/admin/events/${eventId}`, { requireAuth: true });
               if (response.success) {
                 setEvents(prev => prev.filter(event => event._id !== eventId));
-                Alert.alert('Success', 'Event deleted successfully');
               }
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete event');
-              if (__DEV__) {
-                console.error('Admin delete event error:', error);
-              }
+              setError(toAppError(error, { fallbackMessage: 'Failed to delete event' }));
             }
           }
         }
@@ -180,7 +171,6 @@ const AdminEventsScreen = ({ navigation }) => {
       isOnline: event.isOnline || false,
     };
     
-    console.log('Navigating to CreateEvent with clean event data:', JSON.stringify(cleanEvent, null, 2));
     navigation.navigate('CreateEvent', { editEvent: cleanEvent });
   };
 
@@ -293,6 +283,14 @@ const AdminEventsScreen = ({ navigation }) => {
     );
   }
 
+  if (error && error.severity === APP_ERROR_SEVERITY.ERROR && events.length === 0) {
+    return (
+      <SafeAreaView style={adminEventsStyles.container}>
+        <AppErrorState error={error} onRetry={() => fetchEvents(1, true)} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={adminEventsStyles.container}>
       <View style={adminEventsStyles.header}>
@@ -361,6 +359,7 @@ const AdminEventsScreen = ({ navigation }) => {
         }}
         scrollEventThrottle={400}
       >
+        <AppErrorBanner error={error} onRetry={() => fetchEvents(1, true)} disabled={loading || refreshing} />
         {events.length === 0 ? (
           <View style={adminEventsStyles.emptyContainer}>
             <Feather name="calendar" size={48} color="#9CA3AF" />

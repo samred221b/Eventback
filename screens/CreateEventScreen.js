@@ -52,11 +52,118 @@ const CreateEventScreen = ({ navigation, route }) => {
   });
   const [imageUri, setImageUri] = useState(null);
   const [isPricingExpanded, setIsPricingExpanded] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   
   // Animation values
   const pricingHeight = useState(new Animated.Value(0))[0];
   const pricingOpacity = useState(new Animated.Value(0))[0];
   const iconRotation = useState(new Animated.Value(0))[0];
+
+  // Event templates
+  const eventTemplates = [
+    {
+      id: 'concert',
+      name: 'Music Concert',
+      icon: 'music',
+      color: '#EF4444',
+      description: 'Perfect for live music events',
+      defaults: {
+        category: 'music',
+        mode: 'In-person',
+        price: '500',
+        vipPrice: '1000',
+        vvipPrice: '2000',
+        earlyBirdPrice: '400',
+        capacity: '500',
+        description: 'Join us for an unforgettable night of live music featuring amazing performances.',
+        importantInfo: 'Doors open 1 hour before showtime. No outside food or drinks allowed.',
+        ticketsAvailableAt: 'Available at the venue and online'
+      }
+    },
+    {
+      id: 'workshop',
+      name: 'Workshop',
+      icon: 'tool',
+      color: '#3B82F6',
+      description: 'Educational and skill-building events',
+      defaults: {
+        category: 'education',
+        mode: 'In-person',
+        price: '200',
+        vipPrice: '300',
+        capacity: '50',
+        description: 'Learn new skills and gain valuable knowledge from industry experts.',
+        importantInfo: 'Bring your laptop and notebook. Materials will be provided.',
+        ticketsAvailableAt: 'Available online only'
+      }
+    },
+    {
+      id: 'conference',
+      name: 'Conference',
+      icon: 'users',
+      color: '#10B981',
+      description: 'Professional gatherings and networking',
+      defaults: {
+        category: 'business',
+        mode: 'In-person',
+        price: '1000',
+        vipPrice: '2000',
+        capacity: '200',
+        description: 'Connect with industry leaders and expand your professional network.',
+        importantInfo: 'Business casual dress code. Networking lunch included.',
+        ticketsAvailableAt: 'Available online and at the venue'
+      }
+    },
+    {
+      id: 'party',
+      name: 'Party/Social',
+      icon: 'coffee',
+      color: '#F59E0B',
+      description: 'Social gatherings and celebrations',
+      defaults: {
+        category: 'culture',
+        mode: 'In-person',
+        price: '300',
+        earlyBirdPrice: '200',
+        capacity: '150',
+        description: 'Join us for a fun-filled evening of entertainment and socializing.',
+        importantInfo: 'Dress to impress! Valid ID required for entry.',
+        ticketsAvailableAt: 'Available at the venue'
+      }
+    },
+    {
+      id: 'sports',
+      name: 'Sports Event',
+      icon: 'activity',
+      color: '#8B5CF6',
+      description: 'Sports competitions and fitness events',
+      defaults: {
+        category: 'sports',
+        mode: 'In-person',
+        price: '100',
+        capacity: '100',
+        description: 'Exciting sports competition and activities for all fitness levels.',
+        importantInfo: 'Wear comfortable sports attire. Bring water bottle.',
+        ticketsAvailableAt: 'Available online and at the venue'
+      }
+    },
+    {
+      id: 'webinar',
+      name: 'Webinar/Online',
+      icon: 'monitor',
+      color: '#06B6D4',
+      description: 'Online events and virtual meetings',
+      defaults: {
+        category: 'education',
+        mode: 'Online',
+        price: '0',
+        capacity: '1000',
+        description: 'Join our online session from anywhere in the world.',
+        importantInfo: 'Link will be sent 24 hours before the event. Stable internet required.',
+        ticketsAvailableAt: 'Free registration online'
+      }
+    }
+  ];
 
   // Auto-populate organizer name from profile
   useEffect(() => {
@@ -175,6 +282,22 @@ const CreateEventScreen = ({ navigation, route }) => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleTemplateSelect = (template) => {
+    // Apply template defaults to form data
+    setFormData(prev => ({
+      ...prev,
+      ...template.defaults
+    }));
+    setShowTemplateModal(false);
+    
+    // Show confirmation
+    Alert.alert(
+      'Template Applied',
+      `${template.name} template has been applied. You can customize all fields as needed.`,
+      [{ text: 'OK', style: 'default' }]
+    );
   };
 
   const pickImage = async () => {
@@ -495,6 +618,23 @@ const CreateEventScreen = ({ navigation, route }) => {
       </View>
 
       <ScrollView style={createEventStyles.scrollView} showsVerticalScrollIndicator={false}>
+
+        {/* Template Selection Button */}
+        <View style={createEventStyles.templateButtonContainer}>
+          <TouchableOpacity 
+            style={createEventStyles.templateButton}
+            onPress={() => setShowTemplateModal(true)}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#0277BD', '#01579B']}
+              style={createEventStyles.templateButtonGradient}
+            >
+              <Text style={createEventStyles.templateButtonText}>Use Event Template</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <Text style={createEventStyles.templateHelperText}>Start with a pre-configured template for faster setup</Text>
+        </View>
 
         <View style={createEventStyles.form}>
 
@@ -1060,6 +1200,55 @@ const CreateEventScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
+        <View style={createEventStyles.modalOverlay}>
+          <View style={createEventStyles.modalContainer}>
+            <View style={createEventStyles.modalHeader}>
+              <Text style={createEventStyles.modalTitle}>Choose Event Template</Text>
+              <TouchableOpacity 
+                style={createEventStyles.modalCloseButton}
+                onPress={() => setShowTemplateModal(false)}
+              >
+                <Feather name="x" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={createEventStyles.modalSubtitle}>
+              Select a template to pre-fill your event details
+            </Text>
+
+            <ScrollView style={createEventStyles.templateList} showsVerticalScrollIndicator={false}>
+              {eventTemplates.map((template) => (
+                  <TouchableOpacity
+                    key={template.id}
+                    style={createEventStyles.templateCard}
+                    onPress={() => handleTemplateSelect(template)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={createEventStyles.templateContent}>
+                      <Text style={createEventStyles.templateName}>{template.name}</Text>
+                      <Text style={createEventStyles.templateDescription}>{template.description}</Text>
+                      
+                      <View style={createEventStyles.templateFeatures}>
+                        <Text style={createEventStyles.templateFeatureText}>
+                          Category: {template.defaults.category}
+                        </Text>
+                        <Text style={createEventStyles.templateFeatureText}>
+                          Mode: {template.defaults.mode}
+                        </Text>
+                        <Text style={createEventStyles.templateFeatureText}>
+                          Price: {template.defaults.price === '0' ? 'Free' : `ETB ${template.defaults.price}`}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
