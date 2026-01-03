@@ -16,7 +16,7 @@
     "lint:fix": "eslint . --ext .js,.jsx --fix"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-community/netinfo": "^11.3.1",
     "@react-native-firebase/analytics": "^23.7.0",
