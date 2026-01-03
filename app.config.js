@@ -46,7 +46,6 @@ export default {
     scheme: 'eventopia',
     plugins: [
       '@react-native-firebase/app',
-      '@react-native-firebase/analytics',
     ],
     updates: {
       enabled: true,

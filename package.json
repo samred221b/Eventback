@@ -16,7 +16,7 @@
     "lint:fix": "eslint . --ext .js,.jsx --fix"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-community/netinfo": "^11.3.1",
     "@react-native-firebase/analytics": "^23.7.0",
@@ -29,6 +29,7 @@
     "axios": "^1.13.2",
     "expo": "~54.0.30",
     "expo-constants": "~18.0.12",
+    "expo-dev-client": "~6.0.20",
     "expo-image-manipulator": "^14.0.8",
     "expo-image-picker": "~17.0.10",
     "expo-linear-gradient": "^15.0.8",
