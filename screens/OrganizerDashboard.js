@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,20 +12,53 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 
 import { useAuth } from '../providers/AuthProvider';
 import { SafeScrollView, SafeTouchableOpacity } from '../components/SafeComponents';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
 
 import styles from '../styles/OrganizerDashboardStyle';
 import { formatDate, parseBoolean } from '../utils/dataProcessor';
 import apiService from '../services/api';
+import cacheService from '../utils/cacheService';
+import { logger } from '../utils/logger';
+import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
+
+const DASHBOARD_EVENTS_CACHE_KEY = 'dashboard:organizer:events';
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+const cacheDashboardEvents = async (eventsData) => {
+  try {
+    await cacheService.set(DASHBOARD_EVENTS_CACHE_KEY, eventsData, { ttlMs: CACHE_TTL_MS });
+  } catch (e) {
+    logger.warn('Failed to cache dashboard events:', e);
+  }
+};
+
+const getCachedDashboardEvents = async () => {
+  try {
+    const { data, isExpired } = await cacheService.get(DASHBOARD_EVENTS_CACHE_KEY);
+    if (!Array.isArray(data)) return null;
+    return { events: data, isExpired };
+  } catch (e) {
+    logger.warn('Failed to get cached dashboard events:', e);
+    return null;
+  }
+};
 
 export default function OrganizerDashboard({ navigation }) {
   const { user, organizerProfile, signOut, verifyOrganizerIfNeeded } = useAuth();
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Track if we've already loaded events
+  const eventsLoadedRef = useRef(false);
+  const lastLoadTimeRef = useRef(0);
   const [insights, setInsights] = useState({
     totalViews: 0,
     totalLikes: 0,
@@ -41,35 +74,49 @@ export default function OrganizerDashboard({ navigation }) {
     recentActivity: 0,
   });
   
-  // Load events when screen is focused
+  // Load events when screen is focused (with caching)
   useFocusEffect(
     React.useCallback(() => {
       let isActive = true;
       (async () => {
         try {
-          setIsLoading(true);
           // Try to verify in the background, but don't block the UI
           verifyOrganizerIfNeeded().catch(e => {
             // Silent fail
           });
           
-          // Always load events regardless of verification status
-          if (isActive) {
+          // Only load events if we haven't loaded them recently (within last 30 seconds)
+          const now = Date.now();
+          const timeSinceLastLoad = now - lastLoadTimeRef.current;
+          const shouldLoad = !eventsLoadedRef.current || timeSinceLastLoad > 30000; // 30 seconds
+          
+          if (shouldLoad && isActive) {
             await loadOrganizerEvents();
+            eventsLoadedRef.current = true;
+            lastLoadTimeRef.current = now;
           }
         } catch (e) {
           // Silent fail
-        } finally {
-          if (isActive) setIsLoading(false);
         }
       })();
       return () => { isActive = false; };
-    }, [loadOrganizerEvents])
+    }, [])
   );
   
-  const loadOrganizerEvents = async () => {
+  const loadOrganizerEvents = async (forceRefresh = false) => {
     try {
+      // Try to get cached data first (unless force refresh)
+      if (!forceRefresh) {
+        const cached = await getCachedDashboardEvents();
+        if (cached?.events?.length && !cached.isExpired) {
+          setOrganizerEvents(cached.events);
+          calculateInsights(cached.events);
+          return;
+        }
+      }
+
       setIsLoading(true);
+      setError(null);
       const response = await apiService.getOrganizerEvents();
       
       if (response.success && response.data) {
@@ -91,6 +138,9 @@ export default function OrganizerDashboard({ navigation }) {
         
         setOrganizerEvents(events);
         calculateInsights(events);
+        
+        // Cache the events data
+        await cacheDashboardEvents(events);
       } else {
         const allEventsResponse = await apiService.getEvents();
         if (allEventsResponse.success && allEventsResponse.data) {
@@ -115,7 +165,8 @@ export default function OrganizerDashboard({ navigation }) {
         }
       }
     } catch (error) {
-      // Silent fail
+      setError(toAppError(error, { fallbackMessage: 'Failed to load your events. Please try again.' }));
+      logger.error('OrganizerDashboard loadOrganizerEvents error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +177,7 @@ export default function OrganizerDashboard({ navigation }) {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'We need camera roll permissions to upload images.');
+        setError(toAppError(new Error('Camera roll permission is required to upload images.'), { kind: 'PERMISSION_DENIED', severity: APP_ERROR_SEVERITY.WARNING }));
         return;
       }
 
@@ -140,7 +191,7 @@ export default function OrganizerDashboard({ navigation }) {
         const localUri = result.assets[0].uri;
         setBannerImageUri(localUri);
 
-        Alert.alert('Uploading...', 'Please wait while your banner is uploaded.');
+        setError(toAppError(new Error('Please wait while your banner is uploaded.'), { kind: 'INFO', severity: APP_ERROR_SEVERITY.INFO }));
 
         const fd = new FormData();
         fd.append('file', {
@@ -158,18 +209,18 @@ export default function OrganizerDashboard({ navigation }) {
           );
           if (response.data.secure_url) {
             setBannerImageUrl(response.data.secure_url);
-            Alert.alert('Success!', 'Banner uploaded successfully.');
+            setError(toAppError(new Error('Banner uploaded successfully.'), { kind: 'SUCCESS', severity: APP_ERROR_SEVERITY.SUCCESS }));
           } else {
             throw new Error('Upload failed');
           }
         } catch (error) {
-          Alert.alert('Upload Failed', 'Failed to upload banner. Please try again.');
+          setError(toAppError(error, { fallbackMessage: 'Failed to upload banner. Please try again.' }));
           setBannerImageUri(null);
           setBannerImageUrl(null);
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      setError(toAppError(error, { fallbackMessage: 'An unexpected error occurred. Please try again.' }));
     }
   };
 
@@ -180,18 +231,18 @@ export default function OrganizerDashboard({ navigation }) {
 
   const addBanner = async () => {
     if (!isPromoAdmin) {
-      Alert.alert('Access denied', 'Only the administrator can manage promotional banners.');
+      setError(toAppError(new Error('Only the administrator can manage promotional banners.'), { kind: 'PERMISSION_DENIED', severity: APP_ERROR_SEVERITY.WARNING }));
       return;
     }
     if (!bannerImageUrl) {
-      Alert.alert('Banner Missing', 'Please upload a banner image first.');
+      setError(toAppError(new Error('Please upload a banner image first.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return;
     }
     try {
       setIsBannerPublishing(true);
       const verify = await verifyOrganizerIfNeeded();
       if (!verify?.success) {
-        Alert.alert('Verification required', 'Please sign in again to publish banners.');
+        setError(toAppError(new Error('Please sign in again to publish banners.'), { kind: 'AUTH_REQUIRED', severity: APP_ERROR_SEVERITY.WARNING }));
         setIsBannerPublishing(false);
         return;
       }
@@ -203,15 +254,16 @@ export default function OrganizerDashboard({ navigation }) {
       }, { requireAuth: true });
 
       if (res?.success) {
-        Alert.alert('Success', 'Promotional banner published successfully.');
+        setError(null); // Clear any previous errors
+        setError(toAppError(new Error('Promotional banner published successfully.'), { kind: 'SUCCESS', severity: APP_ERROR_SEVERITY.SUCCESS }));
         setBannerImageUri(null);
         setBannerImageUrl(null);
         await loadBanners();
       } else {
-        Alert.alert('Error', res?.message || 'Failed to publish banner');
+        setError(toAppError(new Error(res?.message || 'Failed to publish banner'), { kind: 'API_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
       }
     } catch (error) {
-      Alert.alert('Error', error?.message || 'Failed to publish banner.');
+      setError(toAppError(error, { fallbackMessage: 'Failed to publish banner.' }));
     } finally {
       setIsBannerPublishing(false);
     }
@@ -219,22 +271,22 @@ export default function OrganizerDashboard({ navigation }) {
 
   const replaceSelectedBanner = async () => {
     if (!isPromoAdmin) {
-      Alert.alert('Access denied', 'Only the administrator can manage promotional banners.');
+      setError(toAppError(new Error('Only the administrator can manage promotional banners.'), { kind: 'PERMISSION_DENIED', severity: APP_ERROR_SEVERITY.WARNING }));
       return;
     }
     if (!selectedBannerId) {
-      Alert.alert('Select Banner', 'Please select a banner to replace.');
+      setError(toAppError(new Error('Please select a banner to replace.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return;
     }
     if (!bannerImageUrl) {
-      Alert.alert('Image Missing', 'Please pick and upload a new image first.');
+      setError(toAppError(new Error('Please pick and upload a new image first.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return;
     }
     try {
       setIsBannerPublishing(true);
       const verify = await verifyOrganizerIfNeeded();
       if (!verify?.success) {
-        Alert.alert('Verification required', 'Please sign in again to replace banners.');
+        setError(toAppError(new Error('Please sign in again to replace banners.'), { kind: 'AUTH_REQUIRED', severity: APP_ERROR_SEVERITY.WARNING }));
         setIsBannerPublishing(false);
         return;
       }
@@ -242,15 +294,16 @@ export default function OrganizerDashboard({ navigation }) {
         imageUrl: bannerImageUrl,
       }, { requireAuth: true });
       if (res?.success) {
-        Alert.alert('Success', 'Banner replaced successfully.');
+        setError(null); // Clear any previous errors
+        setError(toAppError(new Error('Banner replaced successfully.'), { kind: 'SUCCESS', severity: APP_ERROR_SEVERITY.SUCCESS }));
         setBannerImageUri(null);
         setBannerImageUrl(null);
         await loadBanners();
       } else {
-        Alert.alert('Error', res?.message || 'Failed to replace banner');
+        setError(toAppError(new Error(res?.message || 'Failed to replace banner'), { kind: 'API_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
       }
     } catch (error) {
-      Alert.alert('Error', error?.message || 'Failed to replace banner.');
+      setError(toAppError(error, { fallbackMessage: 'Failed to replace banner.' }));
     } finally {
       setIsBannerPublishing(false);
     }
@@ -258,11 +311,11 @@ export default function OrganizerDashboard({ navigation }) {
 
   const deleteSelectedBanner = async () => {
     if (!isPromoAdmin) {
-      Alert.alert('Access denied', 'Only the administrator can manage promotional banners.');
+      setError(toAppError(new Error('Only the administrator can manage promotional banners.'), { kind: 'PERMISSION_DENIED', severity: APP_ERROR_SEVERITY.WARNING }));
       return;
     }
     if (!selectedBannerId) {
-      Alert.alert('Select Banner', 'Please select a banner to delete.');
+      setError(toAppError(new Error('Please select a banner to delete.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return;
     }
     Alert.alert('Delete Banner', 'Are you sure you want to delete this banner?', [
@@ -272,19 +325,20 @@ export default function OrganizerDashboard({ navigation }) {
           setIsBannerPublishing(true);
           const verify = await verifyOrganizerIfNeeded();
           if (!verify?.success) {
-            Alert.alert('Verification required', 'Please sign in again to delete banners.');
+            setError(toAppError(new Error('Please sign in again to delete banners.'), { kind: 'AUTH_REQUIRED', severity: APP_ERROR_SEVERITY.WARNING }));
             setIsBannerPublishing(false);
             return;
           }
           const res = await apiService.delete(`/banners/${selectedBannerId}`, { requireAuth: true });
           if (res?.success) {
-            Alert.alert('Deleted', 'Banner deleted successfully.');
+            setError(null); // Clear any previous errors
+            setError(toAppError(new Error('Banner deleted successfully.'), { kind: 'SUCCESS', severity: APP_ERROR_SEVERITY.SUCCESS }));
             await loadBanners();
           } else {
-            Alert.alert('Error', res?.message || 'Failed to delete banner');
+            setError(toAppError(new Error(res?.message || 'Failed to delete banner'), { kind: 'API_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
           }
         } catch (error) {
-          Alert.alert('Error', error?.message || 'Failed to delete banner.');
+          setError(toAppError(error, { fallbackMessage: 'Failed to delete banner.' }));
         } finally {
           setIsBannerPublishing(false);
         }
@@ -296,7 +350,7 @@ export default function OrganizerDashboard({ navigation }) {
     if (!isPromoAdmin) {
       setIsBannersLoading(false);
       setShowBannerModal(false);
-      Alert.alert('Access denied', 'Only the administrator can manage promotional banners.');
+      setError(toAppError(new Error('Only the administrator can manage promotional banners.'), { kind: 'PERMISSION_DENIED', severity: APP_ERROR_SEVERITY.WARNING }));
       return;
     }
     setIsBannersLoading(true);
@@ -451,6 +505,7 @@ export default function OrganizerDashboard({ navigation }) {
 
   useEffect(() => {
     if (showBannerModal) {
+      setError(null); // Clear any previous errors when opening banner modal
       loadBanners();
     }
   }, [showBannerModal]);
@@ -458,7 +513,7 @@ export default function OrganizerDashboard({ navigation }) {
   const dashboardProfile = {
     name: organizerProfile?.name || user?.displayName || user?.email?.split('@')[0] || 'Organizer',
     email: organizerProfile?.email || user?.email || '',
-    avatar: '',
+    avatar: organizerProfile?.profileImage || organizerProfile?.avatar || '',
     totalEvents: organizerProfile?.totalEvents || organizerEvents.length,
     activeEvents: organizerEvents.filter(e => e.status !== 'Ended').length,
     totalFavorites: organizerEvents.reduce((sum, event) => sum + (event.likes || 0), 0),
@@ -515,12 +570,13 @@ export default function OrganizerDashboard({ navigation }) {
               const response = await apiService.deleteEvent(eventId);
               if (response.success) {
                 setOrganizerEvents(prev => prev.filter(e => e.id !== eventId));
-                Alert.alert('Success', 'Event deleted successfully');
+                setError(null); // Clear any previous errors
+                setError(toAppError(new Error('Event deleted successfully'), { kind: 'SUCCESS', severity: APP_ERROR_SEVERITY.SUCCESS }));
               } else {
-                Alert.alert('Error', response.message || 'Failed to delete event');
+                setError(toAppError(new Error(response.message || 'Failed to delete event'), { kind: 'API_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
               }
             } catch (error) {
-              Alert.alert('Error', error.message || 'Failed to delete event');
+              setError(toAppError(error, { fallbackMessage: 'Failed to delete event.' }));
             }
           }
         }
@@ -601,10 +657,21 @@ export default function OrganizerDashboard({ navigation }) {
       scrollEnabled={true}
       nestedScrollEnabled={true}
       keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ paddingBottom: 20 }}
     >
       {/* StatusBar moved to App.js */}
       
-      <View style={styles.modernDashboardHeader}>
+      <LinearGradient
+        colors={['#0277BD', '#01579B', '#0B3A67']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.modernDashboardHeader}
+      >
+        <View style={styles.modernDashboardHeaderBg} pointerEvents="none">
+          <View style={styles.modernDashboardHeaderOrbOne} />
+          <View style={styles.modernDashboardHeaderOrbTwo} />
+        </View>
+
         <View style={styles.modernDashboardHeaderTop}>
           <View style={styles.modernDashboardProfile}>
             <View style={styles.modernDashboardAvatar}>
@@ -615,12 +682,23 @@ export default function OrganizerDashboard({ navigation }) {
                   resizeMode="cover"
                 />
               ) : (
-                <Feather name="user" size={28} color="#FFFFFF" />
+                <Feather name="user" size={30} color="#FFFFFF" />
               )}
             </View>
             <View style={styles.modernDashboardProfileInfo}>
-              <Text style={styles.modernDashboardWelcome}>Welcome back,</Text>
-              <Text style={styles.modernDashboardName}>{dashboardProfile.name}</Text>
+              <Text style={styles.modernDashboardWelcome}>Organizer Dashboard</Text>
+              <View style={styles.modernDashboardNameRow}>
+                <Text style={styles.modernDashboardName} numberOfLines={1}>{dashboardProfile.name}</Text>
+                {dashboardProfile.isVerified ? (
+                  <View style={styles.modernDashboardVerifiedChip}>
+                    <Feather name="check" size={12} color="#0F172A" />
+                    <Text style={styles.modernDashboardVerifiedText}>Verified</Text>
+                  </View>
+                ) : null}
+              </View>
+              {!!dashboardProfile.email && (
+                <Text style={styles.modernDashboardEmail} numberOfLines={1}>{dashboardProfile.email}</Text>
+              )}
             </View>
           </View>
           
@@ -639,16 +717,18 @@ export default function OrganizerDashboard({ navigation }) {
             <Text style={styles.minimalStatNumber}>{dashboardProfile.totalEvents}</Text>
             <Text style={styles.minimalStatLabel}>Events</Text>
           </View>
+          <View style={styles.minimalStatDivider} />
           <View style={styles.minimalStatItem}>
-            <Text style={styles.minimalStatNumber}>{dashboardProfile.totalAttendees || 0}</Text>
-            <Text style={styles.minimalStatLabel}>Attendees</Text>
+            <Text style={styles.minimalStatNumber}>{insights.totalViews || 0}</Text>
+            <Text style={styles.minimalStatLabel}>Views</Text>
           </View>
+          <View style={styles.minimalStatDivider} />
           <View style={styles.minimalStatItem}>
             <Text style={styles.minimalStatNumber}>{dashboardProfile.totalFavorites || 0}</Text>
             <Text style={styles.minimalStatLabel}>Favorites</Text>
           </View>
         </View>
-      </View>
+      </LinearGradient>
 
       <View style={styles.modernDashboardQuickActions}>
         <SafeTouchableOpacity 
@@ -664,7 +744,10 @@ export default function OrganizerDashboard({ navigation }) {
 
         <SafeTouchableOpacity 
           style={styles.modernDashboardSecondaryButton}
-          onPress={loadOrganizerEvents}
+          onPress={() => {
+            setError(null); // Clear any previous errors
+            loadOrganizerEvents();
+          }}
           activeOpacity={0.8}
         >
           <Feather name="refresh-cw" size={20} color="#0277BD" />
@@ -677,6 +760,8 @@ export default function OrganizerDashboard({ navigation }) {
           <Text style={styles.modernDashboardSectionTitle}>My Events</Text>
           <Text style={styles.modernDashboardSectionCount}>{organizerEvents.length}</Text>
         </View>
+
+        <AppErrorBanner error={error} onRetry={loadOrganizerEvents} disabled={isLoading} />
 
         {isLoading ? (
           <View style={styles.modernDashboardEmptyState}>
@@ -720,6 +805,19 @@ export default function OrganizerDashboard({ navigation }) {
           <View style={[styles.modernDashboardActionGradient, { backgroundColor: '#0277BD' }]}>
             <Feather name="bar-chart-2" size={22} color="#FFFFFF" />
             <Text style={styles.modernDashboardActionText}>Analytics</Text>
+          </View>
+        </SafeTouchableOpacity>
+      </View>
+
+      <View style={styles.modernDashboardSection}>
+        <SafeTouchableOpacity 
+          style={styles.modernDashboardActionButton}
+          onPress={() => navigation.navigate('OrganizerInbox')}
+          activeOpacity={0.9}
+        >
+          <View style={[styles.modernDashboardActionGradient, { backgroundColor: '#10B981' }]}>
+            <Feather name="inbox" size={22} color="#FFFFFF" />
+            <Text style={styles.modernDashboardActionText}>Messages</Text>
           </View>
         </SafeTouchableOpacity>
       </View>
@@ -777,6 +875,23 @@ export default function OrganizerDashboard({ navigation }) {
                   <View>
                     <Text style={styles.dashboardSettingText}>System Analytics</Text>
                     <Text style={styles.dashboardSettingSubtext}>View platform statistics and trends</Text>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={16} color="#94A3B8" />
+              </SafeTouchableOpacity>
+              
+              <SafeTouchableOpacity 
+                style={styles.dashboardSettingItem} 
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('AdminMessaging')}
+              >
+                <View style={styles.settingItemLeft}>
+                  <View style={[styles.settingIconContainer, { backgroundColor: '#10B981' }]}>
+                    <Feather name="message-square" size={16} color="#FFFFFF" />
+                  </View>
+                  <View>
+                    <Text style={styles.dashboardSettingText}>Admin Messaging</Text>
+                    <Text style={styles.dashboardSettingSubtext}>Send messages to organizers</Text>
                   </View>
                 </View>
                 <Feather name="chevron-right" size={16} color="#94A3B8" />
@@ -1095,6 +1210,8 @@ export default function OrganizerDashboard({ navigation }) {
             </View>
 
             <SafeScrollView style={styles.createEventForm}>
+              <AppErrorBanner error={error} onRetry={() => setError(null)} disabled={isBannerPublishing} />
+              
               <View style={{ marginBottom: 12 }}>
                 {isBannersLoading ? (
                   <View style={{ alignItems: 'center', paddingVertical: 16 }}>

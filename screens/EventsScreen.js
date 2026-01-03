@@ -18,6 +18,7 @@ import { useFavorites } from '../providers/FavoritesProvider';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import apiService from '../services/api';
+import EmptyState from '../components/EmptyState';
 import cacheService, { TTL } from '../utils/cacheService';
 import AppErrorBanner from '../components/AppErrorBanner';
 import AppErrorState from '../components/AppErrorState';
@@ -146,8 +147,8 @@ const EventsScreen = ({ navigation, route }) => {
   useEffect(() => {
     // Debounce search - only search after user stops typing for 500ms
     if (searchQuery.trim().length === 0) {
-      // If search is cleared, reload immediately
-      loadEvents();
+      // If search is cleared, just filter existing events without reloading from server
+      filterEventsByCategory(selectedCategory, activeFilter);
       return;
     }
     
@@ -528,10 +529,22 @@ const EventsScreen = ({ navigation, route }) => {
         return <View style={{ padding: 16 }} />;
       }
       return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No events available</Text>
-          <Text style={styles.emptySubtext}>Please check your connection or try again later.</Text>
-        </View>
+        <EmptyState
+          icon="calendar"
+          iconSize={64}
+          title="No Events Available"
+          description={searchQuery.trim() 
+            ? `No events found for "${searchQuery}"`
+            : "There are no events to display at the moment. Try adjusting your filters or check back later."
+          }
+          primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => fetchEvents()}
+          primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Refresh'}
+          primaryActionIcon={searchQuery.trim() ? 'x' : 'refresh-cw'}
+          secondaryAction={() => navigation.navigate('Home')}
+          secondaryActionText="Explore Home"
+          secondaryActionIcon="home"
+          gradientColors={['#0277BD', '#01579B']}
+        />
       );
     }
     return (
@@ -568,6 +581,10 @@ const EventsScreen = ({ navigation, route }) => {
             end={{ x: 1, y: 1 }}
             style={homeStyles.homeHeaderCard}
           >
+            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+              <View style={homeStyles.homeHeaderOrbOne} />
+              <View style={homeStyles.homeHeaderOrbTwo} />
+            </View>
             <View style={homeStyles.homeHeaderTopRow}>
               <View>
                 <Text style={homeStyles.homeHeaderNameText}>Events</Text>

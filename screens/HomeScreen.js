@@ -21,6 +21,7 @@ import { useFavorites } from '../providers/FavoritesProvider';
 import { SafeScrollView, SafeTouchableOpacity } from '../components/SafeComponents';
 import EnhancedSearch from '../components/EnhancedSearch';
 import AppErrorBanner from '../components/AppErrorBanner';
+import EmptyState from '../components/EmptyState';
 
 import homeStyles from '../styles/homeStyles';
 import { makeEventSerializable, formatPrice, standardizeEventForDetails } from '../utils/dataProcessor';
@@ -90,14 +91,17 @@ export default function HomeScreen({ navigation }) {
   const bellAnchorRef = useRef(null);
 
   const [error, setError] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [broadcastNotifications, setBroadcastNotifications] = useState([]);
+  const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
 
   const backgroundImageStyle = {
     position: 'absolute',
-    top: -10,
-    left: 10,
-    right: 0,
+    top: 0,
+    left: 0,
+    right: -10,
     bottom: 0,
-    width: 800,
+    width: 410,
     height: '100%',
   };
 
@@ -118,9 +122,44 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     // Prefill from cache and refresh in background on first mount
     loadEventsFromBackend({ background: true });
+    refreshNotifications({ background: true });
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshNotifications({ background: true });
+    }, [])
+  );
+
+  const refreshNotifications = async ({ background = false } = {}) => {
+    try {
+      if (!background) {
+        setIsNotificationsLoading(true);
+      }
+
+      const [countRes, listRes] = await Promise.all([
+        apiService.getUnreadNotificationsCount(),
+        apiService.getBroadcastNotifications(30),
+      ]);
+
+      const nextUnread = countRes?.data?.unreadCount;
+      if (typeof nextUnread === 'number') {
+        setUnreadCount(nextUnread);
+      }
+
+      const nextList = Array.isArray(listRes?.data) ? listRes.data : [];
+      setBroadcastNotifications(nextList);
+    } catch (e) {
+      // Silent fail: notifications are non-blocking
+    } finally {
+      if (!background) {
+        setIsNotificationsLoading(false);
+      }
+    }
+  };
+
   const handleBellPress = () => {
+    refreshNotifications({ background: true });
     const anchorRef = hasInitialLoad ? bellAnchorRef : loadingBellAnchorRef;
     const anchorNode = anchorRef?.current;
 
@@ -138,6 +177,33 @@ export default function HomeScreen({ navigation }) {
 
   const handleCloseRecentEventsModal = () => {
     setShowRecentEventsModal(false);
+  };
+
+  const handleNotificationPress = async (notification) => {
+    try {
+      if (!notification?.id) return;
+      if (notification.isRead) return;
+
+      await apiService.markNotificationRead(notification.id);
+
+      setBroadcastNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (e) {
+      // Silent fail
+    }
+  };
+
+  const handleClearNotifications = async () => {
+    try {
+      if (broadcastNotifications.length === 0) return;
+      await apiService.markAllNotificationsRead();
+      setBroadcastNotifications([]);
+      setUnreadCount(0);
+    } catch (e) {
+      // Silent fail
+    }
   };
 
   const loadEventsFromBackend = async ({ isRefresh = false, background = false } = {}) => {
@@ -343,6 +409,10 @@ export default function HomeScreen({ navigation }) {
             end={{ x: 1, y: 1 }}
             style={homeStyles.homeHeaderCard}
           >
+            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+              <View style={homeStyles.homeHeaderOrbOne} />
+              <View style={homeStyles.homeHeaderOrbTwo} />
+            </View>
             <View style={homeStyles.homeHeaderTopRow}>
               <View style={homeStyles.modernDashboardProfile}>
                 <View style={homeStyles.modernDashboardAvatar}>
@@ -499,7 +569,7 @@ export default function HomeScreen({ navigation }) {
               </View>
               <View style={{ width: 8 }} />
               <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
-                Recently Listed
+                Notifications
               </Text>
               <TouchableOpacity
                 onPress={handleCloseRecentEventsModal}
@@ -513,43 +583,71 @@ export default function HomeScreen({ navigation }) {
             <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
               <View style={{ height: 8 }} />
 
-              {recentEventsForModal.length === 0 ? (
+              {isNotificationsLoading ? (
+                <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 8 }}>
+                  <ActivityIndicator size="small" color="#0277BD" />
+                </View>
+              ) : broadcastNotifications.length === 0 ? (
                 <View style={{ alignItems: 'center', paddingTop: 24 }}>
-                  <Feather name="calendar" size={32} color="#CBD5E1" />
-                  <Text style={{ color: '#64748B', marginTop: 8, fontSize: 13 }}>No events available yet.</Text>
+                  <Feather name="bell" size={32} color="#CBD5E1" />
+                  <Text style={{ color: '#64748B', marginTop: 8, fontSize: 13 }}>No notifications yet.</Text>
                 </View>
               ) : (
                 <ScrollView showsVerticalScrollIndicator={false}>
-                  {recentEventsForModal.map((event, index) => (
+                  {broadcastNotifications.map((n) => (
                     <TouchableOpacity
-                      key={event.id}
-                      onPress={() => {
-                        handleCloseRecentEventsModal();
-                        handleEventPress(event);
-                      }}
+                      key={n.id}
+                      onPress={() => handleNotificationPress(n)}
                       activeOpacity={0.84}
                       style={{
                         paddingVertical: 10,
                         paddingHorizontal: 10,
                         borderRadius: 12,
-                        backgroundColor: '#F8FAFC',
+                        backgroundColor: n.isRead ? '#F8FAFC' : '#EFF6FF',
                         marginBottom: 6,
                         borderWidth: 1,
-                        borderColor: '#E2E8F0',
+                        borderColor: n.isRead ? '#E2E8F0' : '#BFDBFE',
                       }}
                     >
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A', marginBottom: 2 }} numberOfLines={1}>
-                        {event.title || 'Untitled Event'}
-                      </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Feather name="tag" size={11} color="#64748B" style={{ marginRight: 4 }} />
-                        <Text style={{ fontSize: 11, color: '#64748B', textTransform: 'capitalize' }}>
-                          {event.category || 'General'}
-                        </Text>
+                        <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: n.isRead ? '#E2E8F0' : '#3B82F6', alignItems: 'center', justifyContent: 'center' }}>
+                          <Feather name="volume-2" size={12} color={n.isRead ? '#475569' : '#FFFFFF'} />
+                        </View>
+                        <View style={{ width: 8 }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
+                            {n.title || 'Announcement'}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: '#475569', marginTop: 2 }} numberOfLines={2}>
+                            {n.message}
+                          </Text>
+                        </View>
+                        {!n.isRead && (
+                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }} />
+                        )}
                       </View>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
+              )}
+              {broadcastNotifications.length > 0 && (
+                <LinearGradient
+                  colors={['#0277BD', '#01579B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    marginTop: 12,
+                    borderRadius: 6,
+                    paddingVertical: 6,
+                    paddingHorizontal: 16,
+                    alignItems: 'center',
+                    alignSelf: 'flex-end',
+                  }}
+                >
+                  <TouchableOpacity onPress={handleClearNotifications} activeOpacity={0.8}>
+                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>Clear All</Text>
+                  </TouchableOpacity>
+                </LinearGradient>
               )}
             </View>
           </TouchableOpacity>
@@ -571,11 +669,15 @@ export default function HomeScreen({ navigation }) {
         
         <View style={homeStyles.homeHeaderContainer}>
           <LinearGradient
-            colors={['#0367a1ff', '#01579B']}
+            colors={['#0277BD', '#01579B']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={homeStyles.homeHeaderCard}
           >
+            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+              <View style={homeStyles.homeHeaderOrbOne} />
+              <View style={homeStyles.homeHeaderOrbTwo} />
+            </View>
             <View style={homeStyles.homeHeaderTopRow}>
               <View style={homeStyles.modernDashboardProfile}>
                 <View style={homeStyles.modernDashboardAvatar}>
@@ -605,6 +707,13 @@ export default function HomeScreen({ navigation }) {
                       size={20}
                       color={'rgba(255, 255, 255, 1)'}
                     />
+                    {unreadCount > 0 && (
+                      <View style={homeStyles.notificationBadge}>
+                        <Text style={homeStyles.notificationBadgeText}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
                   </SafeTouchableOpacity>
                 </View>
               </View>
@@ -641,7 +750,7 @@ export default function HomeScreen({ navigation }) {
           <View style={homeStyles.trendingEventsSection}>
             <View style={homeStyles.trendingEventsHeader}>
               <View style={homeStyles.trendingTitleContainer}>
-                <Feather name="trending-up" size={20} color="#EF4444" />
+                <Feather name="trending-up" size={20} color="#000000" />
                 <Text style={homeStyles.trendingEventsTitle}>Trending Events</Text>
               </View>
               <SafeTouchableOpacity onPress={() => navigation.navigate('Events')}>
@@ -751,45 +860,30 @@ export default function HomeScreen({ navigation }) {
         )}
         
         {/* Empty State */}
-        {trendingEvents.length === 0 && !isLoading && (
-          <View style={homeStyles.emptyStateContainer}>
-            <View style={homeStyles.emptyStateIllustration}>
-              <Feather name="calendar" size={64} color="#9CA3AF" />
-            </View>
-            <Text style={homeStyles.emptyStateTitle}>No Events Yet</Text>
-            <Text style={homeStyles.emptyStateDescription}>
-              {searchQuery.trim() 
+        {trendingEvents.length === 0 && !isLoading && hasInitialLoad && (
+          <EmptyState
+            icon="calendar"
+            iconSize={64}
+            title="No Events Yet"
+            description={
+              searchQuery.trim()
                 ? `No events found for "${searchQuery}"`
                 : "Be the first to create amazing events in your area!"
-              }
-            </Text>
-            {searchQuery.trim() && (
-              <SafeTouchableOpacity 
-                style={homeStyles.emptyStateButton}
-                onPress={() => setSearchQuery('')}
-                activeOpacity={0.9}
-              >
-                <Feather name="x" size={16} color="#FFFFFF" />
-                <Text style={homeStyles.emptyStateButtonText}>Clear Search</Text>
-              </SafeTouchableOpacity>
-            )}
-            {!searchQuery.trim() && (
-              <SafeTouchableOpacity 
-                style={homeStyles.emptyStateButton}
-                onPress={() => navigation.navigate('Events')}
-                activeOpacity={0.9}
-              >
-                <Feather name="plus" size={16} color="#FFFFFF" />
-                <Text style={homeStyles.emptyStateButtonText}>Create Event</Text>
-              </SafeTouchableOpacity>
-            )}
-          </View>
+            }
+            primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => navigation.navigate('Events')}
+            primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Explore Events'}
+            primaryActionIcon={searchQuery.trim() ? 'x' : 'compass'}
+            secondaryAction={() => navigation.navigate('OrganizerDashboard')}
+            secondaryActionText="Create Event"
+            secondaryActionIcon="plus"
+            gradientColors={['#0277BD', '#01579B']}
+          />
         )}
 
         <View style={homeStyles.featuredEventsSection}>
           <View style={homeStyles.featuredEventsHeader}>
             <View style={homeStyles.trendingTitleContainer}>
-              <Feather name="star" size={20} color="#FFD700" />
+              <Feather name="star" size={20} color="#000000" />
               <Text style={homeStyles.featuredEventsTitle}>Featured Events</Text>
             </View>
             <SafeTouchableOpacity onPress={() => navigation.navigate('Events')}>
@@ -881,7 +975,7 @@ export default function HomeScreen({ navigation }) {
         <View style={homeStyles.featuredEventsSection}>
           <View style={homeStyles.featuredEventsHeader}>
             <View style={homeStyles.trendingTitleContainer}>
-              <Feather name="calendar" size={20} color="#3B82F6" />
+              <Feather name="calendar" size={20} color="#000000" />
               <Text style={homeStyles.featuredEventsTitle}>Upcoming Events</Text>
             </View>
             <SafeTouchableOpacity onPress={() => navigation.navigate('Events')}>

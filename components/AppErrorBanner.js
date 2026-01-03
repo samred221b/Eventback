@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { APP_ERROR_SEVERITY } from '../utils/appError';
 
@@ -9,22 +10,36 @@ const AppErrorBanner = memo(({ error, onRetry, disabled = false }) => {
 
   const severity = error.severity || APP_ERROR_SEVERITY.ERROR;
 
+  const useGradient = severity === APP_ERROR_SEVERITY.WARNING || severity === APP_ERROR_SEVERITY.ERROR;
+  const gradientColors = ['#0277BD', '#01579B'];
   const backgroundColor =
     severity === APP_ERROR_SEVERITY.INFO
       ? '#2563EB'
-      : severity === APP_ERROR_SEVERITY.WARNING
-        ? '#F59E0B'
-        : '#EF4444';
+      : severity === APP_ERROR_SEVERITY.SUCCESS
+        ? '#10B981'
+        : '#0277BD';
 
   const iconName =
     severity === APP_ERROR_SEVERITY.INFO
       ? 'info'
       : severity === APP_ERROR_SEVERITY.WARNING
         ? 'alert-triangle'
-        : 'x-circle';
+        : severity === APP_ERROR_SEVERITY.SUCCESS
+          ? 'check-circle'
+          : 'x-circle';
+
+  const BannerWrapper = useGradient ? LinearGradient : View;
+  const wrapperStyle = useGradient 
+    ? [styles.wrapper] 
+    : [styles.wrapper, { backgroundColor }];
 
   return (
-    <View style={[styles.wrapper, { backgroundColor }]}>
+    <BannerWrapper 
+      style={wrapperStyle}
+      colors={useGradient ? gradientColors : undefined}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
       <View style={styles.row}>
         <Feather name={iconName} size={16} color="#FFFFFF" style={styles.icon} />
         <View style={styles.textWrap}>
@@ -37,7 +52,7 @@ const AppErrorBanner = memo(({ error, onRetry, disabled = false }) => {
             </Text>
           )}
         </View>
-        {onRetry && error.retryable !== false && (
+        {onRetry && error.retryable !== false && severity !== APP_ERROR_SEVERITY.SUCCESS && (
           <TouchableOpacity
             onPress={onRetry}
             disabled={disabled}
@@ -48,7 +63,7 @@ const AppErrorBanner = memo(({ error, onRetry, disabled = false }) => {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </BannerWrapper>
   );
 });
 
@@ -56,8 +71,8 @@ export default AppErrorBanner;
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.1)',
   },
@@ -73,25 +88,25 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   details: {
-    marginTop: 2,
+    marginTop: 1,
     color: 'rgba(255,255,255,0.92)',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
   },
   retryButton: {
-    marginLeft: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    marginLeft: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 14,
+    borderRadius: 12,
   },
   retryText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
 });

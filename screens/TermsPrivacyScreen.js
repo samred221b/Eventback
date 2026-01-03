@@ -17,6 +17,10 @@ export default function TermsPrivacyScreen({ navigation }) {
           end={{ x: 1, y: 1 }}
           style={homeStyles.homeHeaderCard}
         >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
           <View style={homeStyles.homeHeaderTopRow}>
             <View style={homeStyles.modernDashboardProfile}>
               <View style={homeStyles.modernDashboardAvatar}>

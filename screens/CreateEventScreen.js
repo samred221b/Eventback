@@ -20,12 +20,17 @@ import createEventStyles from '../styles/createEventStyles';
 import homeStyles from '../styles/homeStyles';
 import DatePickerModal from '../components/DatePickerModal';
 import TimePickerModal from '../components/TimePickerModal';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
+import { logger } from '../utils/logger';
+import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
 
 const CreateEventScreen = ({ navigation, route }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const { user, organizerProfile, backendConnected, verifyOrganizerIfNeeded } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -292,67 +297,81 @@ const CreateEventScreen = ({ navigation, route }) => {
     }));
     setShowTemplateModal(false);
     
-    // Show confirmation
-    Alert.alert(
-      'Template Applied',
-      `${template.name} template has been applied. You can customize all fields as needed.`,
-      [{ text: 'OK', style: 'default' }]
-    );
+    setError(null); // Clear any previous errors
+    setError(toAppError(new Error(`${template.name} template has been applied. You can customize all fields as needed.`), { kind: 'SUCCESS', severity: APP_ERROR_SEVERITY.SUCCESS }));
+  };
+
+  const extractPickerUri = (result) => {
+    if (!result || result.canceled) return null;
+    if (result.assets && result.assets[0]) return result.assets[0].uri;
+    if (result.images && result.images[0]) return result.images[0].uri;
+    if (result.uri) return result.uri;
+    return null;
+  };
+
+  const uploadImageToCloudinary = async (localUri) => {
+    setImageUri(localUri); // Show local preview immediately
+    setError(toAppError(new Error('Please wait while your image is uploaded.'), { kind: 'INFO', severity: APP_ERROR_SEVERITY.INFO }));
+
+    const cloudinaryFormData = new FormData();
+    cloudinaryFormData.append('file', {
+      uri: localUri,
+      type: 'image/jpeg',
+      name: 'upload.jpg',
+    });
+    cloudinaryFormData.append('upload_preset', 'Eventopia');
+
+    try {
+      const response = await axios.post(
+        'https://api.cloudinary.com/v1_1/dqme0oqap/image/upload',
+        cloudinaryFormData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        }
+      );
+
+      if (response.data.secure_url) {
+        setFormData(prev => ({
+          ...prev,
+          imageUrl: response.data.secure_url,
+        }));
+        setError(null);
+        // Show success popup instead of banner
+        Alert.alert(
+          'Success!',
+          'Image uploaded successfully and is now globally available.',
+          [{ text: 'OK', style: 'default' }]
+        );
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      setError(toAppError(error, { fallbackMessage: 'Failed to upload image to Cloudinary. Please try again or use an image URL.' }));
+      removeImage();
+    }
   };
 
   const pickImage = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'We need camera roll permissions to upload images.');
+        setError(toAppError(new Error('Camera roll permission is required to upload images.'), { kind: 'PERMISSION_DENIED', severity: APP_ERROR_SEVERITY.WARNING }));
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        const localUri = result.assets[0].uri;
-        setImageUri(localUri); // Show local preview immediately
-
-        Alert.alert('Uploading...', 'Please wait while your image is uploaded.');
-
-        // Prepare form data for Cloudinary
-        const formData = new FormData();
-        formData.append('file', {
-          uri: localUri,
-          type: 'image/jpeg', // You can use result.assets[0].type if available
-          name: 'upload.jpg',
-        });
-        formData.append('upload_preset', 'Eventopia'); // your upload preset
-
-        try {
-          const response = await axios.post(
-            'https://api.cloudinary.com/v1_1/dqme0oqap/image/upload',
-            formData,
-            {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            }
-          );
-          if (response.data.secure_url) {
-            setFormData(prev => ({
-              ...prev,
-              imageUrl: response.data.secure_url,
-            }));
-            Alert.alert('Success!', 'Image uploaded successfully and is now globally available.');
-          } else {
-            throw new Error('Upload failed');
-          }
-        } catch (error) {
-          Alert.alert('Upload Failed', 'Failed to upload image to Cloudinary. Please try again or use an image URL.');
-          removeImage();
-        }
+      const localUri = extractPickerUri(result);
+      if (localUri) {
+        await uploadImageToCloudinary(localUri);
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      logger.error('Error in pickImage:', error);
+      setError(toAppError(error, { fallbackMessage: 'An unexpected error occurred. Please try again.' }));
     }
   };
 
@@ -368,80 +387,48 @@ const CreateEventScreen = ({ navigation, route }) => {
     const { title, description, address, date, time } = formData;
     
     if (!title.trim()) {
-      Alert.alert(
-        '⚠️ Please Fill the Informations Properly and Correct',
-        'Your event needs a title to stand out\n\n💡 Add a catchy title that describes your event clearly.',
-        [{ text: 'Got it', style: 'default' }]
-      );
+      setError(toAppError(new Error('Your event needs a title to stand out. Add a catchy title that describes your event clearly.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return false;
     }
     
     if (!description.trim()) {
-      Alert.alert(
-        '📝 Missing Event Description',
-        'Tell people what makes your event special!\n\n💡 Describe what attendees can expect, activities, or highlights.',
-        [{ text: 'Got it', style: 'default' }]
-      );
+      setError(toAppError(new Error('Tell people what makes your event special! Describe what attendees can expect, activities, or highlights.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return false;
     }
     
     if (!address.trim()) {
-      Alert.alert(
-        '📍 Missing Event Location',
-        'Where will your amazing event take place?\n\n💡 Enter the venue address so attendees know where to go.',
-        [{ text: 'Got it', style: 'default' }]
-      );
+      setError(toAppError(new Error('Where will your amazing event take place? Enter the venue address so attendees know where to go.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return false;
     }
     
     if (!date) {
-      Alert.alert(
-        '📅 Missing Event Date',
-        'When is your event happening?\n\n💡 Select a date so people can mark their calendars!',
-        [{ text: 'Got it', style: 'default' }]
-      );
+      setError(toAppError(new Error('When is your event happening? Select a date so people can mark their calendars!'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return false;
     }
     
     if (!time) {
-      Alert.alert(
-        '⏰ Missing Event Time',
-        'What time should everyone arrive?\n\n💡 Set the time so attendees can plan accordingly.',
-        [{ text: 'Got it', style: 'default' }]
-      );
+      setError(toAppError(new Error('What time should everyone arrive? Set the time so attendees can plan accordingly.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return false;
     }
     
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date)) {
-      Alert.alert(
-        '📅 Invalid Date Format',
-        'Please use the correct date format.\n\n💡 Example: 2024-12-25 (YYYY-MM-DD)',
-        [{ text: 'Got it', style: 'default' }]
-      );
+      setError(toAppError(new Error('Please use the correct date format. Example: 2024-12-25 (YYYY-MM-DD)'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return false;
     }
     
     // Validate time format (accepts only hh:mm AM/PM)
     const time12Regex = /^(0[1-9]|1[0-2]):[0-5][0-9] ?(AM|PM)$/i;
     if (!time12Regex.test(time)) {
-      Alert.alert(
-        '⏰ Invalid Time Format',
-        'Please use the correct time format.\n\n💡 Example: 7:30 PM or 02:15 AM',
-        [{ text: 'Got it', style: 'default' }]
-      );
+      setError(toAppError(new Error('Please use the correct time format. Example: 7:30 PM or 02:15 AM'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return false;
     }
     
     // Validate future date
     const eventDate = new Date(`${date}T${time}`);
     if (eventDate <= new Date()) {
-      Alert.alert(
-        '🚀 Future Events Only',
-        'Events must be scheduled for the future!\n\n💡 Pick a date and time that hasn\'t passed yet.',
-        [{ text: 'Got it', style: 'default' }]
-      );
+      setError(toAppError(new Error('Events must be scheduled for the future! Pick a date and time that hasn\'t passed yet.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return false;
     }
     
@@ -449,10 +436,11 @@ const CreateEventScreen = ({ navigation, route }) => {
   };
 
   const handleCreateEvent = async () => {
+    setError(null); // Clear any previous errors
     if (!validateForm()) return;
     
     if (!backendConnected) {
-      Alert.alert('Error', 'Backend not available. Please check your connection.');
+      setError(toAppError(new Error('Backend not available. Please check your connection.'), { kind: 'NETWORK_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
       return;
     }
 
@@ -460,11 +448,11 @@ const CreateEventScreen = ({ navigation, route }) => {
     try {
       const verify = await verifyOrganizerIfNeeded();
       if (!verify?.success) {
-        Alert.alert('Verification required', 'Please sign in again to create events.');
+        setError(toAppError(new Error('Please sign in again to create events.'), { kind: 'AUTH_REQUIRED', severity: APP_ERROR_SEVERITY.WARNING }));
         return;
       }
     } catch (e) {
-      Alert.alert('Verification error', 'Could not verify your organizer session. Please try again.');
+      setError(toAppError(new Error('Could not verify your organizer session. Please try again.'), { kind: 'AUTH_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
       return;
     }
 
@@ -546,19 +534,20 @@ const CreateEventScreen = ({ navigation, route }) => {
           ]
         );
       } else {
-        Alert.alert('Error', response.message || 'Failed to create event');
+        setError(toAppError(new Error(response.message || 'Failed to create event'), { kind: 'API_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
       }
     } catch (error) {
+      logger.error('CreateEventScreen handleCreateEvent error:', error);
       const rawMessage = error?.response?.data?.message || error?.message || '';
       const messageLower = String(rawMessage).toLowerCase();
       const isTimeout = error?.name === 'AbortError' || messageLower.includes('timeout');
 
       if (typeof rawMessage === 'string' && messageLower.includes('too many requests')) {
-        Alert.alert('Rate Limit Exceeded', 'You have made too many requests. Please wait a few minutes and try again.');
+        setError(toAppError(new Error('You have made too many requests. Please wait a few minutes and try again.'), { kind: 'RATE_LIMIT', severity: APP_ERROR_SEVERITY.ERROR }));
       } else if (isTimeout) {
-        Alert.alert('Request Timeout', 'The server is taking too long to respond. Please check your internet connection or try again later.');
+        setError(toAppError(new Error('The server is taking too long to respond. Please check your internet connection or try again later.'), { kind: 'TIMEOUT', severity: APP_ERROR_SEVERITY.ERROR }));
       } else {
-        Alert.alert('Error', rawMessage || 'Failed to create event. Please try again.');
+        setError(toAppError(error, { fallbackMessage: 'Failed to create event. Please try again.' }));
       }
     } finally {
       setIsLoading(false);
@@ -591,16 +580,33 @@ const CreateEventScreen = ({ navigation, route }) => {
           end={{ x: 1, y: 1 }}
           style={homeStyles.homeHeaderCard}
         >
-          <View style={homeStyles.homeHeaderTopRow}>
+          <View style={homeStyles.modernDashboardHeaderTop}>
             <View style={homeStyles.modernDashboardProfile}>
               <View style={homeStyles.modernDashboardAvatar}>
-                <View style={homeStyles.modernDashboardAvatarInner}>
-                  <Feather name="user" size={20} color="#0F172A" />
-                </View>
+                {organizerProfile?.profileImage ? (
+                  <Image 
+                    source={{ uri: organizerProfile.profileImage }} 
+                    style={homeStyles.modernDashboardAvatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Feather name="user" size={30} color="#FFFFFF" />
+                )}
               </View>
-              <View>
-                <Text style={homeStyles.homeHeaderWelcomeText}>Welcome,</Text>
-                <Text style={homeStyles.homeHeaderNameText}>{organizerProfile?.name || user?.displayName || 'Organizer'}</Text>
+              <View style={homeStyles.modernDashboardProfileInfo}>
+                <Text style={homeStyles.modernDashboardWelcome}>Create Event</Text>
+                <View style={homeStyles.modernDashboardNameRow}>
+                  <Text style={homeStyles.modernDashboardName} numberOfLines={1}>{organizerProfile?.name || user?.displayName || 'Organizer'}</Text>
+                  {organizerProfile?.isVerified && (
+                    <View style={homeStyles.modernDashboardVerifiedChip}>
+                      <Feather name="check" size={12} color="#0F172A" />
+                      <Text style={homeStyles.modernDashboardVerifiedText}>Verified</Text>
+                    </View>
+                  )}
+                </View>
+                {!!organizerProfile?.email && (
+                  <Text style={homeStyles.modernDashboardEmail} numberOfLines={1}>{organizerProfile.email}</Text>
+                )}
               </View>
             </View>
             <View style={homeStyles.homeHeaderActions}>
@@ -618,6 +624,8 @@ const CreateEventScreen = ({ navigation, route }) => {
       </View>
 
       <ScrollView style={createEventStyles.scrollView} showsVerticalScrollIndicator={false}>
+
+        <AppErrorBanner error={error} onRetry={() => setError(null)} disabled={isLoading} />
 
         {/* Template Selection Button */}
         <View style={createEventStyles.templateButtonContainer}>
@@ -1119,7 +1127,6 @@ const CreateEventScreen = ({ navigation, route }) => {
                 maxLength={100}
               />
               <View style={createEventStyles.inputAccent} />
-              <Text style={createEventStyles.inputHelperText}>From your organizer profile</Text>
             </View>
           </View>
 
@@ -1205,15 +1212,21 @@ const CreateEventScreen = ({ navigation, route }) => {
       {showTemplateModal && (
         <View style={createEventStyles.modalOverlay}>
           <View style={createEventStyles.modalContainer}>
-            <View style={createEventStyles.modalHeader}>
+            {/* Header with Gradient */}
+            <LinearGradient
+              colors={['#0277BD', '#01579B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={createEventStyles.modalHeader}
+            >
               <Text style={createEventStyles.modalTitle}>Choose Event Template</Text>
               <TouchableOpacity 
                 style={createEventStyles.modalCloseButton}
                 onPress={() => setShowTemplateModal(false)}
               >
-                <Feather name="x" size={24} color="#6B7280" />
+                <Feather name="x" size={24} color="#FFFFFF" />
               </TouchableOpacity>
-            </View>
+            </LinearGradient>
             
             <Text style={createEventStyles.modalSubtitle}>
               Select a template to pre-fill your event details
@@ -1232,15 +1245,21 @@ const CreateEventScreen = ({ navigation, route }) => {
                       <Text style={createEventStyles.templateDescription}>{template.description}</Text>
                       
                       <View style={createEventStyles.templateFeatures}>
-                        <Text style={createEventStyles.templateFeatureText}>
-                          Category: {template.defaults.category}
-                        </Text>
-                        <Text style={createEventStyles.templateFeatureText}>
-                          Mode: {template.defaults.mode}
-                        </Text>
-                        <Text style={createEventStyles.templateFeatureText}>
-                          Price: {template.defaults.price === '0' ? 'Free' : `ETB ${template.defaults.price}`}
-                        </Text>
+                        <View style={createEventStyles.templateFeatureItem}>
+                          <Text style={createEventStyles.templateFeatureText}>
+                            {template.defaults.category}
+                          </Text>
+                        </View>
+                        <View style={createEventStyles.templateFeatureItem}>
+                          <Text style={createEventStyles.templateFeatureText}>
+                            {template.defaults.mode}
+                          </Text>
+                        </View>
+                        <View style={createEventStyles.templateFeatureItem}>
+                          <Text style={createEventStyles.templateFeatureText}>
+                            {template.defaults.price === '0' ? 'Free' : `ETB ${template.defaults.price}`}
+                          </Text>
+                        </View>
                       </View>
                     </View>
                   </TouchableOpacity>

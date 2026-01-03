@@ -139,6 +139,10 @@ export default function HelpSupportScreen({ navigation }) {
           end={{ x: 1, y: 1 }}
           style={homeStyles.homeHeaderCard}
         >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
           <View style={homeStyles.homeHeaderTopRow}>
             <View style={homeStyles.modernDashboardProfile}>
               <View style={homeStyles.modernDashboardAvatar}>
@@ -171,7 +175,7 @@ export default function HelpSupportScreen({ navigation }) {
         </LinearGradient>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
 
         {/* FAQ Categories */}
         <View style={styles.faqSection}>
@@ -265,15 +269,6 @@ export default function HelpSupportScreen({ navigation }) {
               <Text style={styles.contactTitle}>Email Support</Text>
               <Text style={styles.contactInfo}>samred221b@gmail.com</Text>
               <Text style={styles.contactNote}>Response within 24 hours</Text>
-            </View>
-          </View>
-
-          <View style={styles.contactMethod}>
-            <Text style={styles.contactIcon}>📱</Text>
-            <View style={styles.contactDetails}>
-              <Text style={styles.contactTitle}>Phone Support</Text>
-              <Text style={styles.contactInfo}>+251904577804</Text>
-              <Text style={styles.contactNote}>Mon-Fri, 9 AM - 6 PM EAT</Text>
             </View>
           </View>
 
@@ -418,8 +413,8 @@ const styles = StyleSheet.create({
   contactInfoSection: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -429,7 +424,7 @@ const styles = StyleSheet.create({
   contactMethod: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   contactIcon: {
     fontSize: 24,

@@ -33,6 +33,7 @@ export default {
     },
     android: {
       package: 'com.eventopia.app',
+      googleServicesFile: './android/app/google-services.json',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
@@ -43,6 +44,10 @@ export default {
       favicon: './assets/favicon.png',
     },
     scheme: 'eventopia',
+    plugins: [
+      '@react-native-firebase/app',
+      '@react-native-firebase/analytics',
+    ],
     updates: {
       enabled: true,
     },
@@ -65,7 +70,9 @@ export default {
       },
       // Feature flags
       debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === 'true',
-      analyticsEnabled: process.env.EXPO_PUBLIC_ANALYTICS_ENABLED === 'true',
+      analyticsEnabled: process.env.EXPO_PUBLIC_ANALYTICS_ENABLED
+        ? process.env.EXPO_PUBLIC_ANALYTICS_ENABLED === 'true'
+        : !IS_DEV,
     },
   },
 };

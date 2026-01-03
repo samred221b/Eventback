@@ -84,6 +84,10 @@ export default function PricingScreen({ navigation }) {
           end={{ x: 1, y: 1 }}
           style={homeStyles.homeHeaderCard}
         >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
           <View style={homeStyles.homeHeaderTopRow}>
             <View style={homeStyles.modernDashboardProfile}>
               <View style={homeStyles.modernDashboardAvatar}>
@@ -554,7 +558,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     margin: 24,
-    maxHeight: '80%',
+    maxHeight: '85%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
@@ -584,6 +588,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     padding: 20,
+    paddingBottom: 30,
   },
   selectedPlanInfo: {
     backgroundColor: '#F0F9FF',
@@ -666,7 +671,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3C7',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 24,
     borderWidth: 1,
     borderColor: '#F59E0B',
   },
@@ -685,6 +690,7 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'column',
     gap: 12,
+    paddingBottom: 10,
   },
   confirmButton: {
     backgroundColor: '#0277BD',

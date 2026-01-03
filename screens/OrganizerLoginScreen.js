@@ -9,6 +9,10 @@ import { Feather } from '@expo/vector-icons';
 import Logo from '../assets/Logo.png';
 import { logger } from '../utils/logger';
 import PricingScreen from './PricingScreen';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
+import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
+import homeStyles from '../styles/homeStyles';
 
 const { width } = Dimensions.get('window');
 
@@ -19,8 +23,9 @@ export default function OrganizerLoginScreen({ navigation }) {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedInput, setFocusedInput] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const { signIn, signUp } = useAuth();
 
   const handlePrimaryAction = async () => {
@@ -28,12 +33,13 @@ export default function OrganizerLoginScreen({ navigation }) {
       return;
     }
 
+    setError(null); // Clear any previous errors
+
     if (!email.trim() || !password.trim() || (!isLogin && !name.trim())) {
-      setErrorMessage(isLogin ? 'Please enter both email and password.' : 'Please complete all required fields.');
+      setError(toAppError(new Error(isLogin ? 'Please enter both email and password.' : 'Please complete all required fields.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return;
     }
 
-    setErrorMessage('');
     setIsSubmitting(true);
 
     try {
@@ -45,15 +51,15 @@ export default function OrganizerLoginScreen({ navigation }) {
       
       if (isLogin) {
         // Handle login
-        result = await signIn(trimmedEmail, trimmedPassword);
+        result = await signIn(trimmedEmail, trimmedPassword, rememberMe);
         if (!result?.success) {
           // More specific error message for invalid credentials
           if (result?.error?.includes('password') || result?.error?.includes('user-not-found')) {
-            setErrorMessage('The email or password you entered is incorrect. Please try again.');
+            setError(toAppError(new Error('The email or password you entered is incorrect. Please try again.'), { kind: 'AUTH_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
           } else if (result?.error?.includes('network')) {
-            setErrorMessage('Unable to connect. Please check your internet connection and try again.');
+            setError(toAppError(new Error('Unable to connect. Please check your internet connection and try again.'), { kind: 'NETWORK_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
           } else {
-            setErrorMessage('Unable to log in. Please check your details and try again.');
+            setError(toAppError(new Error('Unable to log in. Please check your details and try again.'), { kind: 'AUTH_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
           }
           return;
         }
@@ -63,13 +69,13 @@ export default function OrganizerLoginScreen({ navigation }) {
         result = await signUp(trimmedEmail, trimmedPassword, trimmedName);
         if (!result?.success) {
           if (result?.error?.includes('email-already-in-use')) {
-            setErrorMessage('This email is already registered. Please sign in or use a different email.');
+            setError(toAppError(new Error('This email is already registered. Please sign in or use a different email.'), { kind: 'AUTH_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
           } else if (result?.error?.includes('weak-password')) {
-            setErrorMessage('Password should be at least 6 characters long.');
+            setError(toAppError(new Error('Password should be at least 6 characters long.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
           } else if (result?.error?.includes('invalid-email')) {
-            setErrorMessage('Please enter a valid email address.');
+            setError(toAppError(new Error('Please enter a valid email address.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
           } else {
-            setErrorMessage('Unable to create account. Please try again.');
+            setError(toAppError(new Error('Unable to create account. Please try again.'), { kind: 'API_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
           }
           return;
         }
@@ -93,7 +99,7 @@ export default function OrganizerLoginScreen({ navigation }) {
       }
     } catch (error) {
       logger.error('Login error:', error);
-      setErrorMessage('An unexpected error occurred. Please try again later.');
+      setError(toAppError(error, { fallbackMessage: 'An unexpected error occurred. Please try again later.' }));
     } finally {
       setIsSubmitting(false);
     }
@@ -111,10 +117,10 @@ const handleForgotPassword = () => {
     const auth = getAuth();
     try {
       await sendPasswordResetEmail(auth, email);
-      Alert.alert("Success", "Password reset email sent! Check your inbox.");
+      setError(toAppError(new Error('Password reset email sent! Check your inbox.'), { kind: 'SUCCESS', severity: APP_ERROR_SEVERITY.SUCCESS }));
     } catch (error) {
-      logger.error("Error sending password reset email:", error);
-      Alert.alert("Error", "Failed to send password reset email. Please try again.");
+      logger.error('Error sending password reset email:', error);
+      setError(toAppError(error, { fallbackMessage: 'Failed to send password reset email. Please try again.' }));
     }
   };
 
@@ -159,7 +165,7 @@ const handleForgotPassword = () => {
                 style={{paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8, backgroundColor: '#0277BD'}}
                 onPress={async () => {
                   if (!forgotEmail.trim()) {
-                    Alert.alert("Error", "Please enter a valid email address.");
+                    setError(toAppError(new Error('Please enter a valid email address.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
                     return;
                   }
                   setForgotLoading(true);
@@ -189,6 +195,10 @@ const handleForgotPassword = () => {
           end={{ x: 1, y: 1 }}
           style={styles.header}
         >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
           <View style={styles.headerIconContainer}>
             <Image source={Logo} style={styles.logo} />
           </View>
@@ -197,7 +207,7 @@ const handleForgotPassword = () => {
           </Text>
           <Text style={styles.headerSubtitle}>
             {isLogin 
-              ? 'Sign in to manage your events' 
+              ? 'Sign in to create, manage, and promote events' 
               : 'Start creating amazing events today'}
           </Text>
         </LinearGradient>
@@ -209,12 +219,7 @@ const handleForgotPassword = () => {
           </Text>
 
           {/* Error Message */}
-          {errorMessage ? (
-            <View style={styles.errorContainer}>
-              <Feather name="alert-circle" size={20} color="#DC2626" style={styles.errorIcon} />
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
-          ) : null}
+          <AppErrorBanner error={error} onRetry={() => setError(null)} disabled={isSubmitting} />
 
           {/* Name Input (Sign Up Only) */}
           {!isLogin && (
@@ -280,6 +285,20 @@ const handleForgotPassword = () => {
             </TouchableOpacity>
           </View>
 
+          {/* Remember Me - Login Only */}
+          {isLogin && (
+            <TouchableOpacity 
+              style={styles.rememberMeContainer}
+              onPress={() => setRememberMe(!rememberMe)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                {rememberMe && <Feather name="check" size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.rememberMeText}>Remember me</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Forgot Password */}
           {isLogin && (
             <TouchableOpacity style={styles.forgotButton} activeOpacity={0.7} onPress={handleForgotPassword}>
@@ -315,27 +334,6 @@ const handleForgotPassword = () => {
             </LinearGradient>
           </TouchableOpacity>
 
-
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social Login */}
-          <View style={styles.socialButtons}>
-            <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-              <Feather name="facebook" size={20} color="#1877F2" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-              <Feather name="mail" size={20} color="#EA4335" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-              <Feather name="github" size={20} color="#333333" />
-            </TouchableOpacity>
-          </View>
-
           {/* Toggle Login/Signup */}
           <TouchableOpacity 
             style={styles.toggleButton}
@@ -363,7 +361,7 @@ const handleForgotPassword = () => {
               <View style={styles.benefitIconContainer}>
                 <Feather name="trending-up" size={20} color="#0277BD" />
               </View>
-              <Text style={styles.benefitNumber}>10K+</Text>
+              <Text style={styles.benefitNumber}>200+</Text>
               <Text style={styles.benefitLabel}>Events Created</Text>
             </View>
             
@@ -371,7 +369,7 @@ const handleForgotPassword = () => {
               <View style={styles.benefitIconContainer}>
                 <Feather name="users" size={20} color="#10B981" />
               </View>
-              <Text style={styles.benefitNumber}>50K+</Text>
+              <Text style={styles.benefitNumber}>25K+</Text>
               <Text style={styles.benefitLabel}>Active Users</Text>
             </View>
             
@@ -379,8 +377,8 @@ const handleForgotPassword = () => {
               <View style={styles.benefitIconContainer}>
                 <Feather name="star" size={20} color="#F59E0B" />
               </View>
-              <Text style={styles.benefitNumber}>4.8</Text>
-              <Text style={styles.benefitLabel}>User Rating</Text>
+              <Text style={styles.benefitNumber}>150+</Text>
+              <Text style={styles.benefitLabel}>Organizers</Text>
             </View>
           </View>
         </View>
@@ -464,6 +462,7 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
     paddingHorizontal: 24,
     alignItems: 'center',
+    overflow: 'hidden',
   },
  
   logo: {
@@ -532,6 +531,31 @@ const styles = StyleSheet.create({
   eyeIcon: {
     paddingRight: 16,
     paddingLeft: 12,
+  },
+  rememberMeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#0277BD',
+    borderColor: '#0277BD',
+  },
+  rememberMeText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+    marginLeft: 10,
   },
   forgotButton: {
     alignSelf: 'flex-end',

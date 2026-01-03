@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../providers/AuthProvider';
+import homeStyles from '../styles/homeStyles';
 
 export default function VerificationScreen({ navigation }) {
   const { user, organizerProfile } = useAuth();
@@ -69,61 +70,45 @@ export default function VerificationScreen({ navigation }) {
   if (isVerified) {
     return (
       <View style={styles.container}>
-        {/* Header */}
-        <LinearGradient
-          colors={['#0277BD', '#01579B']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            paddingTop: insets.top,
-            paddingBottom: 16,
-            paddingHorizontal: 20
-          }}
-        >
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            width: '100%'
-          }}>
-            <TouchableOpacity 
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}
-              onPress={() => navigation.goBack()}
-            >
-              <Feather name="arrow-left" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            
-            <Text style={{ 
-              fontSize: 18, 
-              fontWeight: '700', 
-              color: '#FFFFFF' 
-            }}>
-              Verification Status
-            </Text>
-            
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }} />
-          </View>
-        </LinearGradient>
+        {/* Header matching HomeScreen */}
+        <View style={homeStyles.homeHeaderContainer}>
+          <LinearGradient
+            colors={['#0277BD', '#01579B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={homeStyles.homeHeaderCard}
+          >
+            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+              <View style={homeStyles.homeHeaderOrbOne} />
+              <View style={homeStyles.homeHeaderOrbTwo} />
+            </View>
+            <View style={homeStyles.homeHeaderTopRow}>
+              <View style={homeStyles.modernDashboardProfile}>
+                <View style={homeStyles.modernDashboardAvatar}>
+                  <View style={homeStyles.modernDashboardAvatarInner}>
+                    <Feather name="user" size={20} color="#0277BD" />
+                  </View>
+                </View>
+                <View style={homeStyles.modernDashboardText}>
+                  <Text style={[homeStyles.modernDashboardGreeting, { color: '#FFFFFF' }]}>Verification</Text>
+                  <Text style={[homeStyles.modernDashboardName, { color: '#FFFFFF' }]}>Status</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={homeStyles.modernDashboardBell}
+                onPress={() => navigation.goBack()}
+              >
+                <Feather name="arrow-left" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Verified Status */}
           <View style={styles.verifiedSection}>
             <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedIcon}>✅</Text>
+              <Feather name="check" size={40} color="#0277BD" />
             </View>
             <Text style={styles.verifiedTitle}>You're Verified!</Text>
             <Text style={styles.verifiedDescription}>
@@ -137,7 +122,7 @@ export default function VerificationScreen({ navigation }) {
             
             <View style={styles.benefitsList}>
               <View style={styles.benefitItem}>
-                <Text style={styles.benefitIcon}>✅</Text>
+                <Feather name="check-circle" size={18} color="#0277BD" style={styles.benefitIcon} />
                 <View style={styles.benefitContent}>
                   <Text style={styles.benefitTitle}>Verified Badge</Text>
                   <Text style={styles.benefitDescription}>Blue checkmark on your profile and events</Text>
@@ -244,7 +229,7 @@ export default function VerificationScreen({ navigation }) {
 
           <View style={styles.benefitsList}>
             <View style={styles.benefitItem}>
-              <Text style={styles.benefitIcon}>✅</Text>
+              <Feather name="check-circle" size={18} color="#0277BD" style={styles.benefitIcon} />
               <Text style={styles.benefitText}>Verified badge on your profile</Text>
             </View>
             <View style={styles.benefitItem}>
@@ -413,7 +398,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#dcfce7',
+    backgroundColor: '#E3F2FD',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -424,7 +409,7 @@ const styles = StyleSheet.create({
   verifiedTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#1f2937',
+    color: '#0277BD',
     marginBottom: 8,
   },
   verifiedDescription: {

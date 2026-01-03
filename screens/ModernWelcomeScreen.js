@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   Dimensions,
   Image,
   TouchableOpacity,
-  ActivityIndicator
+  Animated,
+  Easing
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -17,19 +18,92 @@ const { width, height } = Dimensions.get('window');
 export default function ModernWelcomeScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(true);
 
+  const pulse = useRef(new Animated.Value(0)).current;
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+  const welcomeEnter = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     const init = async () => {
       try {
-        setTimeout(() => {
+        const t = setTimeout(() => {
           setIsLoading(false);
         }, 1500);
+
+        return () => clearTimeout(t);
       } catch (e) {
         setIsLoading(false);
       }
     };
 
-    init();
+    let cleanup;
+    init().then((c) => {
+      cleanup = c;
+    });
+
+    return () => {
+      if (typeof cleanup === 'function') cleanup();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isLoading) return;
+
+    const pulseAnim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 650,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 650,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const dotAnim = Animated.loop(
+      Animated.stagger(140, [
+        Animated.sequence([
+          Animated.timing(dot1, { toValue: 1, duration: 320, useNativeDriver: true }),
+          Animated.timing(dot1, { toValue: 0, duration: 320, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(dot2, { toValue: 1, duration: 320, useNativeDriver: true }),
+          Animated.timing(dot2, { toValue: 0, duration: 320, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(dot3, { toValue: 1, duration: 320, useNativeDriver: true }),
+          Animated.timing(dot3, { toValue: 0, duration: 320, useNativeDriver: true }),
+        ]),
+      ])
+    );
+
+    pulseAnim.start();
+    dotAnim.start();
+
+    return () => {
+      pulseAnim.stop();
+      dotAnim.stop();
+    };
+  }, [isLoading, pulse, dot1, dot2, dot3]);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    welcomeEnter.setValue(0);
+    Animated.timing(welcomeEnter, {
+      toValue: 1,
+      duration: 520,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [isLoading, welcomeEnter]);
 
   const handleGetStarted = async () => {
     try {
@@ -46,8 +120,58 @@ export default function ModernWelcomeScreen({ navigation }) {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
-        <Text style={styles.loadingText}>Eventopia</Text>
+        <LinearGradient
+          colors={['#0277BD', '#01579B', '#014A7F']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+
+        <LinearGradient
+          colors={['rgba(11,18,32,0)', 'rgba(11,18,32,0.75)']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.depthOverlay}
+        />
+
+        <View pointerEvents="none" style={styles.decorations}>
+          <View style={styles.orb1} />
+          <View style={styles.orb2} />
+          <View style={styles.orb3} />
+        </View>
+
+        <View style={styles.loadingContent}>
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  scale: pulse.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.96, 1.03],
+                  }),
+                },
+              ],
+              opacity: pulse.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.92, 1],
+              }),
+            }}
+          >
+            <Image
+              source={require('../assets/Logo.png')}
+              style={styles.loadingLogo}
+              resizeMode="contain"
+            />
+          </Animated.View>
+
+          <Text style={styles.loadingText}>Eventopia</Text>
+
+          <View style={styles.loadingDotsRow}>
+            <Animated.View style={[styles.loadingDot, { opacity: dot1 }]} />
+            <Animated.View style={[styles.loadingDot, { opacity: dot2 }]} />
+            <Animated.View style={[styles.loadingDot, { opacity: dot3 }]} />
+          </View>
+        </View>
       </View>
     );
   }
@@ -76,7 +200,22 @@ export default function ModernWelcomeScreen({ navigation }) {
       </View>
       
       {/* Content */}
-      <View style={styles.content}>
+      <Animated.View
+        style={[
+          styles.content,
+          {
+            opacity: welcomeEnter,
+            transform: [
+              {
+                translateY: welcomeEnter.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [14, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
         {/* Hero */}
         <View style={styles.hero}>
           <Image
@@ -156,7 +295,7 @@ export default function ModernWelcomeScreen({ navigation }) {
             </LinearGradient>
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -171,15 +310,37 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0277BD',
+  },
+  
+  loadingContent: {
+    alignItems: 'center',
+  },
+  
+  loadingLogo: {
+    width: 110,
+    height: 110,
+    marginBottom: 8,
   },
   
   loadingText: {
-    color: '#FFFFFF',
-    fontSize: 24,
+    marginTop: 2,
+    fontSize: 26,
     fontWeight: '700',
-    marginTop: 20,
-    letterSpacing: 2,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  
+  loadingDotsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  
+  loadingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.9)',
   },
   
   backgroundGradient: {

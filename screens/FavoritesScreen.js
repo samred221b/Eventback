@@ -21,6 +21,7 @@ import apiService from '../services/api';
 import favStyles from '../styles/Favouritescreenstyle';
 import homeStyles from '../styles/homeStyles';
 import EnhancedSearch from '../components/EnhancedSearch';
+import EmptyState from '../components/EmptyState';
 import { logger } from '../utils/logger';
 import cacheService, { TTL } from '../utils/cacheService';
 
@@ -313,6 +314,10 @@ const FavoritesScreen = ({ navigation }) => {
           end={{ x: 1, y: 1 }}
           style={homeStyles.homeHeaderCard}
         >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
           <View style={homeStyles.homeHeaderTopRow}>
             <Text style={homeStyles.homeHeaderNameText}>Favourites</Text>
             <View style={homeStyles.homeHeaderActions}>
@@ -413,38 +418,23 @@ const FavoritesScreen = ({ navigation }) => {
         ListHeaderComponentStyle={{ marginBottom: 16 }}
         ListEmptyComponent={
           hasInitialLoad ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconContainer}>
-                <LinearGradient
-                  colors={['#EF4444', '#DC2626']}
-                  style={styles.emptyIconGradient}
-                >
-                  <Feather name="heart" size={48} color="#FFFFFF" />
-                </LinearGradient>
-              </View>
-              <Text style={styles.emptyTitle}>No Favorites Yet</Text>
-              <Text style={styles.emptyDescription}>
-                Start exploring events and tap the heart icon to save your favorites here
-              </Text>
-              <View style={styles.emptyActions}>
-                <TouchableOpacity 
-                  style={styles.exploreButton}
-                  onPress={() => navigation.navigate('Home')}
-                  activeOpacity={0.8}
-                >
-                  <Feather name="compass" size={16} color="#FFFFFF" />
-                  <Text style={styles.exploreButtonText}>Explore Events</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.browseButton}
-                  onPress={() => navigation.navigate('Events')}
-                  activeOpacity={0.8}
-                >
-                  <Feather name="grid" size={16} color="#0277BD" />
-                  <Text style={styles.browseButtonText}>Browse All</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            <EmptyState
+              icon="heart"
+              iconSize={64}
+              title="No Favorites Yet"
+              description={
+                searchQuery.trim()
+                  ? `No favorites found for "${searchQuery}"`
+                  : "Start exploring events and tap the heart icon to save your favorites here."
+              }
+              primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => navigation.navigate('Home')}
+              primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Explore Events'}
+              primaryActionIcon={searchQuery.trim() ? 'x' : 'compass'}
+              secondaryAction={() => navigation.navigate('Events')}
+              secondaryActionText="Browse All"
+              secondaryActionIcon="grid"
+              gradientColors={['#EF4444', '#DC2626']}
+            />
           ) : (
             <View style={{ paddingVertical: 16 }} />
           )

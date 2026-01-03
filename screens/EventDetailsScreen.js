@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, Share, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Alert, Share, Image, ScrollView, TouchableOpacity, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // StatusBar removed; use root StatusBar in App.js
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,7 +9,7 @@ import { formatPrice, formatDate, formatTime } from '../utils/dataProcessor';
 import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
 import { logger } from '../utils/logger';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function EventDetailsScreen({ route, navigation }) {
   const { event } = route.params;
@@ -18,6 +18,15 @@ export default function EventDetailsScreen({ route, navigation }) {
   const [offline, setOffline] = useState(false); // State to track offline status
   const [userResponse, setUserResponse] = useState(null); // Track user response: 'interested', 'going', 'maybe'
   const [isPricingExpanded, setIsPricingExpanded] = useState(false); // State for pricing dropdown
+  const [showFullScreenImage, setShowFullScreenImage] = useState(false);
+
+  const heroImageUri =
+    (typeof event?.imageUrl === 'string' && event.imageUrl) ||
+    (typeof event?.image === 'string' && event.image) ||
+    (typeof event?.imageUri === 'string' && event.imageUri) ||
+    (typeof event?.imageURL === 'string' && event.imageURL) ||
+    (typeof event?.image_url === 'string' && event.image_url) ||
+    null;
 
   useEffect(() => {
     const checkNetworkStatus = async () => {
@@ -65,7 +74,7 @@ export default function EventDetailsScreen({ route, navigation }) {
 
   const handleOrganizerPress = () => {
     if (event.organizerId) {
-      navigation.navigate('OrganizerProfile', { 
+      navigation.navigate('Organprofilescreenforusers', { 
         organizerId: event.organizerId._id || event.organizerId.id,
         organizerName: event.organizerName || event.organizer
       });
@@ -293,12 +302,18 @@ export default function EventDetailsScreen({ route, navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroContainer}>
-          {event.imageUrl ? (
-            <Image 
-              source={{ uri: event.imageUrl }} 
-              style={styles.heroImage}
-              resizeMode="cover"
-            />
+          {heroImageUri ? (
+            <TouchableOpacity
+              activeOpacity={0.92}
+              onPress={() => setShowFullScreenImage(true)}
+              style={{ flex: 1 }}
+            >
+              <Image 
+                source={{ uri: heroImageUri }} 
+                style={styles.heroImage}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
           ) : (
             <LinearGradient
               colors={['#0277BD', '#01579B']}
@@ -316,7 +331,7 @@ export default function EventDetailsScreen({ route, navigation }) {
             <Text style={styles.detailsMeta}>
               {formatDate(event.date)} • {event.location?.city || event.location?.country || 'Location'}{event.category ? ` • ${event.category}` : ''}
             </Text>
-            <Text style={styles.detailsMeta}>Related: {getRelatedHashtags(event.category).join(' ')}</Text>
+            <Text style={styles.detailsMeta}>Related: {getRelatedHashtags(event.category).join(', ')}</Text>
             <View style={styles.divider} />
             <Text style={styles.cardTitle}>About the Experience</Text>
             <Text style={styles.detailsSubtitle}>
@@ -430,6 +445,7 @@ export default function EventDetailsScreen({ route, navigation }) {
             <View style={styles.userResponseSection}>
               {/* Organizer Info Above Response Question */}
               <TouchableOpacity style={styles.organizerNameContainer} onPress={handleOrganizerPress}>
+                <Text style={styles.hostedByText}>Hosted By</Text>
                 <View style={styles.organizerNameRow}>
                   <View style={styles.organizerAvatarSmall}>
                     {event.organizerId?.profileImage ? (
@@ -571,6 +587,36 @@ export default function EventDetailsScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
       </View>
+
+      <Modal
+        visible={showFullScreenImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFullScreenImage(false)}
+      >
+        <View style={styles.fullScreenContainer}>
+          <TouchableOpacity
+            style={styles.fullScreenBackground}
+            activeOpacity={1}
+            onPress={() => setShowFullScreenImage(false)}
+          >
+            {!!heroImageUri && (
+              <Image
+                source={{ uri: heroImageUri }}
+                style={styles.fullScreenImage}
+                resizeMode="contain"
+              />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.fullScreenCloseButton}
+            onPress={() => setShowFullScreenImage(false)}
+            activeOpacity={0.85}
+          >
+            <Feather name="x" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1153,8 +1199,14 @@ const styles = StyleSheet.create({
   },
   // Organizer Name Styles
   organizerNameContainer: {
-    gap: 12,
+    gap: 8,
     marginBottom: 16,
+  },
+  hostedByText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 4,
   },
   organizerNameRow: {
     flexDirection: 'row',
@@ -1211,5 +1263,27 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  fullScreenContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+  },
+  fullScreenBackground: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width,
+    height,
+  },
+  fullScreenCloseButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    padding: 8,
   },
 });

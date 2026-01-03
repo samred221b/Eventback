@@ -17,6 +17,9 @@ import { formatPrice, formatDate, formatTime, standardizeEventForDetails } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { logger } from '../utils/logger';
 import apiService from '../services/api';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
+import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
 
 const { width } = Dimensions.get('window');
 
@@ -42,7 +45,7 @@ export default function OrganizerProfileScreen({ route, navigation }) {
       const organizerData = organizerResponse.data.success ? organizerResponse.data.data : null;
 
       if (!organizerData) {
-        setError('Organizer not found');
+        setError(toAppError(new Error('Organizer not found'), { kind: 'NOT_FOUND', severity: APP_ERROR_SEVERITY.WARNING }));
         return;
       }
 
@@ -55,7 +58,7 @@ export default function OrganizerProfileScreen({ route, navigation }) {
 
     } catch (err) {
       logger.error('Error fetching organizer profile:', err);
-      setError('Failed to load organizer profile');
+      setError(toAppError(err, { fallbackMessage: 'Failed to load organizer profile' }));
     } finally {
       setLoading(false);
     }
@@ -70,6 +73,7 @@ export default function OrganizerProfileScreen({ route, navigation }) {
       });
     } catch (error) {
       logger.warn('Share failed:', error);
+      setError(toAppError(error, { kind: 'SHARE_ERROR', severity: APP_ERROR_SEVERITY.WARNING, fallbackMessage: 'Share failed' }));
     }
   };
 
@@ -162,20 +166,19 @@ export default function OrganizerProfileScreen({ route, navigation }) {
           <Text style={styles.headerTitle}>Organizer Profile</Text>
           <View style={styles.headerSpacer} />
         </View>
-        <View style={styles.errorContainer}>
-          <Feather name="alert-circle" size={48} color="#EF4444" />
-          <Text style={styles.errorTitle}>Profile Not Found</Text>
-          <Text style={styles.errorText}>{error || 'Unable to load organizer profile'}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchOrganizerProfile}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+        <AppErrorState
+          error={error}
+          onRetry={fetchOrganizerProfile}
+          title="Organizer Not Available"
+          subtitle="We couldn't load this organizer's profile. Please try again."
+        />
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <AppErrorBanner error={error} onRetry={fetchOrganizerProfile} />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header with Background */}
         <View style={styles.profileHeader}>

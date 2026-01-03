@@ -13,6 +13,7 @@ export const APP_ERROR_SEVERITY = {
   INFO: 'info',
   WARNING: 'warning',
   ERROR: 'error',
+  SUCCESS: 'success',
 };
 
 export const createAppError = ({

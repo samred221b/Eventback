@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { useFavorites } from '../providers/FavoritesProvider';
 import apiService from '../services/api';
 import EnhancedSearch from '../components/EnhancedSearch';
+import EmptyState from '../components/EmptyState';
 import homeStyles from '../styles/homeStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
@@ -358,6 +359,10 @@ export default function CalendarScreen({ navigation }) {
             end={{ x: 1, y: 1 }}
             style={[homeStyles.homeHeaderCard, { zIndex: 1, elevation: 1 }]}
           >
+            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+              <View style={homeStyles.homeHeaderOrbOne} />
+              <View style={homeStyles.homeHeaderOrbTwo} />
+            </View>
             <View style={homeStyles.homeHeaderTopRow}>
               <Text style={homeStyles.homeHeaderNameText}>Calendar</Text>
               <View style={homeStyles.homeHeaderActions}>
@@ -585,62 +590,86 @@ export default function CalendarScreen({ navigation }) {
             .filter(event => new Date(event.date) >= new Date())
             .sort((a, b) => new Date(a.date) - new Date(b.date))
             .slice(0, 5)
-            .map((event, index) => (
-              <TouchableOpacity
-                key={event._id}
-                style={styles.upcomingEventCard}
-                onPress={() => handleEventPress(event)}
-                activeOpacity={0.8}
-              >
-                <View
-                  style={styles.upcomingEventGradient}
+            .length === 0 && !isLoading ? (
+            <EmptyState
+              icon="calendar"
+              iconSize={48}
+              title="No Events This Month"
+              description={
+                searchQuery.trim()
+                  ? `No events found for "${searchQuery}"`
+                  : "There are no events scheduled for this month. Check other months or browse all events."
+              }
+              primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => navigation.navigate('Events')}
+              primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Browse Events'}
+              primaryActionIcon={searchQuery.trim() ? 'x' : 'calendar'}
+              secondaryAction={() => navigation.navigate('Home')}
+              secondaryActionText="Go Home"
+              secondaryActionIcon="home"
+              gradientColors={['#0277BD', '#01579B']}
+            />
+          ) : (
+            events
+              .filter(event => new Date(event.date) >= new Date())
+              .sort((a, b) => new Date(a.date) - new Date(b.date))
+              .slice(0, 5)
+              .map((event, index) => (
+                <TouchableOpacity
+                  key={event._id}
+                  style={styles.upcomingEventCard}
+                  onPress={() => handleEventPress(event)}
+                  activeOpacity={0.8}
                 >
-                  {/* Days Left Badge */}
-                  <View style={styles.daysLeftBadge}>
-                    <Text style={styles.daysLeftText}>
-                      {getDaysLeft(event.date)}
-                    </Text>
-                  </View>
-
-                  {/* Event Info */}
-                  <View style={styles.upcomingEventInfo}>
-                    <Text style={styles.upcomingEventTitle} numberOfLines={2}>
-                      {event.title}
-                    </Text>
-                    
-                    <View style={styles.upcomingEventMeta}>
-                      <View style={styles.upcomingMetaRow}>
-                        <Feather name="calendar" size={14} color="#0277BD" />
-                        <Text style={styles.upcomingMetaText}>
-                          {new Date(event.date).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </Text>
-                      </View>
-                      
-                      <View style={styles.upcomingMetaRow}>
-                        <Feather name="clock" size={14} color="#0277BD" />
-                        <Text style={styles.upcomingMetaText}>
-                          {formatTime(event.time)}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.upcomingMetaRow}>
-                      <Feather name="map-pin" size={14} color="#0277BD" />
-                      <Text style={styles.upcomingMetaText} numberOfLines={1}>
-                        {event.location?.city || event.location?.address || 'Location TBA'}
+                  <View
+                    style={styles.upcomingEventGradient}
+                  >
+                    {/* Days Left Badge */}
+                    <View style={styles.daysLeftBadge}>
+                      <Text style={styles.daysLeftText}>
+                        {getDaysLeft(event.date)}
                       </Text>
                     </View>
-                  </View>
 
-                  {/* Arrow Icon */}
-                  <Feather name="chevron-right" size={20} color="#0277BD" />
-                </View>
-              </TouchableOpacity>
-            ))}
+                    {/* Event Info */}
+                    <View style={styles.upcomingEventInfo}>
+                      <Text style={styles.upcomingEventTitle} numberOfLines={2}>
+                        {event.title}
+                      </Text>
+                      
+                      <View style={styles.upcomingEventMeta}>
+                        <View style={styles.upcomingMetaRow}>
+                          <Feather name="calendar" size={14} color="#0277BD" />
+                          <Text style={styles.upcomingMetaText}>
+                            {new Date(event.date).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </Text>
+                        </View>
+                        
+                        <View style={styles.upcomingMetaRow}>
+                          <Feather name="clock" size={14} color="#0277BD" />
+                          <Text style={styles.upcomingMetaText}>
+                            {formatTime(event.time)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.upcomingMetaRow}>
+                        <Feather name="map-pin" size={14} color="#0277BD" />
+                        <Text style={styles.upcomingMetaText} numberOfLines={1}>
+                          {event.location?.city || event.location?.address || 'Location TBA'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Arrow Icon */}
+                    <Feather name="chevron-right" size={20} color="#0277BD" />
+                  </View>
+                </TouchableOpacity>
+              ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

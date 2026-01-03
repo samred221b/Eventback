@@ -17,6 +17,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { logger } from '../utils/logger';
 import apiService from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
+import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
+import homeStyles from '../styles/homeStyles';
 
 const { width } = require('react-native').Dimensions;
 
@@ -76,11 +80,10 @@ function Organprofilescreenforusers({ route, navigation }) {
   const [isFromCache, setIsFromCache] = useState(false);
 
   useEffect(() => {
-    console.log('OrganProfileScreenForUsers mounted with organizerId:', organizerId);
     if (organizerId) {
       fetchOrganizerProfile();
     } else {
-      setError('Organizer ID not provided');
+      setError(toAppError(new Error('No organizer ID provided'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       setLoading(false);
     }
   }, [organizerId]);
@@ -118,7 +121,7 @@ function Organprofilescreenforusers({ route, navigation }) {
       const organizerData = organizerResponse.data.success ? organizerResponse.data.data : organizerResponse.data;
       
       if (!organizerData) {
-        setError('Organizer not found');
+        setError(toAppError(new Error('Organizer not found'), { kind: 'NOT_FOUND', severity: APP_ERROR_SEVERITY.WARNING }));
         return;
       }
       
@@ -139,15 +142,13 @@ function Organprofilescreenforusers({ route, navigation }) {
       logger.error('Error fetching organizer profile:', err);
       
       if (err.response?.status === 404) {
-        setError('Organizer not found');
-      } else if (err.response?.status === 400) {
-        setError('Invalid organizer ID format');
-      } else if (err.code === 'ECONNABORTED') {
-        setError('Request timeout. Please check your connection.');
+        setError(toAppError(new Error('Organizer not found'), { kind: 'NOT_FOUND', severity: APP_ERROR_SEVERITY.WARNING }));
       } else {
-        setError('Failed to load organizer profile');
+        setError(toAppError(err, { fallbackMessage: 'Failed to load organizer profile' }));
       }
     } finally {
+      setLoading(false);
+      setRefreshing(false);
       if (!refreshing) {
         setLoading(false);
       }
@@ -163,6 +164,7 @@ function Organprofilescreenforusers({ route, navigation }) {
       });
     } catch (error) {
       logger.warn('Share failed:', error);
+      setError(toAppError(error, { kind: 'SHARE_ERROR', severity: APP_ERROR_SEVERITY.WARNING, fallbackMessage: 'Share failed' }));
     }
   };
 
@@ -247,53 +249,39 @@ function Organprofilescreenforusers({ route, navigation }) {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-        <LinearGradient
-          colors={['#0277BD', '#01579B']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            paddingTop: insets.top,
-            paddingBottom: 16,
-            paddingHorizontal: 20
-          }}
-        >
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            width: '100%'
-          }}>
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              <Feather name="arrow-left" size={20} color="#FFFFFF" />
+        {/* Header matching HomeScreen */}
+        <View style={[homeStyles.homeHeaderContainer, { paddingTop: insets.top }]}>
+          <LinearGradient
+            colors={['#0277BD', '#01579B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={homeStyles.homeHeaderCard}
+          >
+            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+              <View style={homeStyles.homeHeaderOrbOne} />
+              <View style={homeStyles.homeHeaderOrbTwo} />
             </View>
-            
-            <Text style={{ 
-              fontSize: 18, 
-              fontWeight: '700', 
-              color: '#FFFFFF' 
-            }}>
-              Organizer Profile
-            </Text>
-            
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              <Feather name="share-2" size={20} color="#FFFFFF" />
+            <View style={homeStyles.homeHeaderTopRow}>
+              <View style={homeStyles.modernDashboardProfile}>
+                <View style={homeStyles.modernDashboardAvatar}>
+                  <View style={homeStyles.modernDashboardAvatarInner}>
+                    <Feather name="user" size={20} color="#0277BD" />
+                  </View>
+                </View>
+                <View style={homeStyles.modernDashboardText}>
+                  <Text style={[homeStyles.modernDashboardGreeting, { color: '#FFFFFF' }]}>Organizer</Text>
+                  <Text style={[homeStyles.modernDashboardName, { color: '#FFFFFF' }]}>Profile</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={homeStyles.modernDashboardBell}
+                onPress={() => navigation.goBack()}
+              >
+                <Feather name="arrow-left" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
+        </View>
         
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#0277BD" />
@@ -306,145 +294,89 @@ function Organprofilescreenforusers({ route, navigation }) {
   if (error || !organizer) {
     return (
       <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-        <LinearGradient
-          colors={['#0277BD', '#01579B']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            paddingTop: insets.top,
-            paddingBottom: 16,
-            paddingHorizontal: 20
-          }}
-        >
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            width: '100%'
-          }}>
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              <Feather name="arrow-left" size={20} color="#FFFFFF" />
+        {/* Header matching HomeScreen */}
+        <View style={[homeStyles.homeHeaderContainer, { paddingTop: insets.top }]}>
+          <LinearGradient
+            colors={['#0277BD', '#01579B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={homeStyles.homeHeaderCard}
+          >
+            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+              <View style={homeStyles.homeHeaderOrbOne} />
+              <View style={homeStyles.homeHeaderOrbTwo} />
             </View>
-            
-            <Text style={{ 
-              fontSize: 18, 
-              fontWeight: '700', 
-              color: '#FFFFFF' 
-            }}>
-              Organizer Profile
-            </Text>
-            
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              <Feather name="share-2" size={20} color="#FFFFFF" />
+            <View style={homeStyles.homeHeaderTopRow}>
+              <View style={homeStyles.modernDashboardProfile}>
+                <View style={homeStyles.modernDashboardAvatar}>
+                  <View style={homeStyles.modernDashboardAvatarInner}>
+                    <Feather name="user" size={20} color="#0277BD" />
+                  </View>
+                </View>
+                <View style={homeStyles.modernDashboardText}>
+                  <Text style={[homeStyles.modernDashboardGreeting, { color: '#FFFFFF' }]}>Organizer</Text>
+                  <Text style={[homeStyles.modernDashboardName, { color: '#FFFFFF' }]}>Profile</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={homeStyles.modernDashboardBell}
+                onPress={() => navigation.goBack()}
+              >
+                <Feather name="arrow-left" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
+        </View>
         
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Feather name="user-x" size={64} color="#9CA3AF" />
-          <Text style={{ marginTop: 16, fontSize: 18, fontWeight: '600', color: '#374151' }}>
-            {error || 'Profile Not Found'}
-          </Text>
-          <TouchableOpacity 
-            style={{
-              marginTop: 16,
-              paddingHorizontal: 20,
-              paddingVertical: 10,
-              backgroundColor: '#0277BD',
-              borderRadius: 8
-            }}
-            onPress={() => fetchOrganizerProfile(true)} // Force refresh on retry
-          >
-            <Text style={{ color: '#FFFFFF', fontWeight: '500' }}>Try Again</Text>
-          </TouchableOpacity>
+          <AppErrorState 
+            error={error || { message: 'Organizer not found' }}
+            onRetry={() => fetchOrganizerData(true)}
+          />
         </View>
       </View>
     );
   }
-
-  return (
+          return (
     <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-      {/* HomeScreen-style Header */}
-      <LinearGradient
-        colors={['#0277BD', '#01579B']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{
-          paddingTop: insets.top,
-          paddingBottom: 16,
-          paddingHorizontal: 20
-        }}
-      >
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          width: '100%'
-        }}>
-          <TouchableOpacity 
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-            onPress={() => navigation.goBack()}
-          >
-            <Feather name="arrow-left" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          
-          <Text style={{ 
-            fontSize: 18, 
-            fontWeight: '700', 
-            color: '#FFFFFF' 
-          }}>
-            Organizer Profile
-          </Text>
-          
-          <TouchableOpacity 
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-            onPress={handleShare}
-          >
-            <Feather name="share-2" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
+      <AppErrorBanner error={error} onRetry={() => fetchOrganizerProfile(true)} />
+      {/* Header matching HomeScreen */}
+      <View style={[homeStyles.homeHeaderContainer, { paddingTop: insets.top }]}>
+        <LinearGradient
+          colors={['#0277BD', '#01579B']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={homeStyles.homeHeaderCard}
+        >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
+          <View style={homeStyles.homeHeaderTopRow}>
+            <View style={homeStyles.modernDashboardProfile}>
+              <View style={homeStyles.modernDashboardAvatar}>
+                <View style={homeStyles.modernDashboardAvatarInner}>
+                  <Feather name="user" size={20} color="#0277BD" />
+                </View>
+              </View>
+              <View style={homeStyles.modernDashboardText}>
+                <Text style={[homeStyles.modernDashboardGreeting, { color: '#FFFFFF' }]}>Organizer</Text>
+                <Text style={[homeStyles.modernDashboardName, { color: '#FFFFFF' }]}>Profile</Text>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={homeStyles.modernDashboardBell}
+              onPress={() => navigation.goBack()}
+            >
+              <Feather name="arrow-left" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
 
       <ScrollView 
         style={{ flex: 1 }} 
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#FFFFFF']}
-            tintColor="#FFFFFF"
-            progressBackgroundColor="#0277BD"
-          />
-        }
       >
         {/* Cache Indicator */}
         {isFromCache && !loading && (
@@ -515,13 +447,23 @@ function Organprofilescreenforusers({ route, navigation }) {
                 </Text>
                 {organizer.isVerified && (
                   <View style={{
-                    backgroundColor: '#10B981',
-                    paddingHorizontal: 6,
-                    paddingVertical: 2,
-                    borderRadius: 4,
-                    marginLeft: 8
+                    backgroundColor: '#0277BD',
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 6,
+                    marginLeft: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4
                   }}>
                     <Feather name="check" size={12} color="#FFFFFF" />
+                    <Text style={{
+                      fontSize: 11,
+                      color: '#FFFFFF',
+                      fontWeight: '600'
+                    }}>
+                      Verified
+                    </Text>
                   </View>
                 )}
               </View>

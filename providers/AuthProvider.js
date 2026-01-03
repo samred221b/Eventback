@@ -11,6 +11,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../firebase.config';
 import apiService from '../services/api';
+import analyticsService from '../services/analyticsService';
 
 // Enhanced Auth Context with Backend Integration
 const AuthContext = createContext({});
@@ -28,9 +29,9 @@ export const AuthProvider = ({ children }) => {
   const syncingRef = useRef(false);
 
   // Save auth state to AsyncStorage
-  const saveAuthState = async (userData) => {
+  const saveAuthState = async (userData, rememberMe = true) => {
     try {
-      if (userData) {
+      if (userData && rememberMe) {
         const { uid, email, emailVerified } = userData;
         await AsyncStorage.setItem(
           AUTH_STORAGE_KEY,
@@ -180,6 +181,18 @@ export const AuthProvider = ({ children }) => {
       if (typeof unsubscribe === 'function') unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const applyAnalyticsUser = async () => {
+      try {
+        await analyticsService.setUserId(user?.uid || null);
+      } catch (e) {
+        // no-op
+      }
+    };
+
+    applyAnalyticsUser();
+  }, [user?.uid]);
   
   // Add sendEmailVerification function
   const sendEmailVerification = async () => {
@@ -236,7 +249,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Sign in with email and password
-  const signIn = async (email, password) => {
+  const signIn = async (email, password, rememberMe = true) => {
     try {
       setIsLoading(true);
       
@@ -247,6 +260,10 @@ export const AuthProvider = ({ children }) => {
       
       try {
         const result = await signInWithEmailAndPassword(auth, email, password);
+        
+        // Save auth state based on rememberMe preference
+        await saveAuthState(result.user, rememberMe);
+        
         return { success: true, user: result.user };
       } catch (firebaseError) {
         // Handle Firebase auth errors

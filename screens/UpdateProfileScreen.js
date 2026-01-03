@@ -8,12 +8,16 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../providers/AuthProvider';
 import apiService from '../services/api';
 import homeStyles from '../styles/homeStyles';
+import AppErrorBanner from '../components/AppErrorBanner';
+import AppErrorState from '../components/AppErrorState';
+import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
 
 export default function UpdateProfileScreen({ navigation }) {
   const { user, organizerProfile, updateOrganizerProfile, deleteOrganizerAccount, signOut } = useAuth();
   const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [error, setError] = useState(null);
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -94,18 +98,20 @@ export default function UpdateProfileScreen({ navigation }) {
           ]
         );
       } else {
-        Alert.alert('Error', result.error || 'Failed to delete account');
+        setError(toAppError(new Error(result.error || 'Failed to delete account'), { kind: 'API_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred while deleting your account');
+      logger.error('UpdateProfileScreen confirmDeleteAccount error:', error);
+      setError(toAppError(error, { fallbackMessage: 'An unexpected error occurred while deleting your account' }));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleUpdateProfile = async () => {
+    setError(null); // Clear any previous errors
     if (!profileData.name.trim()) {
-      Alert.alert('Validation Error', 'Name is required');
+      setError(toAppError(new Error('Name is required'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       return;
     }
 
@@ -118,21 +124,15 @@ export default function UpdateProfileScreen({ navigation }) {
       const result = await updateOrganizerProfile(profileData);
       
       if (result.success) {
-        Alert.alert(
-          'Success!',
-          'Your profile has been updated successfully.',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack()
-            }
-          ]
-        );
+        setError(null); // Clear any previous errors
+        setError(toAppError(new Error('Your profile has been updated successfully.'), { kind: 'SUCCESS', severity: APP_ERROR_SEVERITY.SUCCESS }));
+        setTimeout(() => navigation.goBack(), 1500); // Auto-navigate after showing success
       } else {
-        Alert.alert('Error', result.error || 'Failed to update profile');
+        setError(toAppError(new Error(result.error || 'Failed to update profile'), { kind: 'API_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      logger.error('UpdateProfileScreen handleUpdateProfile error:', error);
+      setError(toAppError(error, { fallbackMessage: 'An unexpected error occurred' }));
     } finally {
       setIsLoading(false);
     }
@@ -144,7 +144,7 @@ export default function UpdateProfileScreen({ navigation }) {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'We need camera roll permissions to upload images.');
+        setError(toAppError(new Error('Camera roll permission is required to upload images.'), { kind: 'PERMISSION_DENIED', severity: APP_ERROR_SEVERITY.WARNING }));
         return;
       }
 
@@ -173,20 +173,21 @@ export default function UpdateProfileScreen({ navigation }) {
               ...prev,
               profileImage: imageUrl
             }));
-            Alert.alert('Success', 'Profile image uploaded successfully!');
+            setError(null); // Clear any previous errors
+            setError(toAppError(new Error('Profile image uploaded successfully!'), { kind: 'SUCCESS', severity: APP_ERROR_SEVERITY.SUCCESS }));
           } else {
-            Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload image');
+            setError(toAppError(new Error(uploadResult.error || 'Failed to upload image'), { kind: 'API_ERROR', severity: APP_ERROR_SEVERITY.ERROR }));
           }
         } catch (uploadError) {
           logger.error('Error uploading image:', uploadError);
-          Alert.alert('Upload Error', 'Failed to upload image to server');
+          setError(toAppError(uploadError, { fallbackMessage: 'Failed to upload image to server' }));
         } finally {
           setIsUploadingImage(false);
         }
       }
     } catch (error) {
       logger.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      setError(toAppError(error, { fallbackMessage: 'Failed to pick image' }));
       setIsUploadingImage(false);
     }
   };
@@ -201,6 +202,10 @@ export default function UpdateProfileScreen({ navigation }) {
           end={{ x: 1, y: 1 }}
           style={homeStyles.homeHeaderCard}
         >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
           <View style={homeStyles.homeHeaderTopRow}>
             <View style={homeStyles.modernDashboardProfile}>
               <View style={homeStyles.modernDashboardAvatar}>
@@ -241,6 +246,8 @@ export default function UpdateProfileScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom }}
       >
+        <AppErrorBanner error={error} onRetry={() => setError(null)} disabled={isLoading || isUploadingImage} />
+
         {/* Profile Picture Section */}
         <View style={styles.profileImageSection}>
           <TouchableOpacity 

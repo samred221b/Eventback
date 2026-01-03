@@ -257,6 +257,35 @@ class ApiService {
     return this.get(endpoint, { requireAuth: false });
   }
 
+  // Notifications (broadcast)
+  async getBroadcastNotifications(limit = 30) {
+    // Optional auth: if logged in, backend will include isRead.
+    const requireAuth = !!auth.currentUser;
+    return this.get(`/notifications/broadcast?limit=${limit}`, { requireAuth });
+  }
+
+  async getUnreadNotificationsCount() {
+    if (!auth.currentUser) {
+      return { success: true, data: { unreadCount: 0 } };
+    }
+    return this.get('/notifications/unread-count', { requireAuth: true });
+  }
+
+  async markNotificationRead(id) {
+    if (!id) throw new Error('Notification id is required');
+    if (!auth.currentUser) {
+      return { success: true };
+    }
+    return this.post(`/notifications/${id}/read`, {}, { requireAuth: true });
+  }
+
+  async markAllNotificationsRead() {
+    if (!auth.currentUser) {
+      return { success: true, data: { unreadCount: 0 } };
+    }
+    return this.post('/notifications/read-all', {}, { requireAuth: true });
+  }
+
   // Organizer endpoints
   async getOrganizers(params = {}) {
     const queryString = new URLSearchParams(params).toString();

@@ -1,19 +1,24 @@
 // App.js - CLEAN VERSION (HomeScreen fully extracted)
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as SplashScreen from 'expo-splash-screen';
 import { Asset } from 'expo-asset';
 
+import analyticsService from './services/analyticsService';
+
 import { QueryProvider } from './providers/QueryProvider';
 import { FavoritesProvider } from './providers/FavoritesProvider';
-import { AuthProvider, useAuth } from './providers/AuthProvider';
+import { AuthProvider } from './providers/AuthProvider';
+
+import { useExpoUpdates, UpdatePrompt } from './utils/updates';
 
 import ModernWelcomeScreen from './screens/ModernWelcomeScreen';
 import HomeScreen from './screens/HomeScreen';                    // ← Now imported cleanly
@@ -31,14 +36,18 @@ import HelpSupportScreen from './screens/HelpSupportScreen';
 import TermsPrivacyScreen from './screens/TermsPrivacyScreen';
 import PricingScreen from './screens/PricingScreen';
 import AboutScreen from './screens/AboutScreen';
+import BugReportScreen from './screens/BugReportScreen';
+import FeatureRequestScreen from './screens/FeatureRequestScreen';
 import AdminAnalyticsScreen from './screens/AdminAnalyticsScreen';
 import AdminEventsScreen from './screens/AdminEventsScreen';
 import AdminOrganizersScreen from './screens/AdminOrganizersScreen';
 import AdminOrganizerDetailsScreen from './screens/AdminOrganizerDetailsScreen';
+import AdminMessagingScreen from './screens/AdminMessagingScreen';
 import UsageStatisticsScreen from './screens/UsageStatisticsScreen';
 import OrganizerProfileScreen from './screens/OrganizerProfileScreen';
 import Organprofilescreenforusers from './screens/Organprofilescreenforusers';
 import OrganizerEventsScreen from './screens/OrganizerEventsScreen';
+import OrganizerMessageInbox from './components/OrganizerMessageInbox';
 
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
@@ -82,6 +91,7 @@ function OrganizerStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="OrganizerLogin" component={OrganizerLoginScreen} />
       <Stack.Screen name="OrganizerDashboard" component={OrganizerDashboardScreen} />
+      <Stack.Screen name="OrganizerInbox" component={OrganizerMessageInbox} />
       <Stack.Screen name="Analytics" component={AnalyticsScreen} />
       <Stack.Screen name="Pricing" component={PricingScreen} />
       <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
@@ -91,6 +101,8 @@ function OrganizerStack() {
       <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
       <Stack.Screen name="TermsPrivacy" component={TermsPrivacyScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="BugReport" component={BugReportScreen} />
+      <Stack.Screen name="FeatureRequest" component={FeatureRequestScreen} />
     </Stack.Navigator>
   );
 }
@@ -209,6 +221,24 @@ function MainTabs() {
 function App() {
   const [initialRoute, setInitialRoute] = useState('Welcome');
   const [appReady, setAppReady] = useState(false);
+  const navigationRef = React.useRef(null);
+  const routeNameRef = React.useRef(null);
+  
+  // Expo Updates hook
+  const { showUpdatePrompt, applyUpdate, dismissUpdate } = useExpoUpdates();
+
+  const getActiveRouteName = (state) => {
+    if (!state) return undefined;
+
+    const route = state.routes?.[state.index ?? 0];
+    if (!route) return undefined;
+
+    if (route.state) {
+      return getActiveRouteName(route.state);
+    }
+
+    return route.name;
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -252,7 +282,41 @@ function App() {
           backgroundColor="#000000"
           translucent={false}
         />
-        <NavigationContainer>
+        <UpdatePrompt 
+          visible={showUpdatePrompt}
+          onApply={applyUpdate}
+          onDismiss={dismissUpdate}
+        />
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={async () => {
+            try {
+              const currentRoute = navigationRef.current?.getRootState?.();
+              const currentName = getActiveRouteName(currentRoute);
+              routeNameRef.current = currentName;
+              await analyticsService.logEvent('app_open');
+              if (currentName) {
+                await analyticsService.logScreenView(currentName);
+              }
+            } catch (e) {
+              // no-op
+            }
+          }}
+          onStateChange={async (state) => {
+            try {
+              const previousRouteName = routeNameRef.current;
+              const currentRouteName = getActiveRouteName(state);
+
+              if (currentRouteName && previousRouteName !== currentRouteName) {
+                await analyticsService.logScreenView(currentRouteName);
+              }
+
+              routeNameRef.current = currentRouteName;
+            } catch (e) {
+              // no-op
+            }
+          }}
+        >
           <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
             <Stack.Screen name="Welcome" component={ModernWelcomeScreen} />
             <Stack.Screen name="Main" component={MainTabs} />
@@ -264,6 +328,7 @@ function App() {
             <Stack.Screen name="AdminAnalytics" component={AdminAnalyticsScreen} />
             <Stack.Screen name="AdminOrganizers" component={AdminOrganizersScreen} />
             <Stack.Screen name="AdminOrganizerDetails" component={AdminOrganizerDetailsScreen} />
+            <Stack.Screen name="AdminMessaging" component={AdminMessagingScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </View>

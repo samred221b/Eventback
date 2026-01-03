@@ -32,43 +32,93 @@ export default function UsageStatisticsScreen({ navigation }) {
   const fetchUsageStatistics = async () => {
     try {
       setIsLoading(true);
-      // In a real app, you would have an API endpoint for usage statistics
-      // For now, we'll simulate with mock data
       
-      const mockStats = {
-        totalEvents: 12,
-        publishedEvents: 10,
-        draftEvents: 2,
-        totalViews: 15420,
-        totalLikes: 892,
-        upcomingEvents: 3,
-        pastEvents: 9,
-        monthlyViews: [
-          { month: 'Jan', views: 1200 },
-          { month: 'Feb', views: 1450 },
-          { month: 'Mar', views: 1680 },
-          { month: 'Apr', views: 1920 },
-          { month: 'May', views: 2100 },
-          { month: 'Jun', views: 2340 }
-        ],
-        topEvents: [
-          { id: '1', title: 'Summer Music Festival', views: 3420, likes: 234 },
-          { id: '2', title: 'Tech Conference 2024', views: 2890, likes: 198 },
-          { id: '3', title: 'Food and Wine Expo', views: 2156, likes: 167 }
-        ],
-        recentActivity: [
-          { type: 'view', event: 'Summer Music Festival', count: 45, time: '2 hours ago' },
-          { type: 'like', event: 'Tech Conference 2024', count: 12, time: '5 hours ago' },
-          { type: 'view', event: 'Food and Wine Expo', count: 8, time: '1 day ago' }
-        ]
+      // Fetch organizer stats from backend
+      const statsResponse = await apiService.get('/organizers/profile/stats', { requireAuth: true });
+      const statsData = statsResponse?.data?.stats || {};
+      
+      // Fetch organizer's events for top events and activity
+      const eventsResponse = await apiService.get('/organizers/profile/events', { requireAuth: true });
+      const events = eventsResponse?.data || [];
+      
+      // Calculate published vs draft events
+      const publishedEvents = events.filter(e => e.status === 'published').length;
+      const draftEvents = events.filter(e => e.status === 'draft').length;
+      
+      // Sort events by views for top events
+      const topEvents = events
+        .filter(e => e.status === 'published')
+        .sort((a, b) => (b.views || 0) - (a.views || 0))
+        .slice(0, 3)
+        .map(event => ({
+          id: event._id,
+          title: event.title,
+          views: event.views || 0,
+          likes: event.likes ? event.likes.length : 0
+        }));
+      
+      // Create recent activity from recent events
+      const recentEvents = events
+        .filter(e => e.status === 'published')
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, 3);
+      
+      const recentActivity = recentEvents.map(event => ({
+        type: 'view',
+        event: event.title,
+        count: event.views || 0,
+        time: formatTimeAgo(new Date(event.createdAt || Date.now()))
+      }));
+      
+      // Generate monthly views (mock data for now since backend doesn't track this)
+      const monthlyViews = generateMonthlyViews(statsData.totalViews || 0);
+      
+      // Calculate engagement rate
+      const engagementRate = statsData.totalViews > 0 
+        ? ((statsData.totalLikes || 0) / statsData.totalViews * 100).toFixed(1)
+        : '0.0';
+      
+      const realStats = {
+        totalEvents: statsData.totalEvents || 0,
+        publishedEvents,
+        draftEvents,
+        totalViews: statsData.totalViews || 0,
+        totalLikes: statsData.totalLikes || 0,
+        upcomingEvents: statsData.upcomingEvents || 0,
+        pastEvents: statsData.pastEvents || 0,
+        monthlyViews,
+        topEvents,
+        recentActivity,
+        engagementRate: `${engagementRate}%`
       };
 
-      setStatistics(mockStats);
+      setStatistics(realStats);
     } catch (error) {
       logger.error('Error fetching usage statistics:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const formatTimeAgo = (date) => {
+    const now = new Date();
+    const diffInMs = now - date;
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInHours / 24);
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+  
+  const generateMonthlyViews = (totalViews) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const baseViews = Math.floor(totalViews / 6);
+    return months.map((month, index) => ({
+      month,
+      views: baseViews + Math.floor(Math.random() * baseViews * 0.3)
+    }));
   };
 
   const StatCard = ({ icon, title, value, subtitle, color }) => (
@@ -203,8 +253,8 @@ export default function UsageStatisticsScreen({ navigation }) {
             <StatCard
               icon="trending-up"
               title="Engagement Rate"
-              value="4.2%"
-              subtitle="Views per event"
+              value={statistics.engagementRate}
+              subtitle="Likes per 100 views"
               color={['#8B5CF6', '#7C3AED']}
             />
           </View>
