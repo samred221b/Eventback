@@ -32,8 +32,8 @@ export default {
       translucent: false,
     },
     android: {
-      package: 'com.eventopia.app',
-      googleServicesFile: './android/app/google-services.json',
+      package: 'com.samuelalemayehu.smarthomecontroller',
+      googleServicesFile: './google-services.json',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
