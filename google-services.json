@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "344614900237",
+    "project_id": "smart-home-controller-4c2ab",
+    "storage_bucket": "smart-home-controller-4c2ab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:344614900237:android:f7d434b61ff17b6f19bb44",
+        "android_client_info": {
+          "package_name": "com.samuelalemayehu.smarthomecontroller"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAiQFcVtDP8973lfuaTIH08WBsJ66AZBkc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:344614900237:android:3d5b02e2f8bd030819bb44",
+        "android_client_info": {
+          "package_name": "com.yourcompany.eventopianew"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAiQFcVtDP8973lfuaTIH08WBsJ66AZBkc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
