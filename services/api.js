@@ -185,6 +185,23 @@ class ApiService {
     return this.request(endpoint, { ...options, method: 'DELETE' });
   }
 
+  // Support endpoints
+  async submitBugReport(bugReportData) {
+    return this.post('/support/bug-report', bugReportData, { requireAuth: false });
+  }
+
+  async submitFeatureRequest(featureRequestData) {
+    return this.post('/support/feature-request', featureRequestData, { requireAuth: false });
+  }
+
+  async getSupportRequests(params = {}) {
+    return this.get('/support/requests', { ...params, requireAuth: true });
+  }
+
+  async updateSupportRequestStatus(id, status) {
+    return this.put(`/support/requests/${id}/status`, { status }, { requireAuth: true });
+  }
+
   // Health check
   async healthCheck() {
     return this.get('/health', { requireAuth: false });

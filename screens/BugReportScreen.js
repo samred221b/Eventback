@@ -4,10 +4,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import apiService from '../services/api';
 import { logger } from '../utils/logger';
+import homeStyles from '../styles/homeStyles';
 
 export default function BugReportScreen({ navigation }) {
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
+  
   const [bugReport, setBugReport] = useState({
     title: '',
     description: '',
@@ -31,17 +35,22 @@ export default function BugReportScreen({ navigation }) {
         platform: 'mobile'
       };
       
-      logger.info('Bug report submitted:', reportData);
+      // Send bug report to backend
+      const response = await apiService.submitBugReport(reportData);
       
-      Alert.alert('Bug Report Submitted', 'Thank you for helping us improve Eventopia. We\'ll review your report and get back to you if needed.');
-      
-      setBugReport({
-        title: '',
-        description: '',
-        email: '',
-        category: 'general'
-      });
-      navigation.goBack();
+      if (response.success) {
+        Alert.alert('Bug Report Submitted', 'Thank you for helping us improve Eventopia. We\'ll review your report and get back to you if needed.');
+        
+        setBugReport({
+          title: '',
+          description: '',
+          email: '',
+          category: 'general'
+        });
+        navigation.goBack();
+      } else {
+        throw new Error(response.error || 'Failed to submit bug report');
+      }
     } catch (error) {
       logger.error('Error submitting bug report:', error);
       Alert.alert('Error', 'Failed to submit bug report. Please try again later.');
@@ -51,23 +60,40 @@ export default function BugReportScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#0277BD', '#01579B', '#014373']}
-        style={styles.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerContent}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Feather name="arrow-left" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Report a Bug</Text>
-        </View>
-      </LinearGradient>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header matching HomeScreen */}
+      <View style={homeStyles.homeHeaderContainer}>
+        <LinearGradient
+          colors={['#0277BD', '#01579B']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={homeStyles.homeHeaderCard}
+        >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
+          <View style={homeStyles.homeHeaderTopRow}>
+            <View style={homeStyles.modernDashboardProfile}>
+              <View style={homeStyles.modernDashboardAvatar}>
+                <View style={homeStyles.modernDashboardAvatarInner}>
+                  <Feather name="alert-triangle" size={20} color="#0F172A" />
+                </View>
+              </View>
+              <View style={homeStyles.modernDashboardText}>
+                <Text style={[homeStyles.modernDashboardGreeting, { color: '#FFFFFF' }]}>Support</Text>
+                <Text style={[homeStyles.modernDashboardName, { color: '#FFFFFF' }]}>Bug Report</Text>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={homeStyles.modernDashboardBell}
+              onPress={() => navigation.goBack()}
+            >
+              <Feather name="arrow-left" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -178,7 +204,7 @@ export default function BugReportScreen({ navigation }) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -186,24 +212,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-  },
-  headerGradient: {
-    paddingTop: 50,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: 15,
-    padding: 5,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
   },
   keyboardContainer: {
     flex: 1,
@@ -213,64 +221,62 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+    paddingBottom: 40,
   },
   formContainer: {
-    paddingBottom: 40,
+    flex: 1,
   },
   formSection: {
     marginBottom: 24,
   },
   formLabel: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: '#1F2937',
     marginBottom: 12,
   },
   categoryButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   categoryButton: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1.5,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
     borderColor: '#E5E7EB',
-    minWidth: 70,
-    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   categoryButtonActive: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#0277BD',
     borderColor: '#0277BD',
   },
   categoryButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#6B7280',
   },
   categoryButtonTextActive: {
-    color: '#0277BD',
-    fontWeight: '700',
+    color: '#FFFFFF',
   },
   textInput: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     fontSize: 16,
-    color: '#1F2937',
     backgroundColor: '#FFFFFF',
+    color: '#1F2937',
   },
   textArea: {
     height: 120,
+    textAlignVertical: 'top',
   },
   submitButton: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginTop: 10,
+    marginTop: 32,
+    marginBottom: 20,
   },
   submitButtonGradient: {
     flexDirection: 'row',
@@ -285,7 +291,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   helperText: {
-    fontSize: 13,
     color: '#6B7280',
     textAlign: 'center',
     marginTop: 20,

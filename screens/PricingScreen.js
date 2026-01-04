@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -61,9 +61,8 @@ export default function PricingScreen({ navigation }) {
         '24/7 phone support',
         'Priority placement',
         'Unlimited promotion',
-        'Full white-label',
         'Advanced event management',
-        'Dedicated account manager'
+        'Custom branding options'
       ],
       popular: false
     }

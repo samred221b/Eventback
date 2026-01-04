@@ -51,7 +51,6 @@ export default function AboutScreen({ navigation }) {
     setIsSubmitting(true);
     setError(null);
     try {
-      // In a real app, this would send to your bug tracking system
       const reportData = {
         ...bugReport,
         timestamp: new Date().toISOString(),
@@ -59,22 +58,23 @@ export default function AboutScreen({ navigation }) {
         platform: 'mobile'
       };
       
-      // For now, we'll just log it and show success
-      logger.info('Bug report submitted:', reportData);
+      // Send bug report to backend
+      const response = await apiService.submitBugReport(reportData);
       
-      // You could send this to your backend/API
-      // await apiService.submitBugReport(reportData);
-      
-      Alert.alert('Bug Report Submitted', 'Thank you for helping us improve Eventopia. We\'ll review your report and get back to you if needed.');
-      
-      // Reset form
-      setBugReport({
-        title: '',
-        description: '',
-        email: '',
-        category: 'general'
-      });
-      setShowBugModal(false);
+      if (response.success) {
+        Alert.alert('Bug Report Submitted', 'Thank you for helping us improve Eventopia. We\'ll review your report and get back to you if needed.');
+        
+        // Reset form
+        setBugReport({
+          title: '',
+          description: '',
+          email: '',
+          category: 'general'
+        });
+        setShowBugModal(false);
+      } else {
+        throw new Error(response.error || 'Failed to submit bug report');
+      }
     } catch (error) {
       logger.error('Error submitting bug report:', error);
       setError(toAppError(error, { fallbackMessage: 'Failed to submit bug report. Please try again later.' }));
@@ -92,7 +92,6 @@ export default function AboutScreen({ navigation }) {
     setIsSubmitting(true);
     setError(null);
     try {
-      // In a real app, this would send to your feature tracking system
       const requestData = {
         ...featureRequest,
         timestamp: new Date().toISOString(),
@@ -100,22 +99,23 @@ export default function AboutScreen({ navigation }) {
         platform: 'mobile'
       };
       
-      // For now, we'll just log it and show success
-      logger.info('Feature request submitted:', requestData);
+      // Send feature request to backend
+      const response = await apiService.submitFeatureRequest(requestData);
       
-      // You could send this to your backend/API
-      // await apiService.submitFeatureRequest(requestData);
-      
-      Alert.alert('Feature Request Submitted', 'Thank you for your suggestion! We\'ll review your request and consider it for future updates.');
-      
-      // Reset form
-      setFeatureRequest({
-        title: '',
-        description: '',
-        email: '',
-        category: 'general'
-      });
-      setShowFeatureModal(false);
+      if (response.success) {
+        Alert.alert('Feature Request Submitted', 'Thank you for your suggestion! We\'ll review your request and consider it for future updates.');
+        
+        // Reset form
+        setFeatureRequest({
+          title: '',
+          description: '',
+          email: '',
+          category: 'general'
+        });
+        setShowFeatureModal(false);
+      } else {
+        throw new Error(response.error || 'Failed to submit feature request');
+      }
     } catch (error) {
       logger.error('Error submitting feature request:', error);
       setError(toAppError(error, { fallbackMessage: 'Failed to submit feature request. Please try again later.' }));

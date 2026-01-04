@@ -55,82 +55,190 @@ export const adminEventsStyles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
   },
-  filterChipActive: {
+  filterChipTextActive: {
     color: '#FFFFFF',
+    fontWeight: '600',
   },
-  dashboardEventCard: {
+  // Category chips styles (matching Events screen)
+  categoriesContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  categoriesContent: {
+    paddingHorizontal: 5,
+    gap: 6,
+    alignItems: 'center',
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    gap: 4,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginRight: 3,
+    minWidth: 0,
+  },
+  categoryChipActive: {
+    backgroundColor: 'rgba(2, 119, 189, 0.8)',
+    borderColor: 'rgba(0, 0, 0, 0.5)',
+    shadowColor: 'rgba(2, 119, 189, 0.3)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  categoryChipText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  categoryChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  // Search styles
+  searchContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  searchInput: {
+    flex: 1,
+    height: 44,
+    fontSize: 14,
+    color: '#0F172A',
+    marginLeft: 10,
+  },
+  searchClearButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E2E8F0',
+  },
+  // Modern event card styles - blue themed (compact)
+  card: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     marginVertical: 8,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(2, 119, 189, 0.08)',
   },
-  dashboardEventHeader: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  dashboardEventInfo: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  dashboardEventIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#EFF6FF',
+  cardAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F0F8FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    overflow: 'hidden',
   },
-  dashboardEventDetails: {
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
+    backgroundColor: '#F0F8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardInfo: {
     flex: 1,
+    marginLeft: 12,
   },
-  dashboardEventTitle: {
+  cardName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  dashboardEventDate: {
-    fontSize: 14,
+  cardEmail: {
+    fontSize: 13,
     color: '#64748B',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  dashboardEventMeta: {
+  cardStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  dashboardEventStatusWrapper: {
-    flexDirection: 'row',
-  },
-  dashboardEventStatus: {
+  statusChip: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
-  dashboardEventStatusText: {
-    fontSize: 12,
-    fontWeight: '500',
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
-  dashboardEventActions: {
+  verifiedChip: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    backgroundColor: '#0277BD',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 3,
   },
-  dashboardActionButton: {
-    width: 36,
-    height: 36,
+  verifiedText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
     borderRadius: 8,
+    backgroundColor: '#0277BD',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dashboardEventMeta: {
+  toggleButton: {
+    backgroundColor: '#64748B',
+  },
+  cardMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 12,
@@ -138,14 +246,24 @@ export const adminEventsStyles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
-  dashboardEventMetaItem: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
-  dashboardEventMetaValue: {
+  metaIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
+  },
+  metaText: {
     fontSize: 12,
-    color: '#64748B',
-    marginLeft: 4,
+    color: '#475569',
+    fontWeight: '500',
   },
   emptyContainer: {
     flex: 1,
@@ -231,82 +349,144 @@ export const adminOrganizersStyles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
   },
-  filterChipActive: {
+  filterChipTextActive: {
     color: '#FFFFFF',
   },
-  dashboardEventCard: {
+  searchContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  searchInput: {
+    flex: 1,
+    height: 44,
+    fontSize: 14,
+    color: '#0F172A',
+    marginLeft: 10,
+  },
+  searchClearButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E2E8F0',
+  },
+  // Modern organizer card styles - blue themed (compact)
+  card: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     marginVertical: 8,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(2, 119, 189, 0.08)',
   },
-  dashboardEventHeader: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  dashboardEventInfo: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  dashboardEventIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#EFF6FF',
+  cardAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F0F8FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    overflow: 'hidden',
   },
-  dashboardEventDetails: {
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
+    backgroundColor: '#F0F8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardInfo: {
     flex: 1,
+    marginLeft: 12,
   },
-  dashboardEventTitle: {
+  cardName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  dashboardEventDate: {
-    fontSize: 14,
+  cardEmail: {
+    fontSize: 13,
     color: '#64748B',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  dashboardEventMeta: {
+  cardStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  dashboardEventStatusWrapper: {
-    flexDirection: 'row',
-  },
-  dashboardEventStatus: {
+  statusChip: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
-  dashboardEventStatusText: {
-    fontSize: 12,
-    fontWeight: '500',
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
-  dashboardEventActions: {
+  verifiedChip: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    backgroundColor: '#0277BD',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 3,
   },
-  dashboardActionButton: {
-    width: 36,
-    height: 36,
+  verifiedText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
     borderRadius: 8,
+    backgroundColor: '#0277BD',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dashboardEventMeta: {
+  toggleButton: {
+    backgroundColor: '#64748B',
+  },
+  cardMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 12,
@@ -314,14 +494,24 @@ export const adminOrganizersStyles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
-  dashboardEventMetaItem: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
-  dashboardEventMetaValue: {
+  metaIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
+  },
+  metaText: {
     fontSize: 12,
-    color: '#64748B',
-    marginLeft: 4,
+    color: '#475569',
+    fontWeight: '500',
   },
   emptyContainer: {
     flex: 1,

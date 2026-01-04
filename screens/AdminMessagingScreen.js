@@ -188,7 +188,11 @@ export default function AdminMessagingScreen({ navigation }) {
       <View style={styles.messageHeader}>
         <View style={styles.messageHeaderLeft}>
           <Text style={styles.messageType}>
-            {item.type === 'broadcast' ? '📢 Broadcast' : `📧 To ${item.recipients?.length || 0} organizers`}
+            {item.type === 'broadcast' ? '📢 Broadcast' : 
+             item.type === 'admin' && item.metadata?.requestType === 'bug' ? '🐛 Bug Report' : 
+             item.type === 'admin' && item.metadata?.requestType === 'feature' ? '💡 Feature Request' :
+             item.type === 'admin' ? '📧 Admin Message' :
+             `📧 To ${item.recipients?.length || 0} organizers`}
           </Text>
           <Text style={styles.messageDate}>
             {new Date(item.createdAt).toLocaleDateString()}
@@ -207,6 +211,11 @@ export default function AdminMessagingScreen({ navigation }) {
         <Text style={styles.messageStatus}>
           Status: {item.status || 'delivered'}
         </Text>
+        {item.type === 'admin' && item.metadata && (
+          <Text style={item.metadata.requestType === 'bug' ? styles.bugReportInfo : styles.featureRequestInfo}>
+            Category: {item.metadata.category || 'general'}
+          </Text>
+        )}
         {item.recipients && (
           <Text style={styles.recipientCount}>
             {item.recipients.length} recipients
@@ -699,5 +708,15 @@ const styles = StyleSheet.create({
   recipientCount: {
     fontSize: 11,
     color: '#6B7280',
+  },
+  bugReportInfo: {
+    fontSize: 11,
+    color: '#F59E0B',
+    fontWeight: '500',
+  },
+  featureRequestInfo: {
+    fontSize: 11,
+    color: '#10B981',
+    fontWeight: '500',
   },
 });

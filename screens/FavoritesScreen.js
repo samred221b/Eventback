@@ -341,7 +341,7 @@ const FavoritesScreen = ({ navigation }) => {
       </View>
 
       {showSearch && (
-        <View style={styles.searchSection}>
+        <View style={homeStyles.homeSearchSection}>
           <EnhancedSearch
             value={searchQuery}
             onChangeText={setSearchQuery}

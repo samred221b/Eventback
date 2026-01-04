@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  Modal,
+  Share,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +28,8 @@ export default function OrganizerMessageInbox({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [messageModalVisible, setMessageModalVisible] = useState(false);
 
   useEffect(() => {
     fetchMessages();
@@ -51,6 +55,32 @@ export default function OrganizerMessageInbox({ navigation }) {
     fetchMessages();
   };
 
+  const openMessageModal = (message) => {
+    setSelectedMessage(message);
+    setMessageModalVisible(true);
+    if (!message.read) {
+      markAsRead(message.id);
+    }
+  };
+
+  const closeMessageModal = () => {
+    setMessageModalVisible(false);
+    setSelectedMessage(null);
+  };
+
+  const shareMessage = async () => {
+    if (selectedMessage) {
+      try {
+        await Share.share({
+          message: `Message from Eventopia Admin:\n\n${selectedMessage.title || 'Admin Message'}\n\n${selectedMessage.message}`,
+          title: 'Eventopia Admin Message',
+        });
+      } catch (error) {
+        logger.error('Error sharing message:', error);
+      }
+    }
+  };
+
   const markAsRead = async (messageId) => {
     try {
       await apiService.put(`/organizer/messages/${messageId}/read`, {}, { requireAuth: true });
@@ -64,49 +94,71 @@ export default function OrganizerMessageInbox({ navigation }) {
     }
   };
 
-  const renderMessageItem = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.messageItem,
-        !item.read && styles.unreadMessage
-      ]}
-      onPress={() => {
-        if (!item.read) {
-          markAsRead(item.id);
-        }
-        // Could open message detail modal here
-      }}
-    >
-      <View style={styles.messageHeader}>
-        <View style={styles.messageInfo}>
-          <View style={styles.avatar}>
-            <Feather name="shield" size={20} color="#0277BD" />
+  const renderMessageItem = ({ item, index }) => {
+    return (
+      <TouchableOpacity
+        style={[
+          styles.messageItem,
+          !item.read && styles.unreadMessage,
+        ]}
+        onPress={() => openMessageModal(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.messageHeader}>
+          <View style={styles.messageInfo}>
+            <View style={[styles.avatar, !item.read && styles.unreadAvatar]}>
+              <Feather name="shield" size={20} color={!item.read ? "#FFFFFF" : "#0277BD"} />
+            </View>
+            <View style={styles.senderInfo}>
+              <Text style={[styles.senderName, !item.read && styles.unreadSenderName]}>
+                Eventopia Admin
+              </Text>
+              <Text style={styles.timestamp}>
+                {new Date(item.createdAt).toLocaleDateString()} • {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            </View>
           </View>
-          <View style={styles.senderInfo}>
-            <Text style={styles.senderName}>Eventopia Admin</Text>
-            <Text style={styles.timestamp}>
-              {new Date(item.createdAt).toLocaleDateString()} • {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Text>
+          <View style={styles.messageHeaderRight}>
+            {!item.read && (
+              <View style={styles.unreadDot} />
+            )}
+            <Feather name="chevron-right" size={16} color="#9CA3AF" />
           </View>
         </View>
-        {!item.read && (
-          <View style={styles.unreadDot} />
-        )}
-      </View>
-      
-      <Text style={styles.messageTitle}>{item.title || 'Admin Message'}</Text>
-      <Text style={styles.messagePreview} numberOfLines={2}>
-        {item.message}
-      </Text>
-      
-      <View style={styles.messageFooter}>
-        <Text style={styles.messageType}>
-          📧 Message
+        
+        <Text style={[styles.messageTitle, !item.read && styles.unreadMessageTitle]}>
+          {item.title || 'Admin Message'}
         </Text>
-        <Feather name="chevron-right" size={16} color="#9CA3AF" />
-      </View>
-    </TouchableOpacity>
-  );
+        <Text style={styles.messagePreview} numberOfLines={2}>
+          {item.message}
+        </Text>
+        
+        <View style={styles.messageFooter}>
+          <Text style={styles.messageType}>
+            📧 Message
+          </Text>
+          <Text style={styles.messageTimeAgo}>
+            {getTimeAgo(item.createdAt)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const getTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   if (loading) {
     return (
@@ -165,6 +217,117 @@ export default function OrganizerMessageInbox({ navigation }) {
           contentContainerStyle={styles.messagesContent}
         />
       )}
+
+      {/* Message Detail Modal */}
+      <Modal
+        visible={messageModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={closeMessageModal}
+      >
+        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+          {/* Modal Header */}
+          <LinearGradient
+            colors={['#0277BD', '#01579B', '#004D8C']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.modalHeader}
+          >
+            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+              <View style={homeStyles.homeHeaderOrbOne} />
+              <View style={homeStyles.homeHeaderOrbTwo} />
+            </View>
+            
+            <View style={styles.modalHeaderContent}>
+              <TouchableOpacity 
+                style={styles.modalCloseButton}
+                onPress={closeMessageModal}
+                activeOpacity={0.7}
+              >
+                <Feather name="x" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              
+              <View style={styles.modalHeaderCenter}>
+                <Text style={styles.modalHeaderTitle}>Message Details</Text>
+                <Text style={styles.modalHeaderSubtitle}>Administrative Communication</Text>
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.modalShareButton}
+                onPress={shareMessage}
+                activeOpacity={0.7}
+              >
+                <Feather name="share-2" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+
+          {selectedMessage && (
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              {/* Message Card */}
+              <View style={styles.messageDetailContainer}>
+                {/* Sender Info */}
+                <View style={styles.messageDetailHeader}>
+                  <View style={styles.messageDetailAvatar}>
+                    <LinearGradient
+                      colors={['#0277BD', '#01579B']}
+                      style={styles.avatarGradient}
+                    >
+                      <Feather name="shield" size={28} color="#FFFFFF" />
+                    </LinearGradient>
+                  </View>
+                  <View style={styles.messageDetailSenderInfo}>
+                    <Text style={styles.messageDetailSenderName}>Eventopia Admin</Text>
+                    <Text style={styles.messageDetailTimestamp}>
+                      {new Date(selectedMessage.createdAt).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })} at {new Date(selectedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    <Text style={styles.messageDetailRelativeTime}>
+                      {getTimeAgo(selectedMessage.createdAt)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Message Title */}
+                <View style={styles.titleSection}>
+                  <Text style={styles.messageDetailTitle}>
+                    {selectedMessage.title || 'Admin Message'}
+                  </Text>
+                  <View style={styles.titleUnderline} />
+                </View>
+
+                {/* Message Content */}
+                <View style={styles.messageDetailContent}>
+                  <Text style={styles.messageDetailText}>
+                    {selectedMessage.message}
+                  </Text>
+                </View>
+
+                {/* Message Footer */}
+                <View style={styles.messageDetailFooter}>
+                  <View style={styles.footerLeft}>
+                    <Text style={styles.messageDetailType}>
+                      📧 Administrative Message
+                    </Text>
+                    <Text style={styles.messageDetailStatus}>
+                      {selectedMessage.read ? '✅ Read' : '🔵 Unread'}
+                    </Text>
+                  </View>
+                  <View style={styles.footerRight}>
+                    <Text style={styles.securityBadge}>
+                      🔒 Secure
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -292,6 +455,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
   },
+  messageTimeAgo: {
+    fontSize: 12,
+    color: '#0277BD',
+    fontWeight: '500',
+  },
+  messageHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  unreadAvatar: {
+    backgroundColor: '#0277BD',
+  },
+  unreadSenderName: {
+    color: '#0277BD',
+    fontWeight: '700',
+  },
+  unreadMessageTitle: {
+    color: '#1F2937',
+    fontWeight: '700',
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -310,5 +493,170 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingTop: 20,
+    overflow: 'hidden',
+  },
+  modalHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalHeaderCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  modalHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  modalHeaderSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+  },
+  modalShareButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  messageDetailContainer: {
+    backgroundColor: '#FFFFFF',
+    margin: 16,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  messageDetailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  messageDetailAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 16,
+    overflow: 'hidden',
+  },
+  avatarGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  messageDetailSenderInfo: {
+    flex: 1,
+  },
+  messageDetailSenderName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  messageDetailTimestamp: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  messageDetailRelativeTime: {
+    fontSize: 12,
+    color: '#0277BD',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  titleSection: {
+    marginBottom: 20,
+  },
+  messageDetailTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+    lineHeight: 30,
+  },
+  titleUnderline: {
+    height: 3,
+    backgroundColor: '#0277BD',
+    width: 60,
+    borderRadius: 2,
+    marginTop: 8,
+  },
+  messageDetailContent: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  messageDetailText: {
+    fontSize: 16,
+    color: '#374151',
+    lineHeight: 26,
+  },
+  messageDetailFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  footerLeft: {
+    flex: 1,
+  },
+  footerRight: {
+    alignItems: 'flex-end',
+  },
+  messageDetailType: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  messageDetailStatus: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  securityBadge: {
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '600',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 });

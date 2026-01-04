@@ -7,32 +7,94 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../providers/AuthProvider';
 import apiService from '../services/api';
 import { adminAnalyticsStyles } from '../styles/adminStyles';
+import homeStyles from '../styles/homeStyles';
 import AppErrorBanner from '../components/AppErrorBanner';
 import AppErrorState from '../components/AppErrorState';
 import { APP_ERROR_SEVERITY, toAppError } from '../utils/appError';
+import cacheService, { TTL } from '../utils/cacheService';
+import NetInfo from '@react-native-community/netinfo';
 
 const AdminAnalyticsScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [isOffline, setIsOffline] = useState(false);
+
+  const ANALYTICS_CACHE_KEY = 'admin:analytics';
+
+  const cacheAnalytics = async (analytics) => {
+    try {
+      await cacheService.set(ANALYTICS_CACHE_KEY, analytics, { ttlMs: TTL.ONE_HOUR });
+    } catch (e) {
+      // Silent fail
+    }
+  };
+
+  const loadAnalyticsFromCache = async () => {
+    try {
+      const { data } = await cacheService.get(ANALYTICS_CACHE_KEY);
+      return data || null;
+    } catch (e) {
+      return null;
+    }
+  };
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      // Check network status
+      const netInfo = await NetInfo.fetch();
+      const isConnected = netInfo.isConnected && netInfo.isInternetReachable;
+      setIsOffline(!isConnected);
+
+      // If offline, try to load from cache
+      if (!isConnected) {
+        const cachedAnalytics = await loadAnalyticsFromCache();
+        if (cachedAnalytics) {
+          setAnalytics(cachedAnalytics);
+          setLoading(false);
+          setRefreshing(false);
+          return;
+        }
+      }
+
+      // If offline and no cache, show error
+      if (!isConnected) {
+        setError(toAppError(new Error('No internet connection'), { 
+          fallbackMessage: 'No internet connection. Showing cached data if available.' 
+        }));
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       const response = await apiService.get('/admin/analytics', { requireAuth: true });
       
       if (response.success) {
         setAnalytics(response.data);
+        cacheAnalytics(response.data); // Cache the data
       }
     } catch (error) {
-      setError(toAppError(error, { fallbackMessage: 'Failed to fetch analytics' }));
+      // If network error, try to load from cache
+      const cachedAnalytics = await loadAnalyticsFromCache();
+      if (cachedAnalytics) {
+        setAnalytics(cachedAnalytics);
+        setError(toAppError(error, { 
+          fallbackMessage: 'Network error. Showing cached data.' 
+        }));
+      } else {
+        setError(toAppError(error, { fallbackMessage: 'Failed to fetch analytics' }));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -117,50 +179,119 @@ const AdminAnalyticsScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    fetchAnalytics();
+    // Monitor network status
+    const unsubscribe = NetInfo.addEventListener(state => {
+      const isConnected = state.isConnected && state.isInternetReachable;
+      setIsOffline(!isConnected);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // Try to load from cache first, then fetch fresh data if online
+    const loadInitialData = async () => {
+      const cachedAnalytics = await loadAnalyticsFromCache();
+      if (cachedAnalytics) {
+        setAnalytics(cachedAnalytics);
+        setLoading(false);
+      }
+      // Always try to fetch fresh data
+      fetchAnalytics();
+    };
+
+    loadInitialData();
   }, []);
 
   if (loading) {
     return (
-      <SafeAreaView style={adminAnalyticsStyles.container}>
+      <View style={adminAnalyticsStyles.container}>
         <View style={adminAnalyticsStyles.loadingContainer}>
           <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={adminAnalyticsStyles.loadingText}>Loading analytics...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error && error.severity === APP_ERROR_SEVERITY.ERROR) {
     return (
-      <SafeAreaView style={adminAnalyticsStyles.container}>
+      <View style={adminAnalyticsStyles.container}>
         <AppErrorState error={error} onRetry={fetchAnalytics} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!analytics) {
     return (
-      <SafeAreaView style={adminAnalyticsStyles.container}>
+      <View style={adminAnalyticsStyles.container}>
         <View style={adminAnalyticsStyles.emptyContainer}>
-          <Feather name="bar-chart-2" size={48} color="#9CA3AF" />
-          <Text style={adminAnalyticsStyles.emptyTitle}>No analytics available</Text>
-          <Text style={adminAnalyticsStyles.emptyText}>Please try again later</Text>
+          <Feather name={isOffline ? 'wifi-off' : 'bar-chart-2'} size={48} color="#9CA3AF" />
+          <Text style={adminAnalyticsStyles.emptyTitle}>
+            {isOffline ? 'No Connection' : 'No analytics available'}
+          </Text>
+          <Text style={adminAnalyticsStyles.emptyText}>
+            {isOffline 
+              ? 'Check your internet connection and try again'
+              : 'Please try again later'
+            }
+          </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={adminAnalyticsStyles.container}>
-      <View style={adminAnalyticsStyles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={24} color="#1F2937" />
-        </TouchableOpacity>
-        <Text style={adminAnalyticsStyles.headerTitle}>System Analytics</Text>
-        <TouchableOpacity onPress={handleRefresh}>
-          <Feather name="refresh-cw" size={24} color="#1F2937" />
-        </TouchableOpacity>
+    <View style={[adminAnalyticsStyles.container, { paddingTop: insets.top }]}>
+      <View style={homeStyles.homeHeaderContainer}>
+        <LinearGradient
+          colors={['#0277BD', '#01579B']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={homeStyles.homeHeaderCard}
+        >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
+          <View style={homeStyles.homeHeaderTopRow}>
+            <View style={homeStyles.modernDashboardProfile}>
+              <View style={homeStyles.modernDashboardAvatar}>
+                <View style={homeStyles.modernDashboardAvatarInner}>
+                  <Feather name="bar-chart-2" size={20} color="#0F172A" />
+                </View>
+              </View>
+              <View>
+                <Text style={homeStyles.homeHeaderWelcomeText}>Admin</Text>
+                <Text style={homeStyles.homeHeaderNameText}>System Analytics</Text>
+              </View>
+            </View>
+            <View style={homeStyles.homeHeaderActions}>
+              <TouchableOpacity
+                style={homeStyles.homeHeaderIconButton}
+                onPress={handleRefresh}
+              >
+                <Feather name="refresh-cw" size={18} color="rgba(255, 255, 255, 1)" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={homeStyles.homeHeaderIconButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Feather name="arrow-left" size={20} color="rgba(255, 255, 255, 1)" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={homeStyles.homeHeaderMetaRow}>
+            <Text style={homeStyles.homeHeaderMetaText}>Analytics Dashboard</Text>
+            {isOffline && (
+              <>
+                <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
+                <Text style={[homeStyles.homeHeaderMetaText, { color: '#F59E0B' }]}>Offline</Text>
+              </>
+            )}
+          </View>
+        </LinearGradient>
       </View>
 
       <ScrollView
@@ -225,7 +356,7 @@ const AdminAnalyticsScreen = ({ navigation }) => {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

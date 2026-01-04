@@ -8,6 +8,7 @@ import { useFavorites } from '../providers/FavoritesProvider';
 import { formatPrice, formatDate, formatTime } from '../utils/dataProcessor';
 import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
 import { logger } from '../utils/logger';
+import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
 
@@ -19,6 +20,34 @@ export default function EventDetailsScreen({ route, navigation }) {
   const [userResponse, setUserResponse] = useState(null); // Track user response: 'interested', 'going', 'maybe'
   const [isPricingExpanded, setIsPricingExpanded] = useState(false); // State for pricing dropdown
   const [showFullScreenImage, setShowFullScreenImage] = useState(false);
+
+  const normalizeRemoteImageUri = (uri) => {
+    if (!uri || typeof uri !== 'string') return null;
+
+    const trimmed = uri.trim();
+    if (!trimmed) return null;
+
+    // If backend returns a relative uploads path like "/uploads/abc.jpg",
+    // convert it to an absolute URL using the configured API base URL host.
+    if (trimmed.startsWith('/uploads/')) {
+      try {
+        const extra = (Constants?.expoConfig?.extra) || (Constants?.manifest?.extra) || {};
+        const apiBaseUrl = extra?.apiBaseUrl || 'https://eventoback-1.onrender.com/api';
+        const origin = apiBaseUrl.replace(/\/(api)\/?$/, '');
+        return `${origin}${trimmed}`;
+      } catch (e) {
+        return `https://eventoback-1.onrender.com${trimmed}`;
+      }
+    }
+
+    // In production builds, http images are frequently blocked or fail.
+    // Prefer https when possible.
+    if (trimmed.startsWith('http://')) {
+      return trimmed.replace('http://', 'https://');
+    }
+
+    return trimmed;
+  };
 
   const heroImageUri =
     (typeof event?.imageUrl === 'string' && event.imageUrl) ||
@@ -450,7 +479,7 @@ export default function EventDetailsScreen({ route, navigation }) {
                   <View style={styles.organizerAvatarSmall}>
                     {event.organizerId?.profileImage ? (
                       <Image 
-                        source={{ uri: event.organizerId.profileImage }} 
+                        source={{ uri: normalizeRemoteImageUri(event.organizerId.profileImage) }} 
                         style={styles.organizerAvatarImageSmall}
                         resizeMode="cover"
                       />
@@ -491,10 +520,10 @@ export default function EventDetailsScreen({ route, navigation }) {
                   activeOpacity={0.8}
                 >
                   <LinearGradient
-                    colors={userResponse === 'going' ? ['#10B981', '#059669'] : ['#D1FAE5', '#A7F3D0']}
+                    colors={userResponse === 'going' ? ['#0277BD', '#01579B'] : ['#E0F2FE', '#BAE6FD']}
                     style={styles.advancedButtonGradient}
                   >
-                    <Feather name="check-circle" size={18} color={userResponse === 'going' ? '#FFFFFF' : '#10B981'} />
+                    <Feather name="check-circle" size={18} color={userResponse === 'going' ? '#FFFFFF' : '#0277BD'} />
                     <Text style={[
                       styles.advancedButtonText,
                       userResponse === 'going' && styles.advancedButtonTextActive
@@ -1004,7 +1033,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   verifiedOrganizerText: {
-    color: '#10b981',
+    color: '#0277BD',
     fontSize: 12,
     fontWeight: '500',
     marginTop: 4,
@@ -1013,7 +1042,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -2,
     right: -2,
-    backgroundColor: '#10b981',
+    backgroundColor: '#0277BD',
     borderRadius: 12,
     width: 24,
     height: 24,
@@ -1026,7 +1055,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -2,
     right: -2,
-    backgroundColor: '#10b981',
+    backgroundColor: '#0277BD',
     borderRadius: 12,
     width: 22,
     height: 22,
@@ -1231,7 +1260,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -2,
     right: -2,
-    backgroundColor: '#10b981',
+    backgroundColor: '#0277BD',
     borderRadius: 10,
     width: 18,
     height: 18,
@@ -1252,7 +1281,7 @@ const styles = StyleSheet.create({
   verifiedBadgeSmall: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10b981',
+    backgroundColor: '#0277BD',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,

@@ -13,7 +13,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../utils/logger';
-import { StatusBar } from 'expo-status-bar';
 
 const { width, height } = Dimensions.get('window');
 

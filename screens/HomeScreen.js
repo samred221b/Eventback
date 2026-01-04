@@ -10,11 +10,13 @@ import {
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  StyleSheet,
 } from 'react-native';
 
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+
 import { Feather } from '@expo/vector-icons';
 
 import { useFavorites } from '../providers/FavoritesProvider';
@@ -95,19 +97,10 @@ export default function HomeScreen({ navigation }) {
   const [broadcastNotifications, setBroadcastNotifications] = useState([]);
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
 
-  const backgroundImageStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: -10,
-    bottom: 0,
-    width: 410,
-    height: '100%',
-  };
-
   useFocusEffect(
     React.useCallback(() => {
       const now = Date.now();
+
       const timeSinceLastRefresh = now - lastRefreshTime.current;
       const REFRESH_COOLDOWN = 30000;
 
@@ -148,7 +141,9 @@ export default function HomeScreen({ navigation }) {
       }
 
       const nextList = Array.isArray(listRes?.data) ? listRes.data : [];
-      setBroadcastNotifications(nextList);
+      // UI behavior: only show unread notifications in the bell popover.
+      // ("Clear All" marks everything as read; this prevents read items from reappearing on next refresh.)
+      setBroadcastNotifications(nextList.filter((n) => !n?.isRead));
     } catch (e) {
       // Silent fail: notifications are non-blocking
     } finally {
@@ -201,6 +196,7 @@ export default function HomeScreen({ navigation }) {
       await apiService.markAllNotificationsRead();
       setBroadcastNotifications([]);
       setUnreadCount(0);
+      refreshNotifications({ background: true });
     } catch (e) {
       // Silent fail
     }
@@ -364,6 +360,12 @@ export default function HomeScreen({ navigation }) {
     return `${dateStr} • ${timeStr}`;
   };
 
+  const getEventLocationLabel = (location) => {
+    if (!location) return 'Location TBA';
+    if (typeof location === 'string') return location;
+    return location?.venue || location?.name || location?.address || location?.formattedAddress || location?.city || 'Location TBA';
+  };
+
   const filteredEvents = searchQuery.trim()
     ? processedEvents.filter(event =>
         event.title?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -377,7 +379,7 @@ export default function HomeScreen({ navigation }) {
 
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   const popoverWidth = Math.min(280, Math.max(240, screenWidth - 40));
-  const popoverMaxHeight = Math.min(380, Math.max(240, screenHeight * 0.48));
+  const popoverMaxHeight = Math.min(600, Math.max(240, screenHeight * 0.65));
   const popoverMargin = 12;
 
   const popoverLeft = (() => {
@@ -402,6 +404,12 @@ export default function HomeScreen({ navigation }) {
   if (isLoading && !isRefreshing && hasInitialLoad) {
     return (
       <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <ImageBackground
+          source={require('../assets/3.png')}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
+          resizeMethod="resize"
+        />
         <View style={homeStyles.homeHeaderContainer}>
           <LinearGradient
             colors={['#0277BD', '#01579B']}
@@ -501,295 +509,424 @@ export default function HomeScreen({ navigation }) {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
     >
-      <Modal
-        visible={showRecentEventsModal}
-        transparent
-        animationType="fade"
-        onRequestClose={handleCloseRecentEventsModal}
+      <ImageBackground
+        source={require('../assets/3.png')}
+        style={{ flex: 1 }}
+        resizeMode="cover"
+        resizeMethod="resize"
       >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={handleCloseRecentEventsModal}
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(15, 23, 42, 0.42)',
-          }}
+        <Modal
+          visible={showRecentEventsModal}
+          transparent
+          animationType="fade"
+          onRequestClose={handleCloseRecentEventsModal}
         >
           <TouchableOpacity
             activeOpacity={1}
-            onPress={() => {}}
+            onPress={handleCloseRecentEventsModal}
             style={{
-              position: 'absolute',
-              top: popoverTop,
-              left: popoverLeft,
-              width: popoverWidth,
-              maxHeight: popoverMaxHeight,
-              backgroundColor: '#FFFFFF',
-              borderRadius: 20,
-              shadowColor: '#0277BD',
-              shadowOpacity: 0.28,
-              shadowRadius: 24,
-              shadowOffset: { width: 0, height: 12 },
-              elevation: 16,
-              transform: [{ scale: showRecentEventsModal ? 1 : 0.9 }],
+              flex: 1,
+              backgroundColor: 'rgba(15, 23, 42, 0.42)',
             }}
           >
-            <View
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => {}}
               style={{
                 position: 'absolute',
-                top: -8,
-                left: arrowLeft,
-                width: 16,
-                height: 16,
+                top: popoverTop,
+                left: popoverLeft,
+                width: popoverWidth,
+                maxHeight: popoverMaxHeight,
                 backgroundColor: '#FFFFFF',
-                transform: [{ rotate: '45deg' }],
+                borderRadius: 20,
                 shadowColor: '#0277BD',
-                shadowOpacity: 0.2,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 4 },
-                elevation: 8,
+                shadowOpacity: 0.28,
+                shadowRadius: 24,
+                shadowOffset: { width: 0, height: 12 },
+                elevation: 16,
+                transform: [{ scale: showRecentEventsModal ? 1 : 0.9 }],
               }}
-            />
+            >
+              <View
+                style={{
+                  position: 'absolute',
+                  top: -8,
+                  left: arrowLeft,
+                  width: 16,
+                  height: 16,
+                  backgroundColor: '#FFFFFF',
+                  transform: [{ rotate: '45deg' }],
+                  shadowColor: '#0277BD',
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 8,
+                }}
+              />
 
+              <LinearGradient
+                colors={['#0277BD', '#01579B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+              >
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Feather name="bell" size={14} color="#FFFFFF" />
+                </View>
+                <View style={{ width: 8 }} />
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
+                  Notifications
+                </Text>
+                <TouchableOpacity
+                  onPress={handleCloseRecentEventsModal}
+                  style={{ marginLeft: 'auto', padding: 4 }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Feather name="x" size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+              </LinearGradient>
+
+              <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+                <View style={{ height: 8 }} />
+
+                {isNotificationsLoading ? (
+                  <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 8 }}>
+                    <ActivityIndicator size="small" color="#0277BD" />
+                  </View>
+                ) : broadcastNotifications.length === 0 ? (
+                  <View style={{ alignItems: 'center', paddingTop: 24 }}>
+                    <Feather name="bell" size={32} color="#CBD5E1" />
+                    <Text style={{ color: '#64748B', marginTop: 8, fontSize: 13 }}>No notifications yet.</Text>
+                  </View>
+                ) : (
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    {broadcastNotifications.map((n) => (
+                      <TouchableOpacity
+                        key={n.id}
+                        onPress={() => handleNotificationPress(n)}
+                        activeOpacity={0.84}
+                        style={{
+                          paddingVertical: 10,
+                          paddingHorizontal: 10,
+                          borderRadius: 12,
+                          backgroundColor: n.isRead ? '#F8FAFC' : '#EFF6FF',
+                          marginBottom: 6,
+                          borderWidth: 1,
+                          borderColor: n.isRead ? '#E2E8F0' : '#BFDBFE',
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: n.isRead ? '#E2E8F0' : '#3B82F6', alignItems: 'center', justifyContent: 'center' }}>
+                            <Feather name="volume-2" size={12} color={n.isRead ? '#475569' : '#FFFFFF'} />
+                          </View>
+                          <View style={{ width: 8 }} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
+                              {n.title || 'Announcement'}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: '#475569', marginTop: 2 }} numberOfLines={2}>
+                              {n.message}
+                            </Text>
+                          </View>
+                          {!n.isRead && (
+                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }} />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+                {broadcastNotifications.length > 0 && (
+                  <LinearGradient
+                    colors={['#0277BD', '#01579B']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      marginTop: 12,
+                      borderRadius: 6,
+                      paddingVertical: 6,
+                      paddingHorizontal: 16,
+                      alignItems: 'center',
+                      alignSelf: 'flex-end',
+                    }}
+                  >
+                    <TouchableOpacity onPress={handleClearNotifications} activeOpacity={0.8}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>Clear All</Text>
+                    </TouchableOpacity>
+                  </LinearGradient>
+                )}
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+
+        <View style={{ flex: 1 }}>
+          <AppErrorBanner
+            error={error}
+            onRetry={handleRetry}
+            disabled={isLoadingRef.current}
+          />
+          
+          <View style={homeStyles.homeHeaderContainer}>
             <LinearGradient
               colors={['#0277BD', '#01579B']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={{
-                borderTopLeftRadius: 20,
-                borderTopRightRadius: 20,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                flexDirection: 'row',
-                alignItems: 'center',
-              }}
+              style={homeStyles.homeHeaderCard}
             >
-              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
-                <Feather name="bell" size={14} color="#FFFFFF" />
+              <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+                <View style={homeStyles.homeHeaderOrbOne} />
+                <View style={homeStyles.homeHeaderOrbTwo} />
               </View>
-              <View style={{ width: 8 }} />
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
-                Notifications
-              </Text>
-              <TouchableOpacity
-                onPress={handleCloseRecentEventsModal}
-                style={{ marginLeft: 'auto', padding: 4 }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Feather name="x" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-            </LinearGradient>
-
-            <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
-              <View style={{ height: 8 }} />
-
-              {isNotificationsLoading ? (
-                <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 8 }}>
-                  <ActivityIndicator size="small" color="#0277BD" />
-                </View>
-              ) : broadcastNotifications.length === 0 ? (
-                <View style={{ alignItems: 'center', paddingTop: 24 }}>
-                  <Feather name="bell" size={32} color="#CBD5E1" />
-                  <Text style={{ color: '#64748B', marginTop: 8, fontSize: 13 }}>No notifications yet.</Text>
-                </View>
-              ) : (
-                <ScrollView showsVerticalScrollIndicator={false}>
-                  {broadcastNotifications.map((n) => (
-                    <TouchableOpacity
-                      key={n.id}
-                      onPress={() => handleNotificationPress(n)}
-                      activeOpacity={0.84}
-                      style={{
-                        paddingVertical: 10,
-                        paddingHorizontal: 10,
-                        borderRadius: 12,
-                        backgroundColor: n.isRead ? '#F8FAFC' : '#EFF6FF',
-                        marginBottom: 6,
-                        borderWidth: 1,
-                        borderColor: n.isRead ? '#E2E8F0' : '#BFDBFE',
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: n.isRead ? '#E2E8F0' : '#3B82F6', alignItems: 'center', justifyContent: 'center' }}>
-                          <Feather name="volume-2" size={12} color={n.isRead ? '#475569' : '#FFFFFF'} />
-                        </View>
-                        <View style={{ width: 8 }} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
-                            {n.title || 'Announcement'}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: '#475569', marginTop: 2 }} numberOfLines={2}>
-                            {n.message}
-                          </Text>
-                        </View>
-                        {!n.isRead && (
-                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }} />
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              )}
-              {broadcastNotifications.length > 0 && (
-                <LinearGradient
-                  colors={['#0277BD', '#01579B']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    marginTop: 12,
-                    borderRadius: 6,
-                    paddingVertical: 6,
-                    paddingHorizontal: 16,
-                    alignItems: 'center',
-                    alignSelf: 'flex-end',
-                  }}
-                >
-                  <TouchableOpacity onPress={handleClearNotifications} activeOpacity={0.8}>
-                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>Clear All</Text>
-                  </TouchableOpacity>
-                </LinearGradient>
-              )}
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      <ImageBackground
-        source={require('../assets/3.png')}
-        style={backgroundImageStyle}
-        resizeMode="cover"
-      />
-
-      <View style={{ flex: 1 }}>
-        <AppErrorBanner
-          error={error}
-          onRetry={handleRetry}
-          disabled={isLoadingRef.current}
-        />
-        
-        <View style={homeStyles.homeHeaderContainer}>
-          <LinearGradient
-            colors={['#0277BD', '#01579B']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={homeStyles.homeHeaderCard}
-          >
-            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
-              <View style={homeStyles.homeHeaderOrbOne} />
-              <View style={homeStyles.homeHeaderOrbTwo} />
-            </View>
-            <View style={homeStyles.homeHeaderTopRow}>
-              <View style={homeStyles.modernDashboardProfile}>
-                <View style={homeStyles.modernDashboardAvatar}>
-                  <View style={homeStyles.modernDashboardAvatarInner}>
-                    <Feather name="user" size={20} color="#0F172A" />
+              <View style={homeStyles.homeHeaderTopRow}>
+                <View style={homeStyles.modernDashboardProfile}>
+                  <View style={homeStyles.modernDashboardAvatar}>
+                    <View style={homeStyles.modernDashboardAvatarInner}>
+                      <Feather name="user" size={20} color="#0F172A" />
+                    </View>
+                  </View>
+                  <View>
+                    <Text style={homeStyles.homeHeaderWelcomeText}>Welcome Back,</Text>
+                    <Text style={homeStyles.homeHeaderNameText}>User</Text>
                   </View>
                 </View>
-                <View>
-                  <Text style={homeStyles.homeHeaderWelcomeText}>Welcome Back,</Text>
-                  <Text style={homeStyles.homeHeaderNameText}>User</Text>
-                </View>
-              </View>
-              <View style={homeStyles.homeHeaderActions}>
-                <SafeTouchableOpacity
-                  style={homeStyles.homeHeaderIconButton}
-                  onPress={() => setShowSearch(!showSearch)}
-                >
-                  <Feather name="search" size={20} color="rgba(255, 255, 255, 1)" />
-                </SafeTouchableOpacity>
-                <View ref={bellAnchorRef} collapsable={false}>
+                <View style={homeStyles.homeHeaderActions}>
                   <SafeTouchableOpacity
                     style={homeStyles.homeHeaderIconButton}
-                    onPress={handleBellPress}
+                    onPress={() => setShowSearch(!showSearch)}
                   >
-                    <Feather
-                      name="bell"
-                      size={20}
-                      color={'rgba(255, 255, 255, 1)'}
-                    />
-                    {unreadCount > 0 && (
-                      <View style={homeStyles.notificationBadge}>
-                        <Text style={homeStyles.notificationBadgeText}>
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </Text>
-                      </View>
-                    )}
+                    <Feather name="search" size={20} color="rgba(255, 255, 255, 1)" />
                   </SafeTouchableOpacity>
+                  <View ref={bellAnchorRef} collapsable={false}>
+                    <SafeTouchableOpacity
+                      style={homeStyles.homeHeaderIconButton}
+                      onPress={handleBellPress}
+                    >
+                      <Feather
+                        name="bell"
+                        size={20}
+                        color={'rgba(255, 255, 255, 1)'}
+                      />
+                      {unreadCount > 0 && (
+                        <View style={homeStyles.notificationBadge}>
+                          <Text style={homeStyles.notificationBadgeText}>
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </Text>
+                        </View>
+                      )}
+                    </SafeTouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
 
-            <View style={homeStyles.homeHeaderMetaRow}>
-              <Text style={homeStyles.homeHeaderMetaText}>Discover Events</Text>
-              <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
-              <Text style={homeStyles.homeHeaderMetaText}>Create Memories</Text>
-              <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
-              <Text style={homeStyles.homeHeaderMetaText}>Share Moments</Text>
-            </View>
-          </LinearGradient>
-        </View>
-
-        {showSearch && (
-          <View style={homeStyles.homeSearchSection}>
-            <EnhancedSearch
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search events by name, location, category..."
-              events={processedEvents}
-              onEventSelect={handleEventPress}
-            />
+              <View style={homeStyles.homeHeaderMetaRow}>
+                <Text style={homeStyles.homeHeaderMetaText}>Discover Events</Text>
+                <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
+                <Text style={homeStyles.homeHeaderMetaText}>Create Memories</Text>
+                <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
+                <Text style={homeStyles.homeHeaderMetaText}>Share Moments</Text>
+              </View>
+            </LinearGradient>
           </View>
-        )}
 
-        <View style={homeStyles.promotionalBannersSection}>
-          <AutoScrollingPromoCarousel navigation={navigation} />
-        </View>
+          {showSearch && (
+            <View style={homeStyles.homeSearchSection}>
+              <EnhancedSearch
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search events by name, location, category..."
+                events={processedEvents}
+                onEventSelect={handleEventPress}
+              />
+            </View>
+          )}
 
-        {/* Trending Events Section */}
-        {trendingEvents.length > 0 && (
-          <View style={homeStyles.trendingEventsSection}>
-            <View style={homeStyles.trendingEventsHeader}>
+          <View style={homeStyles.promotionalBannersSection}>
+            <AutoScrollingPromoCarousel navigation={navigation} />
+          </View>
+
+          {/* Trending Events Section */}
+          {trendingEvents.length > 0 && (
+            <View style={homeStyles.trendingEventsSection}>
+              <View style={homeStyles.trendingEventsHeader}>
+                <View style={homeStyles.trendingTitleContainer}>
+                  <Feather name="trending-up" size={20} color="#000000" />
+                  <Text style={homeStyles.trendingEventsTitle}>Trending Events</Text>
+                </View>
+                <SafeTouchableOpacity onPress={() => navigation.navigate('Events')}>
+                  <Text style={homeStyles.seeAllLink}>See All</Text>
+                </SafeTouchableOpacity>
+              </View>
+
+              <View style={homeStyles.trendingEventsContainer}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={homeStyles.trendingEventsScrollContainer}
+                >
+                  {trendingEvents.map((event, index) => (
+                    <SafeTouchableOpacity
+                      key={event.id}
+                      style={homeStyles.trendingEventCard}
+                      onPress={() => handleEventPress(event)}
+                      activeOpacity={0.95}
+                    >
+                      <View style={homeStyles.trendingEventImageContainer}>
+                        {event.imageUrl ? (
+                          <Image
+                            source={{ uri: event.imageUrl }}
+                            style={homeStyles.trendingEventImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <LinearGradient
+                            colors={['#E0E7FF', '#C7D2FE']}
+                            style={homeStyles.trendingEventPlaceholder}
+                          >
+                            <Feather name="image" size={24} color="#6366F1" />
+                          </LinearGradient>
+                        )}
+                      </View>
+
+                      {/* Featured Badge for Trending Events */}
+                      {event.featured && (
+                        <View style={homeStyles.premiumFeaturedBadgeLeft}>
+                          <LinearGradient
+                            colors={['#FFD700', '#FFA500']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={homeStyles.premiumBadgeGradient}
+                          >
+                            <Feather name="star" size={10} color="#FFFFFF" />
+                            <Text style={homeStyles.premiumBadgeText}>FEATURED</Text>
+                          </LinearGradient>
+                        </View>
+                      )}
+
+                      <View style={homeStyles.trendingEventContent}>
+                        <View style={homeStyles.trendingEventHeader}>
+                          <Text style={homeStyles.trendingEventTitle} numberOfLines={2}>
+                            {event.title}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => toggleFavorite(event.id)}
+                            style={homeStyles.trendingHeartButton}
+                            activeOpacity={0.8}
+                          >
+                            <Feather
+                              name="heart"
+                              size={16}
+                              color={isFavorite(event.id) ? "#EF4444" : "#64748B"}
+                              fill={isFavorite(event.id) ? "#EF4444" : "none"}
+                            />
+                          </TouchableOpacity>
+                        </View>
+
+                        <View style={homeStyles.trendingEventMeta}>
+                          <View style={homeStyles.trendingMetaItem}>
+                            <Feather name="calendar" size={12} color="#64748B" />
+                            <Text style={homeStyles.trendingMetaText}>
+                              {new Date(event.date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </Text>
+                          </View>
+                          <View style={homeStyles.trendingMetaItem}>
+                            <Feather name="clock" size={12} color="#64748B" />
+                            <Text style={homeStyles.trendingMetaText}>{event.time || 'TBD'}</Text>
+                          </View>
+                        </View>
+
+                        <View style={homeStyles.trendingEventFooter}>
+                          <View style={homeStyles.trendingLocationItem}>
+                            <Feather name="map-pin" size={12} color="#64748B" />
+                            <Text style={homeStyles.trendingLocationText} numberOfLines={1}>
+                              {getEventLocationLabel(event.location)}
+                            </Text>
+                          </View>
+                          <View style={homeStyles.trendingPriceBadge}>
+                            <Text style={homeStyles.trendingPriceText}>
+                              {event.price === 0 ? 'Free' : `${event.currency} ${event.price}`}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </SafeTouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          )}
+          
+          {/* Empty State */}
+          {trendingEvents.length === 0 && !isLoading && hasInitialLoad && (
+            <EmptyState
+              icon="calendar"
+              iconSize={64}
+              title="No Events Yet"
+              description={
+                searchQuery.trim()
+                  ? `No events found for "${searchQuery}"`
+                  : "Be the first to create amazing events in your area!"
+              }
+              primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => navigation.navigate('Events')}
+              primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Explore Events'}
+              primaryActionIcon={searchQuery.trim() ? 'x' : 'compass'}
+              secondaryAction={() => navigation.navigate('OrganizerDashboard')}
+              secondaryActionText="Create Event"
+              secondaryActionIcon="plus"
+              gradientColors={['#0277BD', '#01579B']}
+            />
+          )}
+
+          <View style={homeStyles.featuredEventsSection}>
+            <View style={homeStyles.featuredEventsHeader}>
               <View style={homeStyles.trendingTitleContainer}>
-                <Feather name="trending-up" size={20} color="#000000" />
-                <Text style={homeStyles.trendingEventsTitle}>Trending Events</Text>
+                <Feather name="star" size={20} color="#000000" />
+                <Text style={homeStyles.featuredEventsTitle}>Featured Events</Text>
               </View>
               <SafeTouchableOpacity onPress={() => navigation.navigate('Events')}>
                 <Text style={homeStyles.seeAllLink}>See All</Text>
               </SafeTouchableOpacity>
             </View>
 
-            <View style={homeStyles.trendingEventsContainer}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={homeStyles.trendingEventsScrollContainer}
-              >
-                {trendingEvents.map((event, index) => (
-                  <SafeTouchableOpacity
-                    key={event.id}
-                    style={homeStyles.trendingEventCard}
-                    onPress={() => handleEventPress(event)}
-                    activeOpacity={0.95}
-                  >
-                  <View style={homeStyles.trendingEventImageContainer}>
+            <View style={homeStyles.premiumFeaturedContainer}>
+              {featuredEvents.map((event, index) => (
+                <SafeTouchableOpacity
+                  key={event.id}
+                  style={homeStyles.horizontalEventCard}
+                  onPress={() => handleEventPress(event)}
+                  activeOpacity={0.95}
+                >
+                  <View style={homeStyles.horizontalEventImageContainer}>
                     {event.imageUrl ? (
                       <Image
                         source={{ uri: event.imageUrl }}
-                        style={homeStyles.trendingEventImage}
+                        style={homeStyles.horizontalEventImage}
                         resizeMode="cover"
                       />
                     ) : (
                       <LinearGradient
-                        colors={['#E0E7FF', '#C7D2FE']}
-                        style={homeStyles.trendingEventPlaceholder}
+                        colors={
+                          index % 3 === 0 ? ['#0277BD', '#01579B'] :
+                          index % 3 === 1 ? ['#8B5CF6', '#7C3AED'] :
+                          ['#059669', '#047857']
+                        }
+                        style={homeStyles.horizontalEventImagePlaceholder}
                       >
-                        <Feather name="image" size={24} color="#6366F1" />
+                        <Feather name="image" size={24} color="#FFFFFF" />
                       </LinearGradient>
                     )}
-                  </View>
-
-                  {/* Featured Badge for Trending Events */}
-                  {event.featured && (
+                    {/* Featured Badge on Left Side */}
                     <View style={homeStyles.premiumFeaturedBadgeLeft}>
                       <LinearGradient
                         colors={['#FFD700', '#FFA500']}
@@ -801,315 +938,187 @@ export default function HomeScreen({ navigation }) {
                         <Text style={homeStyles.premiumBadgeText}>FEATURED</Text>
                       </LinearGradient>
                     </View>
-                  )}
+                  </View>
 
-                  <View style={homeStyles.trendingEventContent}>
-                    <View style={homeStyles.trendingEventHeader}>
-                      <Text style={homeStyles.trendingEventTitle} numberOfLines={2}>
+                  <View style={homeStyles.horizontalEventDetailsContainer}>
+                    <View style={homeStyles.horizontalEventTopSection}>
+                      <Text style={homeStyles.horizontalEventTitle} numberOfLines={2}>
                         {event.title}
                       </Text>
-                      <TouchableOpacity
-                        onPress={() => toggleFavorite(event.id)}
-                        style={homeStyles.trendingHeartButton}
+
+                      <View style={homeStyles.horizontalEventMetaRow}>
+                        <Feather name="map-pin" size={12} color="#6B7280" />
+                        <Text style={homeStyles.horizontalEventMetaText} numberOfLines={1}>
+                          {getEventLocationLabel(event.location)}
+                        </Text>
+                      </View>
+
+                      <View style={homeStyles.horizontalEventMetaRow}>
+                        <Feather name="calendar" size={12} color="#6B7280" />
+                        <Text style={homeStyles.horizontalEventMetaText}>
+                          {formatDateTimeShort(event.date, event.time)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={homeStyles.horizontalEventBottomRow}>
+                      <Text style={homeStyles.horizontalEventPrice}>
+                        {formatPrice(event.price, event.currency)}
+                      </Text>
+
+                      <SafeTouchableOpacity
+                        style={homeStyles.horizontalEventViewButton}
+                        onPress={() => handleEventPress(event)}
                         activeOpacity={0.8}
                       >
-                        <Feather
-                          name="heart"
-                          size={16}
-                          color={isFavorite(event.id) ? "#EF4444" : "#64748B"}
-                          fill={isFavorite(event.id) ? "#EF4444" : "none"}
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={homeStyles.trendingEventMeta}>
-                      <View style={homeStyles.trendingMetaItem}>
-                        <Feather name="calendar" size={12} color="#64748B" />
-                        <Text style={homeStyles.trendingMetaText}>
-                          {new Date(event.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </Text>
-                      </View>
-                      <View style={homeStyles.trendingMetaItem}>
-                        <Feather name="clock" size={12} color="#64748B" />
-                        <Text style={homeStyles.trendingMetaText}>{event.time || 'TBD'}</Text>
-                      </View>
-                    </View>
-
-                    <View style={homeStyles.trendingEventFooter}>
-                      <View style={homeStyles.trendingLocationItem}>
-                        <Feather name="map-pin" size={12} color="#64748B" />
-                        <Text style={homeStyles.trendingLocationText} numberOfLines={1}>
-                          {typeof event.location === 'string' ? event.location : event.location?.name || 'Location TBA'}
-                        </Text>
-                      </View>
-                      <View style={homeStyles.trendingPriceBadge}>
-                        <Text style={homeStyles.trendingPriceText}>
-                          {event.price === 0 ? 'Free' : `${event.currency} ${event.price}`}
-                        </Text>
-                      </View>
+                        <Text style={homeStyles.horizontalEventViewButtonText}>View Details</Text>
+                      </SafeTouchableOpacity>
                     </View>
                   </View>
                 </SafeTouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        )}
-        
-        {/* Empty State */}
-        {trendingEvents.length === 0 && !isLoading && hasInitialLoad && (
-          <EmptyState
-            icon="calendar"
-            iconSize={64}
-            title="No Events Yet"
-            description={
-              searchQuery.trim()
-                ? `No events found for "${searchQuery}"`
-                : "Be the first to create amazing events in your area!"
-            }
-            primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => navigation.navigate('Events')}
-            primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Explore Events'}
-            primaryActionIcon={searchQuery.trim() ? 'x' : 'compass'}
-            secondaryAction={() => navigation.navigate('OrganizerDashboard')}
-            secondaryActionText="Create Event"
-            secondaryActionIcon="plus"
-            gradientColors={['#0277BD', '#01579B']}
-          />
-        )}
-
-        <View style={homeStyles.featuredEventsSection}>
-          <View style={homeStyles.featuredEventsHeader}>
-            <View style={homeStyles.trendingTitleContainer}>
-              <Feather name="star" size={20} color="#000000" />
-              <Text style={homeStyles.featuredEventsTitle}>Featured Events</Text>
-            </View>
-            <SafeTouchableOpacity onPress={() => navigation.navigate('Events')}>
-              <Text style={homeStyles.seeAllLink}>See All</Text>
-            </SafeTouchableOpacity>
-          </View>
-
-          <View style={homeStyles.premiumFeaturedContainer}>
-            {featuredEvents.map((event, index) => (
-              <SafeTouchableOpacity
-                key={event.id}
-                style={homeStyles.horizontalEventCard}
-                onPress={() => handleEventPress(event)}
-                activeOpacity={0.95}
-              >
-                <View style={homeStyles.horizontalEventImageContainer}>
-                  {event.imageUrl ? (
-                    <Image
-                      source={{ uri: event.imageUrl }}
-                      style={homeStyles.horizontalEventImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <LinearGradient
-                      colors={
-                        index % 3 === 0 ? ['#0277BD', '#01579B'] :
-                        index % 3 === 1 ? ['#8B5CF6', '#7C3AED'] :
-                        ['#059669', '#047857']
-                      }
-                      style={homeStyles.horizontalEventImagePlaceholder}
-                    >
-                      <Feather name="image" size={24} color="#FFFFFF" />
-                    </LinearGradient>
-                  )}
-                  {/* Featured Badge on Left Side */}
-                  <View style={homeStyles.premiumFeaturedBadgeLeft}>
-                    <LinearGradient
-                      colors={['#FFD700', '#FFA500']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={homeStyles.premiumBadgeGradient}
-                    >
-                      <Feather name="star" size={10} color="#FFFFFF" />
-                      <Text style={homeStyles.premiumBadgeText}>FEATURED</Text>
-                    </LinearGradient>
-                  </View>
-                </View>
-
-                <View style={homeStyles.horizontalEventDetailsContainer}>
-                  <View style={homeStyles.horizontalEventTopSection}>
-                    <Text style={homeStyles.horizontalEventTitle} numberOfLines={2}>
-                      {event.title}
-                    </Text>
-
-                    <View style={homeStyles.horizontalEventMetaRow}>
-                      <Feather name="map-pin" size={12} color="#6B7280" />
-                      <Text style={homeStyles.horizontalEventMetaText} numberOfLines={1}>
-                        {event.location?.city || event.location?.name || 'Location TBA'}
-                      </Text>
-                    </View>
-
-                    <View style={homeStyles.horizontalEventMetaRow}>
-                      <Feather name="calendar" size={12} color="#6B7280" />
-                      <Text style={homeStyles.horizontalEventMetaText}>
-                        {formatDateTimeShort(event.date, event.time)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={homeStyles.horizontalEventBottomRow}>
-                    <Text style={homeStyles.horizontalEventPrice}>
-                      {formatPrice(event.price, event.currency)}
-                    </Text>
-
-                    <SafeTouchableOpacity
-                      style={homeStyles.horizontalEventViewButton}
-                      onPress={() => handleEventPress(event)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={homeStyles.horizontalEventViewButtonText}>View Details</Text>
-                    </SafeTouchableOpacity>
-                  </View>
-                </View>
-              </SafeTouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={homeStyles.featuredEventsSection}>
-          <View style={homeStyles.featuredEventsHeader}>
-            <View style={homeStyles.trendingTitleContainer}>
-              <Feather name="calendar" size={20} color="#000000" />
-              <Text style={homeStyles.featuredEventsTitle}>Upcoming Events</Text>
-            </View>
-            <SafeTouchableOpacity onPress={() => navigation.navigate('Events')}>
-              <Text style={homeStyles.seeAllLink}>See All</Text>
-            </SafeTouchableOpacity>
-          </View>
-
-          <View style={homeStyles.premiumFeaturedContainer}>
-            {upcomingEvents.map((event, index) => (
-              <SafeTouchableOpacity
-                key={event.id}
-                style={homeStyles.horizontalEventCard}
-                onPress={() => handleEventPress(event)}
-                activeOpacity={0.95}
-              >
-
-                <View style={homeStyles.horizontalEventImageContainer}>
-                  {event.imageUrl ? (
-                    <Image
-                      source={{ uri: event.imageUrl }}
-                      style={homeStyles.horizontalEventImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <LinearGradient
-                      colors={
-                        index % 3 === 0 ? ['#0277BD', '#01579B'] :
-                        index % 3 === 1 ? ['#8B5CF6', '#7C3AED'] :
-                        ['#059669', '#047857']
-                      }
-                      style={homeStyles.horizontalEventImagePlaceholder}
-                    >
-                      <Feather name="image" size={24} color="rgba(255,255,255,0.7)" />
-                    </LinearGradient>
-                  )}
-                </View>
-
-                <View style={homeStyles.horizontalEventDetailsContainer}>
-                  <View style={homeStyles.horizontalEventTopSection}>
-                    <Text style={homeStyles.horizontalEventTitle} numberOfLines={2}>
-                      {event.title}
-                    </Text>
-
-                    <View style={homeStyles.horizontalEventMetaRow}>
-                      <Feather name="map-pin" size={12} color="#6B7280" />
-                      <Text style={homeStyles.horizontalEventMetaText} numberOfLines={1}>
-                        {event.location?.city || event.location?.name || 'Location TBA'}
-                      </Text>
-                    </View>
-
-                    <View style={homeStyles.horizontalEventMetaRow}>
-                      <Feather name="calendar" size={12} color="#6B7280" />
-                      <Text style={homeStyles.horizontalEventMetaText}>
-                        {formatDateTimeShort(event.date, event.time)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={homeStyles.horizontalEventBottomRow}>
-                    <Text style={homeStyles.horizontalEventPrice}>
-                      {formatPrice(event.price, event.currency)}
-                    </Text>
-
-                    <SafeTouchableOpacity
-                      style={homeStyles.horizontalEventViewButton}
-                      onPress={() => handleEventPress(event)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={homeStyles.horizontalEventViewButtonText}>View Details</Text>
-                    </SafeTouchableOpacity>
-                  </View>
-                </View>
-              </SafeTouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={homeStyles.creativeElementsSection}>
-          <View style={homeStyles.statsCardsContainer}>
-            <View style={homeStyles.statsCard}>
-              <LinearGradient
-                colors={['#10B981', '#059669']}
-                style={homeStyles.statsCardGradient}
-              >
-                <Feather name="calendar" size={24} color="#FFFFFF" />
-                <Text style={homeStyles.statsCardNumber}>{processedEvents.length}</Text>
-                <Text style={homeStyles.statsCardLabel}>Total Events</Text>
-              </LinearGradient>
-            </View>
-            <View style={homeStyles.statsCard}>
-              <LinearGradient
-                colors={['#F59E0B', '#D97706']}
-                style={homeStyles.statsCardGradient}
-              >
-                <Feather name="star" size={24} color="#FFFFFF" />
-                <Text style={homeStyles.statsCardNumber}>{featuredEvents.length}</Text>
-                <Text style={homeStyles.statsCardLabel}>Featured</Text>
-              </LinearGradient>
-            </View>
-            <View style={homeStyles.statsCard}>
-              <LinearGradient
-                colors={['#EF4444', '#DC2626']}
-                style={homeStyles.statsCardGradient}
-              >
-                <Feather name="heart" size={24} color="#FFFFFF" />
-                <Text style={homeStyles.statsCardNumber}>{processedEvents.filter(event => isFavorite(event.id)).length}</Text>
-                <Text style={homeStyles.statsCardLabel}>Favorites</Text>
-              </LinearGradient>
+              ))}
             </View>
           </View>
 
-          <View style={homeStyles.organizerBox}>
-            <LinearGradient
-              colors={['#1F2937', '#111827']}
-              style={homeStyles.organizerBoxGradient}
-            >
-              <View style={homeStyles.organizerContent}>
-                <View style={homeStyles.organizerTextSection}>
-                  <Text style={homeStyles.organizerTitle}>Are you an organizer?</Text>
-                  <Text style={homeStyles.organizerSubtitle}>Create and manage amazing events</Text>
-                </View>
-                <SafeTouchableOpacity
-                  style={homeStyles.organizerButton}
-                  onPress={() => navigation.navigate('Organizer', { screen: 'OrganizerLogin' })}
-                  activeOpacity={0.8}
-                >
-                  <Feather name="user-plus" size={18} color="#FFFFFF" />
-                  <Text style={homeStyles.organizerButtonText}>Get Started</Text>
-                </SafeTouchableOpacity>
+          <View style={homeStyles.featuredEventsSection}>
+            <View style={homeStyles.featuredEventsHeader}>
+              <View style={homeStyles.trendingTitleContainer}>
+                <Feather name="calendar" size={20} color="#000000" />
+                <Text style={homeStyles.featuredEventsTitle}>Upcoming Events</Text>
               </View>
-            </LinearGradient>
+              <SafeTouchableOpacity onPress={() => navigation.navigate('Events')}>
+                <Text style={homeStyles.seeAllLink}>See All</Text>
+              </SafeTouchableOpacity>
+            </View>
+
+            <View style={homeStyles.premiumFeaturedContainer}>
+              {upcomingEvents.map((event, index) => (
+                <SafeTouchableOpacity
+                  key={event.id}
+                  style={homeStyles.horizontalEventCard}
+                  onPress={() => handleEventPress(event)}
+                  activeOpacity={0.95}
+                >
+
+                  <View style={homeStyles.horizontalEventImageContainer}>
+                    {event.imageUrl ? (
+                      <Image
+                        source={{ uri: event.imageUrl }}
+                        style={homeStyles.horizontalEventImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <LinearGradient
+                        colors={
+                          index % 3 === 0 ? ['#0277BD', '#01579B'] :
+                          index % 3 === 1 ? ['#8B5CF6', '#7C3AED'] :
+                          ['#059669', '#047857']
+                        }
+                        style={homeStyles.horizontalEventImagePlaceholder}
+                      >
+                        <Feather name="image" size={24} color="rgba(255,255,255,0.7)" />
+                      </LinearGradient>
+                    )}
+                  </View>
+
+                  <View style={homeStyles.horizontalEventDetailsContainer}>
+                    <View style={homeStyles.horizontalEventTopSection}>
+                      <Text style={homeStyles.horizontalEventTitle} numberOfLines={2}>
+                        {event.title}
+                      </Text>
+
+                      <View style={homeStyles.horizontalEventMetaRow}>
+                        <Feather name="map-pin" size={12} color="#6B7280" />
+                        <Text style={homeStyles.horizontalEventMetaText} numberOfLines={1}>
+                          {getEventLocationLabel(event.location)}
+                        </Text>
+                      </View>
+
+                      <View style={homeStyles.horizontalEventMetaRow}>
+                        <Feather name="calendar" size={12} color="#6B7280" />
+                        <Text style={homeStyles.horizontalEventMetaText}>
+                          {formatDateTimeShort(event.date, event.time)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={homeStyles.horizontalEventBottomRow}>
+                      <Text style={homeStyles.horizontalEventPrice}>
+                        {formatPrice(event.price, event.currency)}
+                      </Text>
+
+                      <SafeTouchableOpacity
+                        style={homeStyles.horizontalEventViewButton}
+                        onPress={() => handleEventPress(event)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={homeStyles.horizontalEventViewButtonText}>View Details</Text>
+                      </SafeTouchableOpacity>
+                    </View>
+                  </View>
+                </SafeTouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={homeStyles.creativeElementsSection}>
+            <View style={homeStyles.statsCardsContainer}>
+              <View style={homeStyles.statsCard}>
+                <LinearGradient
+                  colors={['#10B981', '#059669']}
+                  style={homeStyles.statsCardGradient}
+                >
+                  <Feather name="calendar" size={24} color="#FFFFFF" />
+                  <Text style={homeStyles.statsCardNumber}>{processedEvents.length}</Text>
+                  <Text style={homeStyles.statsCardLabel}>Total Events</Text>
+                </LinearGradient>
+              </View>
+              <View style={homeStyles.statsCard}>
+                <LinearGradient
+                  colors={['#F59E0B', '#D97706']}
+                  style={homeStyles.statsCardGradient}
+                >
+                  <Feather name="star" size={24} color="#FFFFFF" />
+                  <Text style={homeStyles.statsCardNumber}>{featuredEvents.length}</Text>
+                  <Text style={homeStyles.statsCardLabel}>Featured</Text>
+                </LinearGradient>
+              </View>
+              <View style={homeStyles.statsCard}>
+                <LinearGradient
+                  colors={['#EF4444', '#DC2626']}
+                  style={homeStyles.statsCardGradient}
+                >
+                  <Feather name="heart" size={24} color="#FFFFFF" />
+                  <Text style={homeStyles.statsCardNumber}>{processedEvents.filter(event => isFavorite(event.id)).length}</Text>
+                  <Text style={homeStyles.statsCardLabel}>Favorites</Text>
+                </LinearGradient>
+              </View>
+            </View>
+
+            <View style={homeStyles.organizerBox}>
+              <LinearGradient
+                colors={['#1F2937', '#111827']}
+                style={homeStyles.organizerBoxGradient}
+              >
+                <View style={homeStyles.organizerContent}>
+                  <View style={homeStyles.organizerTextSection}>
+                    <Text style={homeStyles.organizerTitle}>Are you an organizer?</Text>
+                    <Text style={homeStyles.organizerSubtitle}>Create and manage amazing events</Text>
+                  </View>
+                  <SafeTouchableOpacity
+                    style={homeStyles.organizerButton}
+                    onPress={() => navigation.navigate('Organizer', { screen: 'OrganizerLogin' })}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="user-plus" size={18} color="#FFFFFF" />
+                    <Text style={homeStyles.organizerButtonText}>Get Started</Text>
+                  </SafeTouchableOpacity>
+                </View>
+              </LinearGradient>
+            </View>
           </View>
         </View>
-      </View>
+      </ImageBackground>
     </SafeScrollView>
   );
 }

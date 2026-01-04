@@ -562,7 +562,7 @@ const EventsScreen = ({ navigation, route }) => {
 
   if (isLoading && !isRefreshing && hasInitialLoad) {
     return (
-      <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['top']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3b82f6" />
           <Text style={styles.loadingText}>Loading events...</Text>
@@ -572,7 +572,7 @@ const EventsScreen = ({ navigation, route }) => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['top']}>
       {/* Home-style Header */}
       <View style={[homeStyles.homeHeaderContainer, { marginTop: 0 }]} > 
           <LinearGradient

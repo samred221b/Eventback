@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -153,7 +153,6 @@ export default function TermsPrivacyScreen({ navigation }) {
             If you have questions about these Terms or Privacy Policy, please contact us:
             {'\n\n'}
             📧 Email: samred221b@gmail.com{'\n'}
-            📱 Phone: +251904577804{'\n'}
             🏢 Address: Addis Ababa, Ethiopia{'\n'}
             🌐 Website: www.eventopia.com
           </Text>

@@ -1,13 +1,11 @@
 // App.js - CLEAN VERSION (HomeScreen fully extracted)
-import { View } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import { View, AppState, StatusBar } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { Feather } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as SplashScreen from 'expo-splash-screen';
 import { Asset } from 'expo-asset';
@@ -223,9 +221,51 @@ function App() {
   const [appReady, setAppReady] = useState(false);
   const navigationRef = React.useRef(null);
   const routeNameRef = React.useRef(null);
-  
+  const appStateRef = React.useRef(AppState.currentState);
+
   // Expo Updates hook
   const { showUpdatePrompt, applyUpdate, dismissUpdate } = useExpoUpdates();
+
+  // Function to ensure status bar is always black with white text
+  const setStatusBar = () => {
+    try {
+      // Use React Native StatusBar API
+      StatusBar.setBarStyle('light-content', true);
+      StatusBar.setBackgroundColor('#000000', true);
+      StatusBar.setTranslucent(false);
+      console.log('Status bar set to black with white text (opaque)');
+    } catch (error) {
+      console.warn('Error setting status bar:', error);
+    }
+  };
+
+  // Set status bar immediately on component mount
+  React.useEffect(() => {
+    setStatusBar();
+  }, []);
+
+  // Handle app state changes
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      console.log('App state changed to:', nextAppState);
+
+      if (nextAppState === 'active') {
+        // App came to foreground, ensure status bar is correct
+        setStatusBar();
+      }
+
+      appStateRef.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // Set initial status bar
+    setStatusBar();
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
 
   const getActiveRouteName = (state) => {
     if (!state) return undefined;
@@ -245,6 +285,9 @@ function App() {
 
     const prepare = async () => {
       try {
+        // Set status bar immediately at app start
+        setStatusBar();
+        
         await SplashScreen.preventAutoHideAsync();
 
         // Always start at Welcome on each app launch
@@ -281,6 +324,7 @@ function App() {
           style="light"
           backgroundColor="#000000"
           translucent={false}
+          hidden={false}
         />
         <UpdatePrompt 
           visible={showUpdatePrompt}
@@ -291,6 +335,9 @@ function App() {
           ref={navigationRef}
           onReady={async () => {
             try {
+              // Ensure status bar is set when navigation is ready
+              setStatusBar();
+              
               const currentRoute = navigationRef.current?.getRootState?.();
               const currentName = getActiveRouteName(currentRoute);
               routeNameRef.current = currentName;
@@ -304,6 +351,9 @@ function App() {
           }}
           onStateChange={async (state) => {
             try {
+              // Ensure status bar is set on navigation state change
+              setStatusBar();
+              
               const previousRouteName = routeNameRef.current;
               const currentRouteName = getActiveRouteName(state);
 

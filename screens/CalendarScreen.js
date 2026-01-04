@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -342,7 +342,7 @@ export default function CalendarScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent', flex: 1 }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent', flex: 1 }]} edges={['top']}>
       <ScrollView 
         contentContainerStyle={{ flexGrow: 1 ,  zIndex: 5, elevation:4}}
         style={styles.scrollContainer}
@@ -393,7 +393,7 @@ export default function CalendarScreen({ navigation }) {
         </View>
         {/* Enhanced Search Bar */}
         {showSearch && (
-          <View style={styles.searchSection}>
+          <View style={homeStyles.homeSearchSection}>
             <EnhancedSearch
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -474,32 +474,6 @@ export default function CalendarScreen({ navigation }) {
             ))}
           </ScrollView>
         </View>
-
-        {/* Compact Search Row */}
-        {showSearch && (
-          <View style={styles.compactSearchContainer}>
-            <View style={styles.searchInputContainer}>
-              <Feather name="search" size={16} color="#6B7280" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search events..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholderTextColor="#9CA3AF"
-                autoFocus
-                returnKeyType="search"
-              />
-              {searchQuery && (
-                <TouchableOpacity
-                  style={styles.clearSearchButton}
-                  onPress={() => setSearchQuery('')}
-                >
-                  <Feather name="x" size={16} color="#6B7280" />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
 
         {/* Month Navigation */}
         <View style={styles.monthNavigation}>
@@ -681,18 +655,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  // Search Section
-  searchSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: 'transparent',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    zIndex: 100,
-    elevation: 5,
-  },
-  // Month Selector
-  monthSelector: {
+  // Filter Styles
+  filterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -913,37 +877,6 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: '#FFFFFF',
-  },
-  // Compact Search Styles
-  compactSearchContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    backgroundColor: 'transparent',
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  searchIcon: {
-    marginRight: 4,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1F2937',
-    fontWeight: '500',
-  },
-  clearSearchButton: {
-    padding: 4,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
   },
   // Month Navigation Styles
   monthNavigation: {

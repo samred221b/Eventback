@@ -24,29 +24,28 @@ export default {
         NSPhotoLibraryUsageDescription: 'We need access to your photo library to let you upload event images.',
         NSPhotoLibraryAddUsageDescription: 'We need permission to save images to your photo library.',
         NSCameraUsageDescription: 'Camera access is used to take photos for your events.',
+        UIStatusBarStyle: 'UIStatusBarStyleLightContent', // Ensure white text on black background
+        UIViewControllerBasedStatusBarAppearance: false, // Allow app to control status bar
       },
     },
     androidStatusBar: {
       barStyle: 'light-content',
       backgroundColor: '#000000',
       translucent: false,
+      hidden: false,
     },
     android: {
       package: 'com.samuelalemayehu.smarthomecontroller',
-      googleServicesFile: './google-services.json',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
       },
-      edgeToEdgeEnabled: true,
+      edgeToEdgeEnabled: false, // Disable edge-to-edge to maintain status bar control
     },
     web: {
       favicon: './assets/favicon.png',
     },
     scheme: 'eventopia',
-    plugins: [
-      '@react-native-firebase/app',
-    ],
     updates: {
       enabled: true,
     },

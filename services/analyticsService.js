@@ -46,12 +46,23 @@ const getNativeAnalytics = async () => {
 
   analyticsModulePromise = (async () => {
     try {
+      // In Expo Go, React Native Firebase modules aren't available
+      // Check if we're in Expo Go environment
+      const isExpoGo = Constants.executionEnvironment === 'storeClient' || 
+                       Constants.appOwnership === 'expo';
+      
+      if (isExpoGo) {
+        logger.info('Analytics disabled in Expo Go environment');
+        return null;
+      }
+      
       const mod = await import('@react-native-firebase/analytics');
       const analytics = mod.default;
 
       if (typeof analytics !== 'function') return null;
       return analytics();
     } catch (e) {
+      logger.warn('Analytics module not available:', e.message);
       return null;
     }
   })();
