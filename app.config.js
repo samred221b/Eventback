@@ -48,6 +48,7 @@ export default {
     scheme: 'eventopia',
     updates: {
       enabled: true,
+      url: 'https://u.expo.dev/dca1c3fb-f27c-4620-8f56-28b256d44d32',
     },
     runtimeVersion: {
       policy: 'appVersion',
