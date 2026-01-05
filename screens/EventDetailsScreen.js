@@ -21,33 +21,46 @@ export default function EventDetailsScreen({ route, navigation }) {
   const [isPricingExpanded, setIsPricingExpanded] = useState(false); // State for pricing dropdown
   const [showFullScreenImage, setShowFullScreenImage] = useState(false);
 
-  const normalizeRemoteImageUri = (uri) => {
-    if (!uri || typeof uri !== 'string') return null;
+  const getOrganizerProfileImage = (organizer) => {
+  if (!organizer) return null;
+  return normalizeRemoteImageUri(
+    organizer.profileImage ||
+    organizer.avatar ||
+    organizer.image ||
+    organizer.photo ||
+    organizer.profileImageUrl ||
+    organizer.avatarUrl ||
+    null
+  );
+};
 
-    const trimmed = uri.trim();
-    if (!trimmed) return null;
+const normalizeRemoteImageUri = (uri) => {
+  if (!uri || typeof uri !== 'string') return null;
 
-    // If backend returns a relative uploads path like "/uploads/abc.jpg",
-    // convert it to an absolute URL using the configured API base URL host.
-    if (trimmed.startsWith('/uploads/')) {
-      try {
-        const extra = (Constants?.expoConfig?.extra) || (Constants?.manifest?.extra) || {};
-        const apiBaseUrl = extra?.apiBaseUrl || 'https://eventoback-1.onrender.com/api';
-        const origin = apiBaseUrl.replace(/\/(api)\/?$/, '');
-        return `${origin}${trimmed}`;
-      } catch (e) {
-        return `https://eventoback-1.onrender.com${trimmed}`;
-      }
+  const trimmed = uri.trim();
+  if (!trimmed) return null;
+
+  // If backend returns a relative uploads path like "/uploads/abc.jpg",
+  // convert it to an absolute URL using the configured API base URL host.
+  if (trimmed.startsWith('/uploads/')) {
+    try {
+      const extra = (Constants?.expoConfig?.extra) || (Constants?.manifest?.extra) || {};
+      const apiBaseUrl = extra?.apiBaseUrl || 'https://eventoback-1.onrender.com/api';
+      const origin = apiBaseUrl.replace(/\/(api)\/?$/, '');
+      return `${origin}${trimmed}`;
+    } catch (e) {
+      return `https://eventoback-1.onrender.com${trimmed}`;
     }
+  }
 
-    // In production builds, http images are frequently blocked or fail.
-    // Prefer https when possible.
-    if (trimmed.startsWith('http://')) {
-      return trimmed.replace('http://', 'https://');
-    }
+  // In production builds, http images are frequently blocked or fail.
+  // Prefer https when possible.
+  if (trimmed.startsWith('http://')) {
+    return trimmed.replace('http://', 'https://');
+  }
 
-    return trimmed;
-  };
+  return trimmed;
+};
 
   const heroImageUri =
     (typeof event?.imageUrl === 'string' && event.imageUrl) ||
@@ -477,9 +490,9 @@ export default function EventDetailsScreen({ route, navigation }) {
                 <Text style={styles.hostedByText}>Hosted By</Text>
                 <View style={styles.organizerNameRow}>
                   <View style={styles.organizerAvatarSmall}>
-                    {event.organizerId?.profileImage ? (
+                    {getOrganizerProfileImage(event.organizerId) ? (
                       <Image 
-                        source={{ uri: normalizeRemoteImageUri(event.organizerId.profileImage) }} 
+                        source={{ uri: getOrganizerProfileImage(event.organizerId) }} 
                         style={styles.organizerAvatarImageSmall}
                         resizeMode="cover"
                       />

@@ -24,6 +24,7 @@ import { SafeScrollView, SafeTouchableOpacity } from '../components/SafeComponen
 import EnhancedSearch from '../components/EnhancedSearch';
 import AppErrorBanner from '../components/AppErrorBanner';
 import EmptyState from '../components/EmptyState';
+import HomeSkeleton from '../components/HomeSkeleton';
 
 import homeStyles from '../styles/homeStyles';
 import { makeEventSerializable, formatPrice, standardizeEventForDetails } from '../utils/dataProcessor';
@@ -407,7 +408,7 @@ export default function HomeScreen({ navigation }) {
         <ImageBackground
           source={require('../assets/3.png')}
           style={StyleSheet.absoluteFillObject}
-          resizeMode="cover"
+          resizeMode="contain"
           resizeMethod="resize"
         />
         <View style={homeStyles.homeHeaderContainer}>
@@ -867,25 +868,29 @@ export default function HomeScreen({ navigation }) {
             </View>
           )}
           
-          {/* Empty State */}
-          {trendingEvents.length === 0 && !isLoading && hasInitialLoad && (
-            <EmptyState
-              icon="calendar"
-              iconSize={64}
-              title="No Events Yet"
-              description={
-                searchQuery.trim()
-                  ? `No events found for "${searchQuery}"`
-                  : "Be the first to create amazing events in your area!"
-              }
-              primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => navigation.navigate('Events')}
-              primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Explore Events'}
-              primaryActionIcon={searchQuery.trim() ? 'x' : 'compass'}
-              secondaryAction={() => navigation.navigate('OrganizerDashboard')}
-              secondaryActionText="Create Event"
-              secondaryActionIcon="plus"
-              gradientColors={['#0277BD', '#01579B']}
-            />
+          {/* Show skeleton only on first load, not on background refresh */}
+          {isLoading && !hasInitialLoad ? (
+            <HomeSkeleton />
+          ) : (
+            trendingEvents.length === 0 && !isLoading && hasInitialLoad && (
+              <EmptyState
+                icon="calendar"
+                iconSize={64}
+                title="No Events Yet"
+                description={
+                  searchQuery.trim()
+                    ? `No events found for "${searchQuery}"`
+                    : "Be the first to create amazing events in your area!"
+                }
+                primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => navigation.navigate('Events')}
+                primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Explore Events'}
+                primaryActionIcon={searchQuery.trim() ? 'x' : 'compass'}
+                secondaryAction={() => navigation.navigate('OrganizerDashboard')}
+                secondaryActionText="Create Event"
+                secondaryActionIcon="plus"
+                gradientColors={['#0277BD', '#01579B']}
+              />
+            )
           )}
 
           <View style={homeStyles.featuredEventsSection}>

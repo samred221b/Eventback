@@ -50,7 +50,7 @@ const getCachedDashboardEvents = async () => {
   }
 };
 
-export default function OrganizerDashboard({ navigation }) {
+export default function OrganizerDashboard({ navigation, route }) {
   const { user, organizerProfile, signOut, verifyOrganizerIfNeeded } = useAuth();
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,12 +85,26 @@ export default function OrganizerDashboard({ navigation }) {
             // Silent fail
           });
           
+          const shouldForceRefresh = Boolean(route?.params?.refresh);
+
           // Only load events if we haven't loaded them recently (within last 30 seconds)
           const now = Date.now();
           const timeSinceLastLoad = now - lastLoadTimeRef.current;
           const shouldLoad = !eventsLoadedRef.current || timeSinceLastLoad > 30000; // 30 seconds
-          
-          if (shouldLoad && isActive) {
+
+          if (!isActive) return;
+
+          if (shouldForceRefresh) {
+            await loadOrganizerEvents(true);
+            eventsLoadedRef.current = true;
+            lastLoadTimeRef.current = now;
+
+            // Clear the param so it only refreshes once
+            navigation.setParams({ refresh: undefined });
+            return;
+          }
+
+          if (shouldLoad) {
             await loadOrganizerEvents();
             eventsLoadedRef.current = true;
             lastLoadTimeRef.current = now;
@@ -100,7 +114,7 @@ export default function OrganizerDashboard({ navigation }) {
         }
       })();
       return () => { isActive = false; };
-    }, [])
+    }, [navigation, route?.params?.refresh])
   );
   
   const loadOrganizerEvents = async (forceRefresh = false) => {
@@ -514,7 +528,7 @@ export default function OrganizerDashboard({ navigation }) {
     name: organizerProfile?.name || user?.displayName || user?.email?.split('@')[0] || 'Organizer',
     email: organizerProfile?.email || user?.email || '',
     avatar: organizerProfile?.profileImage || organizerProfile?.avatar || '',
-    totalEvents: organizerProfile?.totalEvents || organizerEvents.length,
+    totalEvents: organizerEvents.length,
     activeEvents: organizerEvents.filter(e => e.status !== 'Ended').length,
     totalFavorites: organizerEvents.reduce((sum, event) => sum + (event.likes || 0), 0),
     isVerified: organizerProfile?.isVerified || false
@@ -714,7 +728,7 @@ export default function OrganizerDashboard({ navigation }) {
         {/* Minimal Stats below header elements - full width */}
         <View style={styles.minimalStatsContainer}>
           <View style={styles.minimalStatItem}>
-            <Text style={styles.minimalStatNumber}>{dashboardProfile.totalEvents}</Text>
+            <Text style={styles.minimalStatNumber}>{organizerEvents.length}</Text>
             <Text style={styles.minimalStatLabel}>Events</Text>
           </View>
           <View style={styles.minimalStatDivider} />
@@ -746,7 +760,9 @@ export default function OrganizerDashboard({ navigation }) {
           style={styles.modernDashboardSecondaryButton}
           onPress={() => {
             setError(null); // Clear any previous errors
-            loadOrganizerEvents();
+            eventsLoadedRef.current = true;
+            lastLoadTimeRef.current = Date.now();
+            loadOrganizerEvents(true);
           }}
           activeOpacity={0.8}
         >
@@ -761,7 +777,7 @@ export default function OrganizerDashboard({ navigation }) {
           <Text style={styles.modernDashboardSectionCount}>{organizerEvents.length}</Text>
         </View>
 
-        <AppErrorBanner error={error} onRetry={loadOrganizerEvents} disabled={isLoading} />
+        <AppErrorBanner error={error} onRetry={() => loadOrganizerEvents(true)} disabled={isLoading} />
 
         {isLoading ? (
           <View style={styles.modernDashboardEmptyState}>

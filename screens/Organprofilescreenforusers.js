@@ -21,6 +21,7 @@ import AppErrorBanner from '../components/AppErrorBanner';
 import AppErrorState from '../components/AppErrorState';
 import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
 import homeStyles from '../styles/homeStyles';
+import Constants from 'expo-constants';
 
 const { width } = require('react-native').Dimensions;
 
@@ -31,6 +32,46 @@ const CACHE_EXPIRY_TIME = 15 * 60 * 1000; // 15 minutes (increased for better pe
 const CACHE_VERSION = 'v1'; // Version for cache invalidation
 
 // Enhanced cache functions
+const normalizeRemoteImageUri = (uri) => {
+  if (!uri || typeof uri !== 'string') return null;
+
+  const trimmed = uri.trim();
+  if (!trimmed) return null;
+
+  // If backend returns a relative uploads path like "/uploads/abc.jpg",
+  // convert it to an absolute URL using the configured API base URL host.
+  if (trimmed.startsWith('/uploads/')) {
+    try {
+      const extra = (Constants?.expoConfig?.extra) || (Constants?.manifest?.extra) || {};
+      const apiBaseUrl = extra?.apiBaseUrl || 'https://eventoback-1.onrender.com/api';
+      const origin = apiBaseUrl.replace(/\/(api)\/?$/, '');
+      return `${origin}${trimmed}`;
+    } catch (e) {
+      return `https://eventoback-1.onrender.com${trimmed}`;
+    }
+  }
+
+  // In production builds, http images are frequently blocked or fail.
+  // Prefer https when possible.
+  if (trimmed.startsWith('http://')) {
+    return trimmed.replace('http://', 'https://');
+  }
+
+  return trimmed;
+};
+
+const getOrganizerProfileImage = (organizer) => {
+  if (!organizer) return null;
+  return normalizeRemoteImageUri(
+    organizer.profileImage ||
+    organizer.avatar ||
+    organizer.image ||
+    organizer.photo ||
+    organizer.profileImageUrl ||
+    organizer.avatarUrl ||
+    null
+  );
+};
 const cacheOrganizerData = async (organizerId, organizerData, eventsData) => {
   try {
     const cacheData = {
@@ -549,9 +590,9 @@ function Organprofilescreenforusers({ route, navigation }) {
                 alignItems: 'center',
                 overflow: 'hidden'
               }}>
-                {organizer.profileImage ? (
+                {getOrganizerProfileImage(organizer) ? (
                   <Image
-                    source={{ uri: organizer.profileImage }}
+                    source={{ uri: getOrganizerProfileImage(organizer) }}
                     style={{ width: 80, height: 80 }}
                   />
                 ) : (

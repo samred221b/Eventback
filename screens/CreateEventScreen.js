@@ -528,7 +528,7 @@ const CreateEventScreen = ({ navigation, route }) => {
                 });
                 setImageUri(null);
                 // Navigate back to dashboard (this will trigger refresh)
-                navigation.navigate('OrganizerDashboard');
+                navigation.navigate('OrganizerDashboard', { refresh: true });
               }
             }
           ]

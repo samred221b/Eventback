@@ -294,6 +294,9 @@ export default function ModernWelcomeScreen({ navigation }) {
               <Feather name="arrow-right" size={18} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
+
+          {/* Text below CTA */}
+          <Text style={styles.ctaSubtext}>By continuing, you agree to our Terms & Privacy</Text>
         </View>
       </Animated.View>
     </View>
@@ -317,8 +320,8 @@ const styles = StyleSheet.create({
   },
   
   loadingLogo: {
-    width: 110,
-    height: 110,
+    width: 120,
+    height: 120,
     marginBottom: 8,
   },
   
@@ -394,8 +397,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 180, // Increased from 72 to move content lower
-    paddingBottom: 32,
+    paddingTop: 80, // Reduced from 120 to move content up
+    paddingBottom: 24,
     justifyContent: 'space-between',
   },
   
@@ -406,13 +409,13 @@ const styles = StyleSheet.create({
 
   bottomSection: {
     marginTop: 'auto',
-    marginBottom: 60, // Added bottom margin to move stats and CTA up
+    marginBottom: 180, // Added bottom margin to move stats and CTA up
   },
 
   logo: {
     width: 120,
     height: 120,
-    marginBottom: -10,
+    marginTop: -30,
   },
   
   appName: {
@@ -534,5 +537,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#FFFFFF',
     marginRight: 10,
+  },
+
+  ctaSubtext: {
+    marginTop: 12,
+    fontSize: 11,
+    color: 'rgba(226, 232, 240, 0.6)',
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });
