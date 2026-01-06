@@ -913,14 +913,15 @@ const homeStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
     overflow: 'hidden',
-    width: 280,
+    height: 310,
+    width: 240,
     marginVertical: 4,
     borderWidth: 1,
     borderColor: '#a19c9c94',
   },
   trendingEventImageContainer: {
     width: '100%',
-    height: 100,
+    height: 180,
   },
   trendingEventImage: {
     width: '100%',

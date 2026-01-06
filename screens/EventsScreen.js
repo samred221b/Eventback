@@ -196,15 +196,16 @@ const EventsScreen = ({ navigation, route }) => {
     setIsRefreshing(isRefresh);
     setError(null);
 
+    // Always show cached events immediately for better UX
+    const cachedEvents = await loadEventsFromCache();
+    if (cachedEvents.length > 0) {
+      setEvents(cachedEvents);
+      setAllEvents(cachedEvents);
+    }
+
     const params = {};
     if (searchQuery.trim()) {
       params.search = searchQuery.trim();
-    }
-
-    // Load cached events first
-    const cachedEvents = await loadCachedFirstPageEvents();
-    if (cachedEvents.length > 0) {
-      setEvents(cachedEvents); // Render cached events immediately
     }
 
     let fetchedEvents = [];

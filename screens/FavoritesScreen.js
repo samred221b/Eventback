@@ -354,42 +354,41 @@ const FavoritesScreen = ({ navigation }) => {
           />
         </View>
       )}
+    </View>
+  );
 
-      {/* Favorites Statistics */}
-      {favoriteEvents.length > 0 && (
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <LinearGradient
-              colors={['#10B981', '#059669']}
-              style={styles.statCardGradient}
-            >
-              <Feather name="heart" size={24} color="#FFFFFF" />
-              <Text style={styles.statNumber}>{favoriteEvents.length}</Text>
-              <Text style={styles.statLabel}>Favorites</Text>
-            </LinearGradient>
-          </View>
-          <View style={styles.statCard}>
-            <LinearGradient
-              colors={['#F59E0B', '#D97706']}
-              style={styles.statCardGradient}
-            >
-              <Feather name="star" size={24} color="#FFFFFF" />
-              <Text style={styles.statNumber}>{favoriteEvents.filter(e => e.featured).length}</Text>
-              <Text style={styles.statLabel}>Featured</Text>
-            </LinearGradient>
-          </View>
-          <View style={styles.statCard}>
-            <LinearGradient
-              colors={['#EF4444', '#DC2626']}
-              style={styles.statCardGradient}
-            >
-              <Feather name="gift" size={24} color="#FFFFFF" />
-              <Text style={styles.statNumber}>{favoriteEvents.filter(e => e.price === 0).length}</Text>
-              <Text style={styles.statLabel}>Free</Text>
-            </LinearGradient>
-          </View>
-        </View>
-      )}
+  const renderStats = () => (
+    <View style={styles.statsContainer}>
+      <View style={styles.statCard}>
+        <LinearGradient
+          colors={['#10B981', '#059669']}
+          style={styles.statCardGradient}
+        >
+          <Feather name="heart" size={24} color="#FFFFFF" />
+          <Text style={styles.statNumber}>{favoriteEvents.length}</Text>
+          <Text style={styles.statLabel}>Favorites</Text>
+        </LinearGradient>
+      </View>
+      <View style={styles.statCard}>
+        <LinearGradient
+          colors={['#F59E0B', '#D97706']}
+          style={styles.statCardGradient}
+        >
+          <Feather name="star" size={24} color="#FFFFFF" />
+          <Text style={styles.statNumber}>{favoriteEvents.filter(e => e.featured).length}</Text>
+          <Text style={styles.statLabel}>Featured</Text>
+        </LinearGradient>
+      </View>
+      <View style={styles.statCard}>
+        <LinearGradient
+          colors={['#EF4444', '#DC2626']}
+          style={styles.statCardGradient}
+        >
+          <Feather name="gift" size={24} color="#FFFFFF" />
+          <Text style={styles.statNumber}>{favoriteEvents.filter(e => e.price === 0).length}</Text>
+          <Text style={styles.statLabel}>Free</Text>
+        </LinearGradient>
+      </View>
     </View>
   );
 
@@ -416,6 +415,8 @@ const FavoritesScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={renderHeader}
         ListHeaderComponentStyle={{ marginBottom: 16 }}
+        ListFooterComponent={favoriteEvents.length > 0 ? renderStats : null}
+        ListFooterComponentStyle={{ marginTop: 16 }}
         ListEmptyComponent={
           hasInitialLoad ? (
             <EmptyState

@@ -21,20 +21,7 @@ export default function EventDetailsScreen({ route, navigation }) {
   const [isPricingExpanded, setIsPricingExpanded] = useState(false); // State for pricing dropdown
   const [showFullScreenImage, setShowFullScreenImage] = useState(false);
 
-  const getOrganizerProfileImage = (organizer) => {
-  if (!organizer) return null;
-  return normalizeRemoteImageUri(
-    organizer.profileImage ||
-    organizer.avatar ||
-    organizer.image ||
-    organizer.photo ||
-    organizer.profileImageUrl ||
-    organizer.avatarUrl ||
-    null
-  );
-};
-
-const normalizeRemoteImageUri = (uri) => {
+  const normalizeRemoteImageUri = (uri) => {
   if (!uri || typeof uri !== 'string') return null;
 
   const trimmed = uri.trim();
@@ -61,6 +48,19 @@ const normalizeRemoteImageUri = (uri) => {
 
   return trimmed;
 };
+
+  const getOrganizerProfileImage = (organizer) => {
+    if (!organizer) return null;
+    return normalizeRemoteImageUri(
+      organizer.profileImage ||
+      organizer.avatar ||
+      organizer.image ||
+      organizer.photo ||
+      organizer.profileImageUrl ||
+      organizer.avatarUrl ||
+      null
+    );
+  };
 
   const heroImageUri =
     (typeof event?.imageUrl === 'string' && event.imageUrl) ||

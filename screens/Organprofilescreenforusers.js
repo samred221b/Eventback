@@ -493,7 +493,7 @@ function Organprofilescreenforusers({ route, navigation }) {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
           <AppErrorState 
             error={error || { message: 'Organizer not found' }}
-            onRetry={() => fetchOrganizerData(true)}
+            onRetry={() => fetchOrganizerProfile(true)}
           />
         </View>
       </View>

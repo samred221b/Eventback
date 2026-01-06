@@ -24,7 +24,6 @@ import { SafeScrollView, SafeTouchableOpacity } from '../components/SafeComponen
 import EnhancedSearch from '../components/EnhancedSearch';
 import AppErrorBanner from '../components/AppErrorBanner';
 import EmptyState from '../components/EmptyState';
-import HomeSkeleton from '../components/HomeSkeleton';
 
 import homeStyles from '../styles/homeStyles';
 import { makeEventSerializable, formatPrice, standardizeEventForDetails } from '../utils/dataProcessor';
@@ -97,6 +96,8 @@ export default function HomeScreen({ navigation }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [broadcastNotifications, setBroadcastNotifications] = useState([]);
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [showNotificationDetailModal, setShowNotificationDetailModal] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -178,6 +179,9 @@ export default function HomeScreen({ navigation }) {
   const handleNotificationPress = async (notification) => {
     try {
       if (!notification?.id) return;
+      setSelectedNotification(notification);
+      setShowNotificationDetailModal(true);
+
       if (notification.isRead) return;
 
       await apiService.markNotificationRead(notification.id);
@@ -189,6 +193,11 @@ export default function HomeScreen({ navigation }) {
     } catch (e) {
       // Silent fail
     }
+  };
+
+  const handleCloseNotificationDetailModal = () => {
+    setShowNotificationDetailModal(false);
+    setSelectedNotification(null);
   };
 
   const handleClearNotifications = async () => {
@@ -402,107 +411,6 @@ export default function HomeScreen({ navigation }) {
     return Math.max(18, Math.min(raw, popoverWidth - 32));
   })();
 
-  if (isLoading && !isRefreshing && hasInitialLoad) {
-    return (
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <ImageBackground
-          source={require('../assets/3.png')}
-          style={StyleSheet.absoluteFillObject}
-          resizeMode="contain"
-          resizeMethod="resize"
-        />
-        <View style={homeStyles.homeHeaderContainer}>
-          <LinearGradient
-            colors={['#0277BD', '#01579B']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={homeStyles.homeHeaderCard}
-          >
-            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
-              <View style={homeStyles.homeHeaderOrbOne} />
-              <View style={homeStyles.homeHeaderOrbTwo} />
-            </View>
-            <View style={homeStyles.homeHeaderTopRow}>
-              <View style={homeStyles.modernDashboardProfile}>
-                <View style={homeStyles.modernDashboardAvatar}>
-                  <View style={homeStyles.modernDashboardAvatarInner}>
-                    <Feather name="user" size={20} color="#0F172A" />
-                  </View>
-                </View>
-                <View>
-                  <Text style={homeStyles.homeHeaderWelcomeText}>Welcome Back,</Text>
-                  <Text style={homeStyles.homeHeaderNameText}>User</Text>
-                </View>
-              </View>
-              <View style={homeStyles.homeHeaderActions}>
-                <SafeTouchableOpacity
-                  style={homeStyles.homeHeaderIconButton}
-                  onPress={() => setShowSearch(!showSearch)}
-                >
-                  <Feather name="search" size={20} color="rgba(255, 255, 255, 1)" />
-                </SafeTouchableOpacity>
-                <View ref={loadingBellAnchorRef} collapsable={false}>
-                  <SafeTouchableOpacity
-                    style={homeStyles.homeHeaderIconButton}
-                    onPress={handleBellPress}
-                  >
-                    <Feather
-                      name="bell"
-                      size={20}
-                      color={'rgba(255, 255, 255, 1)'}
-                    />
-                  </SafeTouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            <View style={homeStyles.homeHeaderMetaRow}>
-              <Text style={homeStyles.homeHeaderMetaText}>Discover Events</Text>
-              <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
-              <Text style={homeStyles.homeHeaderMetaText}>Create Memories</Text>
-              <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
-              <Text style={homeStyles.homeHeaderMetaText}>Share Moments</Text>
-            </View>
-          </LinearGradient>
-        </View>
-
-        <View style={homeStyles.skeletonContainer}>
-          {/* Skeleton Header */}
-          <View style={homeStyles.skeletonHeader}>
-            <View style={homeStyles.skeletonTitle} />
-            <View style={homeStyles.skeletonSubtitle} />
-          </View>
-
-          {/* Skeleton Event Cards */}
-          <View style={homeStyles.skeletonEventsContainer}>
-            {[1, 2, 3].map((index) => (
-              <View key={index} style={homeStyles.skeletonEventCard}>
-                <View style={homeStyles.skeletonImage} />
-                <View style={homeStyles.skeletonContent}>
-                  <View style={homeStyles.skeletonTitle} />
-                  <View style={homeStyles.skeletonMeta} />
-                  <View style={homeStyles.skeletonMeta} />
-                  <View style={homeStyles.skeletonButton} />
-                </View>
-              </View>
-            ))}
-          </View>
-
-          {/* Skeleton Stats */}
-          <View style={homeStyles.skeletonStatsContainer}>
-            {[1, 2, 3, 4].map((index) => (
-              <View key={index} style={homeStyles.skeletonStatCard}>
-                <View style={homeStyles.skeletonIcon} />
-                <View style={homeStyles.skeletonValue} />
-                <View style={homeStyles.skeletonLabel} />
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <SafeScrollView
       style={{ flex: 1, backgroundColor: 'transparent' }}
@@ -516,6 +424,90 @@ export default function HomeScreen({ navigation }) {
         resizeMode="cover"
         resizeMethod="resize"
       >
+        <Modal
+          visible={showNotificationDetailModal}
+          transparent
+          animationType="fade"
+          onRequestClose={handleCloseNotificationDetailModal}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={handleCloseNotificationDetailModal}
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(15, 23, 42, 0.55)',
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+              justifyContent: 'center',
+              paddingHorizontal: 18,
+            }}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => {}}
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 20,
+                overflow: 'hidden',
+                maxHeight: '80%',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.14,
+                shadowRadius: 24,
+                elevation: 14,
+              }}
+            >
+              <LinearGradient
+                colors={['#0277BD', '#01579B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderBottomWidth: 1,
+                  borderBottomColor: 'rgba(255,255,255,0.18)',
+                }}
+              >
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: 'rgba(255,255,255,0.22)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Feather name="mail" size={16} color="#FFFFFF" />
+                </View>
+                <View style={{ width: 12 }} />
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', flex: 1 }} numberOfLines={1}>
+                  Eventopia Admin
+                </Text>
+                <TouchableOpacity
+                  onPress={handleCloseNotificationDetailModal}
+                  style={{ padding: 6 }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Feather name="x" size={18} color="#FFFFFF" />
+                </TouchableOpacity>
+              </LinearGradient>
+
+              <ScrollView
+                style={{ paddingHorizontal: 18, paddingVertical: 18 }}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              >
+                <Text style={{ color: '#1F2937', fontSize: 15, lineHeight: 24, fontWeight: '500' }}>
+                  {selectedNotification?.message || ''}
+                </Text>
+              </ScrollView>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+
         <Modal
           visible={showRecentEventsModal}
           transparent
@@ -595,74 +587,81 @@ export default function HomeScreen({ navigation }) {
                 </TouchableOpacity>
               </LinearGradient>
 
-              <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+              <View style={{ paddingHorizontal: 12, paddingBottom: 12, flex: 1 }}>
                 <View style={{ height: 8 }} />
 
-                {isNotificationsLoading ? (
-                  <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 8 }}>
-                    <ActivityIndicator size="small" color="#0277BD" />
-                  </View>
-                ) : broadcastNotifications.length === 0 ? (
-                  <View style={{ alignItems: 'center', paddingTop: 24 }}>
-                    <Feather name="bell" size={32} color="#CBD5E1" />
-                    <Text style={{ color: '#64748B', marginTop: 8, fontSize: 13 }}>No notifications yet.</Text>
-                  </View>
-                ) : (
-                  <ScrollView showsVerticalScrollIndicator={false}>
-                    {broadcastNotifications.map((n) => (
-                      <TouchableOpacity
-                        key={n.id}
-                        onPress={() => handleNotificationPress(n)}
-                        activeOpacity={0.84}
-                        style={{
-                          paddingVertical: 10,
-                          paddingHorizontal: 10,
-                          borderRadius: 12,
-                          backgroundColor: n.isRead ? '#F8FAFC' : '#EFF6FF',
-                          marginBottom: 6,
-                          borderWidth: 1,
-                          borderColor: n.isRead ? '#E2E8F0' : '#BFDBFE',
-                        }}
-                      >
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: n.isRead ? '#E2E8F0' : '#3B82F6', alignItems: 'center', justifyContent: 'center' }}>
-                            <Feather name="volume-2" size={12} color={n.isRead ? '#475569' : '#FFFFFF'} />
+                <View style={{ flex: 1 }}>
+                  {isNotificationsLoading ? (
+                    <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 8 }}>
+                      <ActivityIndicator size="small" color="#0277BD" />
+                    </View>
+                  ) : broadcastNotifications.length === 0 ? (
+                    <View style={{ alignItems: 'center', paddingTop: 24 }}>
+                      <Feather name="bell" size={32} color="#CBD5E1" />
+                      <Text style={{ color: '#64748B', marginTop: 8, fontSize: 13 }}>No notifications yet.</Text>
+                    </View>
+                  ) : (
+                    <ScrollView
+                      style={{ flex: 1 }}
+                      contentContainerStyle={{ paddingBottom: 10 }}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {broadcastNotifications.map((n) => (
+                        <TouchableOpacity
+                          key={n.id}
+                          onPress={() => handleNotificationPress(n)}
+                          activeOpacity={0.84}
+                          style={{
+                            paddingVertical: 10,
+                            paddingHorizontal: 10,
+                            borderRadius: 12,
+                            backgroundColor: n.isRead ? '#F8FAFC' : '#EFF6FF',
+                            marginBottom: 6,
+                            borderWidth: 1,
+                            borderColor: n.isRead ? '#E2E8F0' : '#BFDBFE',
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: n.isRead ? '#E2E8F0' : '#3B82F6', alignItems: 'center', justifyContent: 'center' }}>
+                              <Feather name="volume-2" size={12} color={n.isRead ? '#475569' : '#FFFFFF'} />
+                            </View>
+                            <View style={{ width: 8 }} />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
+                                {n.title || 'Announcement'}
+                              </Text>
+                              <Text style={{ fontSize: 12, color: '#475569', marginTop: 2 }} numberOfLines={2}>
+                                {n.message}
+                              </Text>
+                            </View>
+                            {!n.isRead && (
+                              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }} />
+                            )}
                           </View>
-                          <View style={{ width: 8 }} />
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
-                              {n.title || 'Announcement'}
-                            </Text>
-                            <Text style={{ fontSize: 12, color: '#475569', marginTop: 2 }} numberOfLines={2}>
-                              {n.message}
-                            </Text>
-                          </View>
-                          {!n.isRead && (
-                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }} />
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  )}
+                </View>
+
                 {broadcastNotifications.length > 0 && (
-                  <LinearGradient
-                    colors={['#0277BD', '#01579B']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{
-                      marginTop: 12,
-                      borderRadius: 6,
-                      paddingVertical: 6,
-                      paddingHorizontal: 16,
-                      alignItems: 'center',
-                      alignSelf: 'flex-end',
-                    }}
-                  >
-                    <TouchableOpacity onPress={handleClearNotifications} activeOpacity={0.8}>
-                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>Clear All</Text>
-                    </TouchableOpacity>
-                  </LinearGradient>
+                  <View style={{ paddingTop: 10, alignItems: 'flex-end' }}>
+                    <LinearGradient
+                      colors={['#0277BD', '#01579B']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        borderRadius: 6,
+                        paddingVertical: 6,
+                        paddingHorizontal: 16,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <TouchableOpacity onPress={handleClearNotifications} activeOpacity={0.8}>
+                        <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>Clear All</Text>
+                      </TouchableOpacity>
+                    </LinearGradient>
+                  </View>
                 )}
               </View>
             </TouchableOpacity>
@@ -817,18 +816,6 @@ export default function HomeScreen({ navigation }) {
                           <Text style={homeStyles.trendingEventTitle} numberOfLines={2}>
                             {event.title}
                           </Text>
-                          <TouchableOpacity
-                            onPress={() => toggleFavorite(event.id)}
-                            style={homeStyles.trendingHeartButton}
-                            activeOpacity={0.8}
-                          >
-                            <Feather
-                              name="heart"
-                              size={16}
-                              color={isFavorite(event.id) ? "#EF4444" : "#64748B"}
-                              fill={isFavorite(event.id) ? "#EF4444" : "none"}
-                            />
-                          </TouchableOpacity>
                         </View>
 
                         <View style={homeStyles.trendingEventMeta}>
@@ -868,29 +855,24 @@ export default function HomeScreen({ navigation }) {
             </View>
           )}
           
-          {/* Show skeleton only on first load, not on background refresh */}
-          {isLoading && !hasInitialLoad ? (
-            <HomeSkeleton />
-          ) : (
-            trendingEvents.length === 0 && !isLoading && hasInitialLoad && (
-              <EmptyState
-                icon="calendar"
-                iconSize={64}
-                title="No Events Yet"
-                description={
-                  searchQuery.trim()
-                    ? `No events found for "${searchQuery}"`
-                    : "Be the first to create amazing events in your area!"
-                }
-                primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => navigation.navigate('Events')}
-                primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Explore Events'}
-                primaryActionIcon={searchQuery.trim() ? 'x' : 'compass'}
-                secondaryAction={() => navigation.navigate('OrganizerDashboard')}
-                secondaryActionText="Create Event"
-                secondaryActionIcon="plus"
-                gradientColors={['#0277BD', '#01579B']}
-              />
-            )
+          {trendingEvents.length === 0 && !isLoading && hasInitialLoad && (
+            <EmptyState
+              icon="calendar"
+              iconSize={64}
+              title="No Events Yet"
+              description={
+                searchQuery.trim()
+                  ? `No events found for "${searchQuery}"`
+                  : "Be the first to create amazing events in your area!"
+              }
+              primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => navigation.navigate('Events')}
+              primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Explore Events'}
+              primaryActionIcon={searchQuery.trim() ? 'x' : 'compass'}
+              secondaryAction={() => navigation.navigate('OrganizerDashboard')}
+              secondaryActionText="Create Event"
+              secondaryActionIcon="plus"
+              gradientColors={['#0277BD', '#01579B']}
+            />
           )}
 
           <View style={homeStyles.featuredEventsSection}>

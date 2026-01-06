@@ -15,6 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
+import Constants from 'expo-constants';
 
 import { useAuth } from '../providers/AuthProvider';
 import { SafeScrollView, SafeTouchableOpacity } from '../components/SafeComponents';
@@ -30,6 +31,30 @@ import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
 
 const DASHBOARD_EVENTS_CACHE_KEY = 'dashboard:organizer:events';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+const normalizeRemoteImageUri = (uri) => {
+  if (!uri || typeof uri !== 'string') return null;
+
+  const trimmed = uri.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('/uploads/')) {
+    try {
+      const extra = (Constants?.expoConfig?.extra) || (Constants?.manifest?.extra) || {};
+      const apiBaseUrl = extra?.apiBaseUrl || 'https://eventoback-1.onrender.com/api';
+      const origin = apiBaseUrl.replace(/\/(api)\/?$/, '');
+      return `${origin}${trimmed}`;
+    } catch (e) {
+      return `https://eventoback-1.onrender.com${trimmed}`;
+    }
+  }
+
+  if (trimmed.startsWith('http://')) {
+    return trimmed.replace('http://', 'https://');
+  }
+
+  return trimmed;
+};
 
 const cacheDashboardEvents = async (eventsData) => {
   try {
@@ -527,7 +552,7 @@ export default function OrganizerDashboard({ navigation, route }) {
   const dashboardProfile = {
     name: organizerProfile?.name || user?.displayName || user?.email?.split('@')[0] || 'Organizer',
     email: organizerProfile?.email || user?.email || '',
-    avatar: organizerProfile?.profileImage || organizerProfile?.avatar || '',
+    avatar: normalizeRemoteImageUri(organizerProfile?.profileImage || organizerProfile?.avatar || ''),
     totalEvents: organizerEvents.length,
     activeEvents: organizerEvents.filter(e => e.status !== 'Ended').length,
     totalFavorites: organizerEvents.reduce((sum, event) => sum + (event.likes || 0), 0),

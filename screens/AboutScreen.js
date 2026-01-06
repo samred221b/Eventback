@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Linking, Image, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Updates from 'expo-updates';
 import { Feather } from '@expo/vector-icons';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +16,7 @@ import homeStyles from '../styles/homeStyles';
 export default function AboutScreen({ navigation }) {
   const [showBugModal, setShowBugModal] = useState(false);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
+  const [isUpdateChecking, setIsUpdateChecking] = useState(false);
   const [bugReport, setBugReport] = useState({
     title: '',
     description: '',
@@ -40,6 +42,62 @@ export default function AboutScreen({ navigation }) {
 
   const handlePrivacyPress = () => {
     navigation.navigate('TermsPrivacy');
+  };
+
+  const handleCheckForUpdate = async () => {
+    if (isUpdateChecking) return;
+
+    try {
+      setIsUpdateChecking(true);
+
+      if (!Updates.isEnabled) {
+        Alert.alert('Updates Disabled', 'Updates are disabled for this build. You may be running in Expo Go.');
+        return;
+      }
+
+      const update = await Updates.checkForUpdateAsync();
+      console.log('Update check result:', update);
+      if (!update?.isAvailable) {
+        Alert.alert('Up to date', 'No updates are available right now.');
+        return;
+      }
+
+      Alert.alert(
+        'Update Available',
+        'A new update is available. Would you like to download and restart now?',
+        [
+          { text: 'Later', style: 'cancel' },
+          {
+            text: 'Update Now',
+            style: 'default',
+            onPress: async () => {
+              try {
+                setIsUpdateChecking(true);
+                await Updates.fetchUpdateAsync();
+                await Updates.reloadAsync();
+              } catch (e) {
+                console.error('Fetch/reload error:', e);
+                Alert.alert('Update Failed', 'Unable to apply the update. Please try again later.');
+              } finally {
+                setIsUpdateChecking(false);
+              }
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    } catch (e) {
+      console.error('Update check error:', e);
+      const isExpoGo = !Updates.isEnabled || __DEV__;
+      Alert.alert(
+        'Update Check Failed',
+        isExpoGo
+          ? 'OTA updates are not available in Expo Go. Use a development build or production APK.'
+          : 'Could not check for updates. Please check your internet connection and try again.'
+      );
+    } finally {
+      setIsUpdateChecking(false);
+    }
   };
 
   const handleBugSubmit = async () => {
@@ -227,17 +285,28 @@ export default function AboutScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
-            <TouchableOpacity style={styles.bugReportButton} onPress={() => navigation.navigate('BugReport')}>
-              <Feather name="alert-triangle" size={18} color="#FFFFFF" />
-              <Text style={styles.bugReportButtonText}>Report a Bug</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <TouchableOpacity style={styles.featureRequestButton} onPress={() => navigation.navigate('FeatureRequest')}>
-              <Feather name="star" size={18} color="#FFFFFF" />
-              <Text style={styles.featureRequestButtonText}>Request a Feature</Text>
-            </TouchableOpacity>
+            <View style={styles.actionsRow}>
+              <TouchableOpacity style={styles.bugReportButton} onPress={() => navigation.navigate('BugReport')}>
+                <Feather name="alert-triangle" size={16} color="#FFFFFF" />
+                <Text style={styles.bugReportButtonText}>Report</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.featureRequestButton} onPress={() => navigation.navigate('FeatureRequest')}>
+                <Feather name="star" size={16} color="#FFFFFF" />
+                <Text style={styles.featureRequestButtonText}>Request</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.updateButton}
+                onPress={handleCheckForUpdate}
+                disabled={isUpdateChecking}
+              >
+                {isUpdateChecking ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Feather name="refresh-cw" size={16} color="#FFFFFF" />
+                )}
+                <Text style={styles.updateButtonText}>Update</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.footer}>
@@ -643,12 +712,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: '#EF4444',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
-    marginBottom: 12,
+    flex: 1,
   },
   bugReportButtonText: {
     fontSize: 14,
@@ -659,17 +728,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: '#0277BD',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
-    marginBottom: 12,
+    flex: 1,
+    marginHorizontal: 0,
   },
   featureRequestButtonText: {
     fontSize: 14,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  updateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#10B981',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    flex: 1,
+  },
+  updateButtonText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 8,
   },
   footer: {
     alignItems: 'center',
