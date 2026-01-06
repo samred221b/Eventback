@@ -145,7 +145,7 @@ export default function HomeScreen({ navigation }) {
       const nextList = Array.isArray(listRes?.data) ? listRes.data : [];
       // UI behavior: only show unread notifications in the bell popover.
       // ("Clear All" marks everything as read; this prevents read items from reappearing on next refresh.)
-      setBroadcastNotifications(nextList.filter((n) => !n?.isRead));
+      setBroadcastNotifications(nextList.filter((n) => !n?.isRead).slice(0, 5));
     } catch (e) {
       // Silent fail: notifications are non-blocking
     } finally {
