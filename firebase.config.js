@@ -4,12 +4,12 @@ import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAPnbzGnBaOZmM1Iw6Tt7Yikr3cQvpy4ek",
-  authDomain: "eventopia-a70ad.firebaseapp.com",
-  projectId: "eventopia-a70ad",
-  storageBucket: "eventopia-a70ad.firebasestorage.app",
-  messagingSenderId: "82619158647",
-  appId: "1:82619158647:android:1343e518bb088774017672"
+  apiKey: "AIzaSyAiQFcVtDP8973lfuaTIH08WBsJ66AZBkc",
+  authDomain: "smart-home-controller-4c2ab.firebaseapp.com",
+  projectId: "smart-home-controller-4c2ab",
+  storageBucket: "smart-home-controller-4c2ab.firebasestorage.app",
+  messagingSenderId: "344614900237",
+  appId: "1:344614900237:android:f7d434b61ff17b6f19bb44"
 };
 
 // Initialize Firebase

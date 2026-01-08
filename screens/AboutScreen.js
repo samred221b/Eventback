@@ -244,6 +244,7 @@ export default function AboutScreen({ navigation }) {
             </View>
             <Text style={styles.appName}>Eventopia</Text>
             <Text style={styles.version}>Version {appVersion}</Text>
+            <Text style={styles.version}>OTA Test: production-channel</Text>
           </View>
 
           <View style={styles.section}>
