@@ -8,7 +8,7 @@ export default {
   expo: {
     name: 'Eventopia',
     slug: 'EventopiaNew',
-    version: '1.0.0',
+    version: '1.0.2',
     orientation: 'portrait',
     icon: './assets/adaptive-icon.png',
     userInterfaceStyle: 'light',

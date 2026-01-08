@@ -886,7 +886,7 @@ function Organprofilescreenforusers({ route, navigation }) {
                 }}>
                   {event.image ? (
                     <Image
-                      source={{ uri: event.image }}
+                      source={{ uri: normalizeRemoteImageUri(event.image) }}
                       style={{ width: 48, height: 48 }}
                     />
                   ) : (

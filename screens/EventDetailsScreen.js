@@ -62,13 +62,14 @@ export default function EventDetailsScreen({ route, navigation }) {
     );
   };
 
-  const heroImageUri =
+  const heroImageUri = normalizeRemoteImageUri(
     (typeof event?.imageUrl === 'string' && event.imageUrl) ||
-    (typeof event?.image === 'string' && event.image) ||
-    (typeof event?.imageUri === 'string' && event.imageUri) ||
-    (typeof event?.imageURL === 'string' && event.imageURL) ||
-    (typeof event?.image_url === 'string' && event.image_url) ||
-    null;
+      (typeof event?.image === 'string' && event.image) ||
+      (typeof event?.imageUri === 'string' && event.imageUri) ||
+      (typeof event?.imageURL === 'string' && event.imageURL) ||
+      (typeof event?.image_url === 'string' && event.image_url) ||
+      null
+  );
 
   useEffect(() => {
     const checkNetworkStatus = async () => {

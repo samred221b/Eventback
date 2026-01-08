@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -73,6 +73,7 @@ export default function CalendarScreen({ navigation }) {
       filterEvents(fetchedEvents, searchQuery, activeFilter);
       setIsLoading(false);
       setIsRefreshing(false);
+      setHasInitialLoad(true);
       return;
     }
 
@@ -112,6 +113,7 @@ export default function CalendarScreen({ navigation }) {
     filterEvents(sortedEvents, searchQuery, activeFilter);
     setIsLoading(false);
     setIsRefreshing(false);
+    setHasInitialLoad(true);
   };
 
   useEffect(() => {
@@ -352,6 +354,16 @@ export default function CalendarScreen({ navigation }) {
         }
       >
         <AppErrorBanner error={error} onRetry={() => loadEvents(true)} disabled={isRefreshing} />
+
+        {!hasInitialLoad && isLoading && events.length === 0 && (
+          <View style={{ paddingTop: 18, paddingBottom: 6, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color="#0277BD" />
+            <Text style={{ marginTop: 10, color: '#64748B', fontSize: 13, fontWeight: '600' }}>
+              Getting data, please wait...
+            </Text>
+          </View>
+        )}
+
         <View style={[homeStyles.homeHeaderContainer, {  zIndex: 1 }]}> 
           <LinearGradient
             colors={['#0277BD', '#01579B']}

@@ -525,9 +525,14 @@ const EventsScreen = ({ navigation, route }) => {
   const renderEventList = () => {
     if (events.length === 0) {
       if (!hasInitialLoad) {
-        // Avoid showing empty-state message on first app open
-        // Render a minimal placeholder while background fetch completes
-        return <View style={{ padding: 16 }} />;
+        return (
+          <View style={{ padding: 16, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color="#0277BD" />
+            <Text style={{ marginTop: 10, color: '#64748B', fontSize: 13, fontWeight: '600' }}>
+              Getting data, please wait...
+            </Text>
+          </View>
+        );
       }
       return (
         <EmptyState

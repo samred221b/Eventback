@@ -18,4 +18,10 @@ export const logger = {
       console.error(...args);
     }
   },
+  info: (...args) => {
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.info(...args);
+    }
+  },
 };

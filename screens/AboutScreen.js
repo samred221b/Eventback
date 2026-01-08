@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Linking, Image, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Updates from 'expo-updates';
+import Constants from 'expo-constants';
 import { Feather } from '@expo/vector-icons';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
 import homeStyles from '../styles/homeStyles';
 
 export default function AboutScreen({ navigation }) {
+  const appVersion = Constants?.expoConfig?.version || Constants?.manifest?.version || '1.0.2';
   const [showBugModal, setShowBugModal] = useState(false);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
   const [isUpdateChecking, setIsUpdateChecking] = useState(false);
@@ -89,11 +91,21 @@ export default function AboutScreen({ navigation }) {
     } catch (e) {
       console.error('Update check error:', e);
       const isExpoGo = !Updates.isEnabled || __DEV__;
+      const errorMessage =
+        typeof e?.message === 'string' && e.message.trim().length > 0
+          ? e.message
+          : String(e);
+      const debugInfo = [
+        `isEnabled: ${String(Updates.isEnabled)}`,
+        `runtimeVersion: ${String(Updates.runtimeVersion ?? 'unknown')}`,
+        `channel: ${String(Updates.channel ?? 'unknown')}`,
+      ].join('\n');
+
       Alert.alert(
         'Update Check Failed',
         isExpoGo
-          ? 'OTA updates are not available in Expo Go. Use a development build or production APK.'
-          : 'Could not check for updates. Please check your internet connection and try again.'
+          ? `OTA updates are not available in Expo Go.\n\n${debugInfo}`
+          : `${errorMessage}\n\n${debugInfo}`
       );
     } finally {
       setIsUpdateChecking(false);
@@ -231,7 +243,7 @@ export default function AboutScreen({ navigation }) {
               />
             </View>
             <Text style={styles.appName}>Eventopia</Text>
-            <Text style={styles.version}>Version 1.0.2</Text>
+            <Text style={styles.version}>Version {appVersion}</Text>
           </View>
 
           <View style={styles.section}>

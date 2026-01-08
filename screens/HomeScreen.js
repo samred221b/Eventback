@@ -186,9 +186,9 @@ export default function HomeScreen({ navigation }) {
 
       await apiService.markNotificationRead(notification.id);
 
-      setBroadcastNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
-      );
+      // Keep the popover list to unread-only items (max 5) for clean UX.
+      // Remove the notification immediately once it is marked read.
+      setBroadcastNotifications((prev) => prev.filter((n) => n.id !== notification.id));
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (e) {
       // Silent fail
@@ -674,6 +674,15 @@ export default function HomeScreen({ navigation }) {
             onRetry={handleRetry}
             disabled={isLoadingRef.current}
           />
+
+          {!hasInitialLoad && isLoading && processedEvents.length === 0 && (
+            <View style={{ paddingTop: 18, paddingBottom: 18, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color="#0277BD" />
+              <Text style={{ marginTop: 10, color: '#64748B', fontSize: 13, fontWeight: '600' }}>
+                Getting data, please wait...
+              </Text>
+            </View>
+          )}
           
           <View style={homeStyles.homeHeaderContainer}>
             <LinearGradient
