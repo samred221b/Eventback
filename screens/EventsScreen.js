@@ -91,6 +91,7 @@ const EventsScreen = ({ navigation, route }) => {
   const { favorites, toggleFavorite } = useFavorites();
   const isLoadingRef = useRef(false);
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all'); // New smart filter state
 
   const categories = [
@@ -189,9 +190,13 @@ const EventsScreen = ({ navigation, route }) => {
     loadEvents(true);
   };
 
-  const loadEvents = async (isRefresh = false) => {
+  const loadEvents = async (isRefresh = false, options = {}) => {
     isLoadingRef.current = true;
-    const shouldShowLoader = isRefresh || hasInitialLoad;
+    const reason = options?.reason;
+    const isUserRetry = reason === 'retry';
+    setIsRetrying(isUserRetry);
+
+    const shouldShowLoader = isRefresh || (!hasInitialLoad && !isUserRetry);
     setIsLoading(shouldShowLoader);
     setIsRefreshing(isRefresh);
     setError(null);
@@ -225,6 +230,7 @@ const EventsScreen = ({ navigation, route }) => {
       isLoadingRef.current = false;
       setIsLoading(false);
       setIsRefreshing(false);
+      setIsRetrying(false);
       setHasInitialLoad(true);
       return;
     }
@@ -278,6 +284,7 @@ const EventsScreen = ({ navigation, route }) => {
     isLoadingRef.current = false;
     setIsLoading(false);
     setIsRefreshing(false);
+    setIsRetrying(false);
     setHasInitialLoad(true);
   };
 
@@ -566,7 +573,7 @@ const EventsScreen = ({ navigation, route }) => {
     );
   };
 
-  if (isLoading && !isRefreshing && hasInitialLoad) {
+  if (isLoading && !isRefreshing && hasInitialLoad && !isRetrying) {
     return (
       <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['top']}>
         <View style={styles.loadingContainer}>
@@ -767,12 +774,13 @@ const EventsScreen = ({ navigation, route }) => {
         <View style={styles.eventsContent}>
           <AppErrorBanner
             error={error}
-            onRetry={() => loadEvents()}
+            onRetry={() => loadEvents(false, { reason: 'retry' })}
             disabled={isLoadingRef.current}
+            loading={isRetrying}
           />
 
           {error && error.severity === APP_ERROR_SEVERITY.ERROR ? (
-            <AppErrorState error={error} onRetry={() => loadEvents()} />
+            <AppErrorState error={error} onRetry={() => loadEvents(false, { reason: 'retry' })} />
           ) : (
             <FlatList
               data={events}

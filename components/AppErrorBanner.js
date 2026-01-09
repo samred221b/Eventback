@@ -1,11 +1,11 @@
 import React, { memo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { APP_ERROR_SEVERITY } from '../utils/appError';
 
-const AppErrorBanner = memo(({ error, onRetry, disabled = false }) => {
+const AppErrorBanner = memo(({ error, onRetry, disabled = false, loading = false }) => {
   if (!error) return null;
 
   const severity = error.severity || APP_ERROR_SEVERITY.ERROR;
@@ -52,16 +52,21 @@ const AppErrorBanner = memo(({ error, onRetry, disabled = false }) => {
             </Text>
           )}
         </View>
-        {onRetry && error.retryable !== false && severity !== APP_ERROR_SEVERITY.SUCCESS && (
+        {loading ? (
+          <View style={styles.loadingPill}>
+            <ActivityIndicator size="small" color="#FFFFFF" />
+            <Text style={styles.loadingText}>Retrying...</Text>
+          </View>
+        ) : (onRetry && error.retryable !== false && severity !== APP_ERROR_SEVERITY.SUCCESS && (
           <TouchableOpacity
             onPress={onRetry}
-            disabled={disabled}
+            disabled={disabled || loading}
             activeOpacity={0.7}
             style={styles.retryButton}
           >
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
-        )}
+        ))}
       </View>
     </BannerWrapper>
   );
@@ -105,6 +110,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   retryText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  loadingPill: {
+    marginLeft: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginLeft: 6,
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',

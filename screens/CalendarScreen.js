@@ -49,12 +49,32 @@ export default function CalendarScreen({ navigation }) {
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all'); // New filter state
 
+  // Refresh events when screen comes into focus
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
+  const isLoadingRef = useRef(false);
+  const lastRefreshTime = useRef(Date.now());
+
   const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
 
   const loadEvents = async (isRefresh = false) => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
+
     setIsLoading(!isRefresh);
     setIsRefreshing(isRefresh);
     setError(null);
+
+    // Cache-first: show cached events immediately for better UX
+    try {
+      const cachedEvents = await loadCalendarEventsFromCache();
+      if (cachedEvents.length > 0) {
+        const sortedCached = [...cachedEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
+        setAllEvents(sortedCached);
+        filterEvents(sortedCached, searchQuery, activeFilter);
+      }
+    } catch (e) {
+      // Silent fail
+    }
 
     let fetchedEvents = [];
     let backendFailed = false;
@@ -69,11 +89,13 @@ export default function CalendarScreen({ navigation }) {
       } else {
         setError(toAppError(new Error('Failed to load calendar events. Please check your connection.')));
       }
-      setAllEvents(fetchedEvents);
-      filterEvents(fetchedEvents, searchQuery, activeFilter);
+      const sortedOffline = [...fetchedEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
+      setAllEvents(sortedOffline);
+      filterEvents(sortedOffline, searchQuery, activeFilter);
       setIsLoading(false);
       setIsRefreshing(false);
       setHasInitialLoad(true);
+      isLoadingRef.current = false;
       return;
     }
 
@@ -106,25 +128,19 @@ export default function CalendarScreen({ navigation }) {
       }
     }
 
-    const sortedEvents = fetchedEvents.sort((a, b) => {
-      return new Date(a.date) - new Date(b.date);
-    });
+    const sortedEvents = [...fetchedEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
     setAllEvents(sortedEvents);
     filterEvents(sortedEvents, searchQuery, activeFilter);
     setIsLoading(false);
     setIsRefreshing(false);
     setHasInitialLoad(true);
+    isLoadingRef.current = false;
   };
 
   useEffect(() => {
     loadEvents();
   }, []);
 
-  // Refresh events when screen comes into focus
-  const [hasInitialLoad, setHasInitialLoad] = useState(false);
-  const isLoadingRef = useRef(false);
-  const lastRefreshTime = useRef(Date.now());
-  
   useFocusEffect(
     React.useCallback(() => {
       const now = Date.now();
