@@ -10,6 +10,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as SplashScreen from 'expo-splash-screen';
 import { Asset } from 'expo-asset';
 
+// Initialize Firebase App first
+import '@react-native-firebase/app';
+
 import analyticsService from './services/analyticsService';
 
 import { QueryProvider } from './providers/QueryProvider';
