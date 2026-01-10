@@ -1,27 +1,18 @@
 import { registerRootComponent } from 'expo';
 
 // Initialize Firebase Web SDK (fallback since native SDK isn't working)
-import { initializeApp } from 'firebase/app';
+import { getApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
 
-console.log('[Firebase] Initializing Firebase Web SDK in index.js');
-
-// Firebase Web SDK config
-const firebaseConfig = {
-  apiKey: "AIzaSyAPnbzGnBaOZmM1Iw6Tt7Yikr3cQvpy4ek",
-  authDomain: "eventopia-a70ad.firebaseapp.com",
-  projectId: "eventopia-a70ad",
-  storageBucket: "eventopia-a70ad.firebasestorage.app",
-  messagingSenderId: "82619158647",
-  appId: "1:82619158647:android:1848815bb2cb3e88017672"
-};
+console.log('[Firebase] Using existing Firebase Web SDK app for Analytics');
 
 try {
-  const app = initializeApp(firebaseConfig);
+  // Use existing Firebase app (initialized by firebase.config.js for Auth)
+  const app = getApp();
   const analytics = getAnalytics(app);
-  console.log('[Firebase] Firebase Web SDK initialized successfully:', app.options.appId);
+  console.log('[Firebase] Firebase Web Analytics initialized successfully with existing app:', app.options.appId);
 } catch (e) {
-  console.log('[Firebase] Failed to initialize Firebase Web SDK:', e.message);
+  console.log('[Firebase] Failed to initialize Firebase Web Analytics:', e.message);
 }
 
 import App from './App.js';

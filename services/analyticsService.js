@@ -61,7 +61,18 @@ const getNativeAnalytics = async () => {
       return {
         logEvent: (name, params) => {
           console.log('[Analytics] Web SDK logEvent:', name, params);
-          return webLogEvent(analytics, name, params);
+          return webLogEvent(analytics, name, { ...(params || {}), debug_mode: 1 });
+        },
+        logScreenView: ({ screen_name, screen_class }) => {
+          console.log('[Analytics] Web SDK logScreenView:', screen_name, screen_class);
+          const firebase_screen = typeof screen_name === 'string' ? screen_name : undefined;
+          const firebase_screen_class = typeof screen_class === 'string' ? screen_class : firebase_screen;
+          if (!firebase_screen) return;
+          return webLogEvent(analytics, 'screen_view', {
+            firebase_screen,
+            firebase_screen_class,
+            debug_mode: 1,
+          });
         },
         setUserId: (id) => {
           console.log('[Analytics] Web SDK setUserId:', id);
