@@ -35,7 +35,7 @@ export default {
       hidden: false,
     },
     android: {
-      package: 'com.samuelalemayehu.smarthomecontroller',
+      package: 'com.eventopia.app',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
