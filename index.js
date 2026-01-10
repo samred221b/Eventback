@@ -5,9 +5,19 @@ import { initializeApp, firebase } from '@react-native-firebase/app';
 
 console.log('[Firebase] @react-native-firebase/app imported in index.js, firebase object:', typeof firebase);
 
-// Initialize Firebase with default config (will use google-services.json)
+// Explicit Firebase config (matching google-services.json)
+const firebaseConfig = {
+  apiKey: "AIzaSyAPnbzGnBaOZmM1Iw6Tt7Yikr3cQvpy4ek",
+  authDomain: "eventopia-a70ad.firebaseapp.com",
+  projectId: "eventopia-a70ad",
+  storageBucket: "eventopia-a70ad.firebasestorage.app",
+  messagingSenderId: "82619158647",
+  appId: "1:82619158647:android:1848815bb2cb3e88017672"
+};
+
+// Initialize Firebase with explicit config
 try {
-  const firebaseApp = initializeApp();
+  const firebaseApp = initializeApp(firebaseConfig);
   console.log('[Firebase] Firebase App initialized successfully in index.js:', firebaseApp.options.appId);
 } catch (e) {
   console.log('[Firebase] Failed to initialize Firebase App in index.js:', e.message);
