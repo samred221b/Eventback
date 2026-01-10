@@ -40,7 +40,7 @@
   "translucent": false
 },
     "android": {
-      "package": "com.eventopia.app",
+      "package": "com.yourcompany.eventopianew",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
