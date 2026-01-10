@@ -69,9 +69,7 @@ export default {
       },
       // Feature flags
       debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === 'true',
-      analyticsEnabled: process.env.EXPO_PUBLIC_ANALYTICS_ENABLED
-        ? process.env.EXPO_PUBLIC_ANALYTICS_ENABLED === 'true'
-        : !IS_DEV,
+      analyticsEnabled: true, // Force enable for debugging
     },
   },
 };

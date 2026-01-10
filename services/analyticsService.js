@@ -9,9 +9,8 @@ const getExtra = () => {
 };
 
 const isEnabled = () => {
-  const extra = getExtra();
-  if (typeof extra.analyticsEnabled === 'boolean') return extra.analyticsEnabled;
-  return false;
+  // Force enable for debugging
+  return true;
 };
 
 const safeString = (value) => {
