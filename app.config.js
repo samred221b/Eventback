@@ -58,15 +58,6 @@ export default {
       eas: {
         projectId: 'dca1c3fb-f27c-4620-8f56-28b256d44d32',
       },
-      // Firebase config from environment variables
-      firebase: {
-        apiKey: "AIzaSyAPnbzGnBaOZmM1Iw6Tt7Yikr3cQvpy4ek",
-  authDomain: "eventopia-a70ad.firebaseapp.com",
-  projectId: "eventopia-a70ad",
-  storageBucket: "eventopia-a70ad.firebasestorage.app",
-  messagingSenderId: "82619158647",
-  appId: "1:82619158647:android:1343e518bb088774017672",
-      },
       // Feature flags
       debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === 'true',
       analyticsEnabled: true, // Force enable for debugging
