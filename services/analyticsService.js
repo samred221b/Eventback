@@ -44,34 +44,36 @@ let analyticsModulePromise = null;
 const getNativeAnalytics = async () => {
   if (analyticsModulePromise) return analyticsModulePromise;
 
-  console.log('[Analytics] getNativeAnalytics() called, starting initialization');
+  console.log('[Analytics] getNativeAnalytics() called, using Firebase Web SDK fallback');
 
   analyticsModulePromise = (async () => {
     try {
-      // In Expo Go, React Native Firebase modules aren't available
-      // Check if we're in Expo Go environment
-      const isExpoGo = Constants.executionEnvironment === 'storeClient' || 
-                       Constants.appOwnership === 'expo';
+      // Use Firebase Web SDK as fallback since native SDK isn't working
+      console.log('[Analytics] Importing Firebase Web SDK');
+      const { getAnalytics, logEvent: webLogEvent, setUserId: webSetUserId, setUserProperties: webSetUserProperties } = await import('firebase/analytics');
+      const { getApp } = await import('firebase/app');
       
-      if (isExpoGo) {
-        logger.info('Analytics disabled in Expo Go environment');
-        return null;
-      }
+      const app = getApp();
+      const analytics = getAnalytics(app);
       
-      console.log('[Analytics] Importing @react-native-firebase/analytics');
-      const mod = await import('@react-native-firebase/analytics');
-      const analytics = mod.default;
-
-      if (typeof analytics !== 'function') return null;
-      const instance = analytics();
+      console.log('[Analytics] Firebase Web Analytics initialized successfully');
       
-      // Force enable debug mode for Firebase Analytics
-      await instance.setAnalyticsCollectionEnabled(true);
-      
-      console.log('[Analytics] Firebase Analytics initialized successfully');
-      return instance;
+      return {
+        logEvent: (name, params) => {
+          console.log('[Analytics] Web SDK logEvent:', name, params);
+          return webLogEvent(analytics, name, params);
+        },
+        setUserId: (id) => {
+          console.log('[Analytics] Web SDK setUserId:', id);
+          return webSetUserId(analytics, id);
+        },
+        setUserProperties: (properties) => {
+          console.log('[Analytics] Web SDK setUserProperties:', properties);
+          return webSetUserProperties(analytics, properties);
+        }
+      };
     } catch (e) {
-      console.log('[Analytics] Analytics module not available:', e.message);
+      console.log('[Analytics] Web SDK not available:', e.message);
       logger.warn('Analytics module not available:', e.message);
       return null;
     }

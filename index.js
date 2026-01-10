@@ -1,11 +1,12 @@
 import { registerRootComponent } from 'expo';
 
-// Initialize Firebase App first (before any other code)
-import { initializeApp, firebase } from '@react-native-firebase/app';
+// Initialize Firebase Web SDK (fallback since native SDK isn't working)
+import { initializeApp } from 'firebase/app';
+import { getAnalytics } from 'firebase/analytics';
 
-console.log('[Firebase] @react-native-firebase/app imported in index.js, firebase object:', typeof firebase);
+console.log('[Firebase] Initializing Firebase Web SDK in index.js');
 
-// Explicit Firebase config (matching google-services.json)
+// Firebase Web SDK config
 const firebaseConfig = {
   apiKey: "AIzaSyAPnbzGnBaOZmM1Iw6Tt7Yikr3cQvpy4ek",
   authDomain: "eventopia-a70ad.firebaseapp.com",
@@ -15,12 +16,12 @@ const firebaseConfig = {
   appId: "1:82619158647:android:1848815bb2cb3e88017672"
 };
 
-// Initialize Firebase with explicit config
 try {
-  const firebaseApp = initializeApp(firebaseConfig);
-  console.log('[Firebase] Firebase App initialized successfully in index.js:', firebaseApp.options.appId);
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  console.log('[Firebase] Firebase Web SDK initialized successfully:', app.options.appId);
 } catch (e) {
-  console.log('[Firebase] Failed to initialize Firebase App in index.js:', e.message);
+  console.log('[Firebase] Failed to initialize Firebase Web SDK:', e.message);
 }
 
 import App from './App.js';
