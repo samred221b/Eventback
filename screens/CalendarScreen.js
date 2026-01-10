@@ -260,18 +260,20 @@ export default function CalendarScreen({ navigation }) {
     return favorites.some(fav => fav.id === eventId || fav._id === eventId);
   };
 
-  const handleEventPress = async (event) => {
-    // Track view
-    try {
-      await apiService.trackEventView(event._id || event.id);
-    } catch (error) {
-      // Silent fail
-    }
-    
+  const handleEventPress = (event) => {
+    const eventId = event?._id || event?.id;
+
     const serializable = makeEventSerializable(event);
     serializable.organizerName = event.organizerName || event.organizer || '';
     serializable.importantInfo = event.importantInfo || '';
+
     navigation.navigate('EventDetails', { event: serializable });
+
+    // Track view
+    if (!eventId) return;
+    apiService.trackEventView(eventId).catch(() => {
+      // Silent fail
+    });
   };
 
   const makeEventSerializable = (event) => {
@@ -370,15 +372,6 @@ export default function CalendarScreen({ navigation }) {
         }
       >
         <AppErrorBanner error={error} onRetry={() => loadEvents(true)} disabled={isRefreshing} />
-
-        {!hasInitialLoad && isLoading && events.length === 0 && (
-          <View style={{ paddingTop: 18, paddingBottom: 6, alignItems: 'center' }}>
-            <ActivityIndicator size="small" color="#0277BD" />
-            <Text style={{ marginTop: 10, color: '#64748B', fontSize: 13, fontWeight: '600' }}>
-              Getting data, please wait...
-            </Text>
-          </View>
-        )}
 
         <View style={[homeStyles.homeHeaderContainer, {  zIndex: 1 }]}> 
           <LinearGradient

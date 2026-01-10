@@ -422,7 +422,7 @@ export default function HomeScreen({ navigation }) {
         source={require('../assets/3.png')}
         style={{ flex: 1, width: '100%', minHeight: screenHeight }}
         imageStyle={{ width: '100%', height: '100%' }}
-        resizeMode="stretch"
+        resizeMode="cover"
         resizeMethod="resize"
       >
         <Modal

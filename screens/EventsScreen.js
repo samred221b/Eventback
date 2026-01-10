@@ -391,16 +391,17 @@ const EventsScreen = ({ navigation, route }) => {
     };
   };
 
-  const handleEventPress = async (event) => {
+  const handleEventPress = (event) => {
+    const eventId = event?._id || event?.id;
+
+    navigation.navigate('EventDetails', {
+      event: makeEventSerializable(event),
+    });
+
     // Track view
-    try {
-      await apiService.trackEventView(event.id);
-    } catch (error) {
+    if (!eventId) return;
+    apiService.trackEventView(eventId).catch(() => {
       // Silent fail
-    }
-    
-    navigation.navigate('EventDetails', { 
-      event: makeEventSerializable(event)
     });
   };
 
