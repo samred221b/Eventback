@@ -10,8 +10,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as SplashScreen from 'expo-splash-screen';
 import { Asset } from 'expo-asset';
 
-// Initialize Firebase App first
-import '@react-native-firebase/app';
+// Initialize Firebase App first (native)
+import { initializeApp } from '@react-native-firebase/app';
+
+// Initialize Firebase with default config (will use google-services.json)
+const firebaseApp = initializeApp();
 
 import analyticsService from './services/analyticsService';
 
