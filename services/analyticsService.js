@@ -10,6 +10,7 @@ const getExtra = () => {
 
 const isEnabled = () => {
   // Force enable for debugging
+  console.log('[Analytics] isEnabled() called, returning true');
   return true;
 };
 
@@ -43,6 +44,8 @@ let analyticsModulePromise = null;
 const getNativeAnalytics = async () => {
   if (analyticsModulePromise) return analyticsModulePromise;
 
+  console.log('[Analytics] getNativeAnalytics() called, starting initialization');
+
   analyticsModulePromise = (async () => {
     try {
       // In Expo Go, React Native Firebase modules aren't available
@@ -55,6 +58,7 @@ const getNativeAnalytics = async () => {
         return null;
       }
       
+      console.log('[Analytics] Importing @react-native-firebase/analytics');
       const mod = await import('@react-native-firebase/analytics');
       const analytics = mod.default;
 
@@ -64,8 +68,10 @@ const getNativeAnalytics = async () => {
       // Force enable debug mode for Firebase Analytics
       await instance.setAnalyticsCollectionEnabled(true);
       
+      console.log('[Analytics] Firebase Analytics initialized successfully');
       return instance;
     } catch (e) {
+      console.log('[Analytics] Analytics module not available:', e.message);
       logger.warn('Analytics module not available:', e.message);
       return null;
     }
