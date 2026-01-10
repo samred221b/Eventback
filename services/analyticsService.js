@@ -59,7 +59,12 @@ const getNativeAnalytics = async () => {
       const analytics = mod.default;
 
       if (typeof analytics !== 'function') return null;
-      return analytics();
+      const instance = analytics();
+      
+      // Force enable debug mode for Firebase Analytics
+      await instance.setAnalyticsCollectionEnabled(true);
+      
+      return instance;
     } catch (e) {
       logger.warn('Analytics module not available:', e.message);
       return null;
