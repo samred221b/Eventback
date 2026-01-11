@@ -4,12 +4,13 @@ import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
-apiKey: "AIzaSyAPnbzGnBaOZmM1Iw6Tt7Yikr3cQvpy4ek",
+  apiKey: "AIzaSyAmy1CCalgey1uzUdfpXkcWWzGS1zrZ1gQ",
   authDomain: "eventopia-a70ad.firebaseapp.com",
   projectId: "eventopia-a70ad",
   storageBucket: "eventopia-a70ad.firebasestorage.app",
   messagingSenderId: "82619158647",
-  appId: "1:82619158647:android:1343e518bb088774017672"
+  appId: "1:82619158647:web:fd316c320649738c017672",
+  measurementId: "G-J79X39YG10"
 };
 
 // Initialize Firebase

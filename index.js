@@ -1,5 +1,8 @@
 import { registerRootComponent } from 'expo';
 
+// Ensure Firebase Web app is initialized (Auth + base app) before Analytics uses getApp().
+import './firebase.config';
+
 // Initialize Firebase Web SDK (fallback since native SDK isn't working)
 import { getApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
