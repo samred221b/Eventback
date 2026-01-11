@@ -3,6 +3,7 @@
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://eventoback-1.onrender.com/api';
 const IS_DEV = process.env.NODE_ENV === 'development';
+const AMPLITUDE_API_KEY = process.env.EXPO_PUBLIC_AMPLITUDE_API_KEY;
 
 export default {
   expo: {
@@ -60,7 +61,10 @@ export default {
       },
       // Feature flags
       debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === 'true',
-      analyticsEnabled: true, // Force enable for debugging
+      analyticsEnabled: process.env.EXPO_PUBLIC_ANALYTICS_ENABLED
+        ? process.env.EXPO_PUBLIC_ANALYTICS_ENABLED === 'true'
+        : !IS_DEV,
+      amplitudeApiKey: AMPLITUDE_API_KEY,
     },
   },
 };

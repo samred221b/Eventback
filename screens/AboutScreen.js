@@ -35,13 +35,15 @@ export default function AboutScreen({ navigation }) {
   const [error, setError] = useState(null);
 
   // Debug logs
-  console.log('=== AboutScreen Debug ===');
-  console.log('analyticsEnabled:', Constants?.expoConfig?.extra?.analyticsEnabled);
-  console.log('Updates.isEnabled:', Updates.isEnabled);
-  console.log('Updates.channel:', Updates.channel);
-  console.log('Updates.runtimeVersion:', Updates.runtimeVersion);
-  console.log('appVersion (Constants):', appVersion);
-  console.log('========================');
+  if (__DEV__ || Constants?.expoConfig?.extra?.debugMode) {
+    console.log('=== AboutScreen Debug ===');
+    console.log('analyticsEnabled:', Constants?.expoConfig?.extra?.analyticsEnabled);
+    console.log('Updates.isEnabled:', Updates.isEnabled);
+    console.log('Updates.channel:', Updates.channel);
+    console.log('Updates.runtimeVersion:', Updates.runtimeVersion);
+    console.log('appVersion (Constants):', appVersion);
+    console.log('========================');
+  }
 
   const handleEmailPress = () => {
     Linking.openURL('mailto:samred221b@gmail.com');

@@ -1,7 +1,8 @@
-import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { logger } from '../utils/logger';
+import * as Amplitude from '@amplitude/analytics-react-native';
 
 const getExtra = () => {
   const expoConfig = Constants.expoConfig || Constants.manifest;
@@ -9,9 +10,9 @@ const getExtra = () => {
 };
 
 const isEnabled = () => {
-  // Force enable for debugging
-  console.log('[Analytics] isEnabled() called, returning true');
-  return true;
+  const extra = getExtra();
+  if (typeof extra.analyticsEnabled === 'boolean') return extra.analyticsEnabled;
+  return !__DEV__;
 };
 
 const safeString = (value) => {
@@ -39,52 +40,30 @@ const safeParams = (params) => {
   return out;
 };
 
-let analyticsModulePromise = null;
+let amplitudeInitPromise = null;
 
-const getNativeAnalytics = async () => {
-  if (analyticsModulePromise) return analyticsModulePromise;
+const ensureAmplitude = async () => {
+  if (amplitudeInitPromise) return amplitudeInitPromise;
 
-  console.log('[Analytics] getNativeAnalytics() called, using native Firebase Analytics');
-
-  analyticsModulePromise = (async () => {
+  amplitudeInitPromise = (async () => {
     try {
-      // Web Analytics SDK relies on DOM; avoid it on native.
-      if (Platform.OS === 'web') return null;
-
-      const isExpoGo = Constants.executionEnvironment === 'storeClient' ||
-        Constants.appOwnership === 'expo';
-      if (isExpoGo) return null;
-
-      const appMod = await import('@react-native-firebase/app');
-      try {
-        const app = appMod.default;
-        if (!app.apps?.length) {
-          app.initializeApp();
-        }
-        console.log('[Firebase] Native default app ready (from analytics):', app.app().options?.appId);
-      } catch (e) {
-        console.log('[Firebase] Native app init failed (from analytics):', e?.message);
-        return null;
+      const { amplitudeApiKey } = getExtra();
+      if (!amplitudeApiKey) {
+        logger.warn('Amplitude API key missing (extra.amplitudeApiKey). Analytics disabled.');
+        return false;
       }
 
-      console.log('[Analytics] Importing @react-native-firebase/analytics');
-      const mod = await import('@react-native-firebase/analytics');
-      const analytics = mod.default;
-
-      if (typeof analytics !== 'function') return null;
-      const instance = analytics();
-
-      await instance.setAnalyticsCollectionEnabled(true);
-      console.log('[Analytics] Firebase Analytics initialized successfully');
-      return instance;
+      await Amplitude.init(amplitudeApiKey, undefined, {
+        disableCookies: true,
+      });
+      return true;
     } catch (e) {
-      console.log('[Analytics] Analytics module not available:', e.message);
-      logger.warn('Analytics module not available:', e.message);
-      return null;
+      logger.warn('Amplitude init failed', e);
+      return false;
     }
   })();
 
-  return analyticsModulePromise;
+  return amplitudeInitPromise;
 };
 
 const analyticsService = {
@@ -94,14 +73,9 @@ const analyticsService = {
     if (!isEnabled()) return;
 
     try {
-      if (Platform.OS === 'web') {
-        return;
-      }
-
-      const native = await getNativeAnalytics();
-      if (!native) return;
-
-      await native.logEvent(name, safeParams(params));
+      const ok = await ensureAmplitude();
+      if (!ok) return;
+      await Amplitude.track(String(name), safeParams(params));
     } catch (e) {
       logger.warn('analytics logEvent failed', e);
     }
@@ -111,17 +85,13 @@ const analyticsService = {
     if (!isEnabled()) return;
 
     try {
-      if (Platform.OS === 'web') {
-        return;
-      }
-
-      const native = await getNativeAnalytics();
-      if (!native) return;
+      const ok = await ensureAmplitude();
+      if (!ok) return;
 
       const name = safeString(screenName);
       if (!name) return;
 
-      await native.logScreenView({
+      await Amplitude.track('screen_view', {
         screen_name: name,
         screen_class: safeString(screenClassOverride) || name,
       });
@@ -134,14 +104,9 @@ const analyticsService = {
     if (!isEnabled()) return;
 
     try {
-      if (Platform.OS === 'web') {
-        return;
-      }
-
-      const native = await getNativeAnalytics();
-      if (!native) return;
-
-      await native.setUserId(safeString(userId) || null);
+      const ok = await ensureAmplitude();
+      if (!ok) return;
+      await Amplitude.setUserId(safeString(userId) || null);
     } catch (e) {
       logger.warn('analytics setUserId failed', e);
     }
@@ -151,14 +116,16 @@ const analyticsService = {
     if (!isEnabled()) return;
 
     try {
-      if (Platform.OS === 'web') {
-        return;
-      }
+      const ok = await ensureAmplitude();
+      if (!ok) return;
 
-      const native = await getNativeAnalytics();
-      if (!native) return;
+      const identify = new Amplitude.Identify();
+      const userProps = safeParams(props) || {};
+      Object.keys(userProps).forEach((k) => {
+        identify.set(k, userProps[k]);
+      });
 
-      await native.setUserProperties(safeParams(props));
+      await Amplitude.identify(identify);
     } catch (e) {
       logger.warn('analytics setUserProperties failed', e);
     }

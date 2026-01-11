@@ -1,16 +1,5 @@
 import { registerRootComponent } from 'expo';
 
-import firebase from '@react-native-firebase/app';
-
-try {
-  if (!firebase.apps?.length) {
-    firebase.initializeApp();
-  }
-  console.log('[Firebase] Native default app ready:', firebase.app().options?.appId);
-} catch (e) {
-  console.log('[Firebase] Native app init failed:', e?.message);
-}
-
 import App from './App.js';
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
