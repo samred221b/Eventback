@@ -1,21 +1,14 @@
 import { registerRootComponent } from 'expo';
 
-// Ensure Firebase Web app is initialized (Auth + base app) before Analytics uses getApp().
-import './firebase.config';
-
-// Initialize Firebase Web SDK (fallback since native SDK isn't working)
-import { getApp } from 'firebase/app';
-import { getAnalytics } from 'firebase/analytics';
-
-console.log('[Firebase] Using existing Firebase Web SDK app for Analytics');
+import { firebase, initializeApp } from '@react-native-firebase/app';
 
 try {
-  // Use existing Firebase app (initialized by firebase.config.js for Auth)
-  const app = getApp();
-  const analytics = getAnalytics(app);
-  console.log('[Firebase] Firebase Web Analytics initialized successfully with existing app:', app.options.appId);
+  if (!firebase.apps?.length) {
+    initializeApp();
+  }
+  console.log('[Firebase] Native default app ready:', firebase.app().options?.appId);
 } catch (e) {
-  console.log('[Firebase] Failed to initialize Firebase Web Analytics:', e.message);
+  console.log('[Firebase] Native app init failed:', e?.message);
 }
 
 import App from './App.js';

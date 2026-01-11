@@ -44,47 +44,40 @@ let analyticsModulePromise = null;
 const getNativeAnalytics = async () => {
   if (analyticsModulePromise) return analyticsModulePromise;
 
-  console.log('[Analytics] getNativeAnalytics() called, using Firebase Web SDK fallback');
+  console.log('[Analytics] getNativeAnalytics() called, using native Firebase Analytics');
 
   analyticsModulePromise = (async () => {
     try {
-      // Use Firebase Web SDK as fallback since native SDK isn't working
-      console.log('[Analytics] Importing Firebase Web SDK');
-      const { getAnalytics, logEvent: webLogEvent, setUserId: webSetUserId, setUserProperties: webSetUserProperties } = await import('firebase/analytics');
-      const { getApp } = await import('firebase/app');
-      
-      const app = getApp();
-      const analytics = getAnalytics(app);
-      
-      console.log('[Analytics] Firebase Web Analytics initialized successfully');
-      
-      return {
-        logEvent: (name, params) => {
-          console.log('[Analytics] Web SDK logEvent:', name, params);
-          return webLogEvent(analytics, name, { ...(params || {}), debug_mode: 1 });
-        },
-        logScreenView: ({ screen_name, screen_class }) => {
-          console.log('[Analytics] Web SDK logScreenView:', screen_name, screen_class);
-          const firebase_screen = typeof screen_name === 'string' ? screen_name : undefined;
-          const firebase_screen_class = typeof screen_class === 'string' ? screen_class : firebase_screen;
-          if (!firebase_screen) return;
-          return webLogEvent(analytics, 'screen_view', {
-            firebase_screen,
-            firebase_screen_class,
-            debug_mode: 1,
-          });
-        },
-        setUserId: (id) => {
-          console.log('[Analytics] Web SDK setUserId:', id);
-          return webSetUserId(analytics, id);
-        },
-        setUserProperties: (properties) => {
-          console.log('[Analytics] Web SDK setUserProperties:', properties);
-          return webSetUserProperties(analytics, properties);
+      // Web Analytics SDK relies on DOM; avoid it on native.
+      if (Platform.OS === 'web') return null;
+
+      const isExpoGo = Constants.executionEnvironment === 'storeClient' ||
+        Constants.appOwnership === 'expo';
+      if (isExpoGo) return null;
+
+      const appMod = await import('@react-native-firebase/app');
+      try {
+        if (!appMod.firebase.apps?.length) {
+          appMod.initializeApp();
         }
-      };
+        console.log('[Firebase] Native default app ready (from analytics):', appMod.firebase.app().options?.appId);
+      } catch (e) {
+        console.log('[Firebase] Native app init failed (from analytics):', e?.message);
+        return null;
+      }
+
+      console.log('[Analytics] Importing @react-native-firebase/analytics');
+      const mod = await import('@react-native-firebase/analytics');
+      const analytics = mod.default;
+
+      if (typeof analytics !== 'function') return null;
+      const instance = analytics();
+
+      await instance.setAnalyticsCollectionEnabled(true);
+      console.log('[Analytics] Firebase Analytics initialized successfully');
+      return instance;
     } catch (e) {
-      console.log('[Analytics] Web SDK not available:', e.message);
+      console.log('[Analytics] Analytics module not available:', e.message);
       logger.warn('Analytics module not available:', e.message);
       return null;
     }

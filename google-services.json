@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "82619158647",
+    "project_id": "eventopia-a70ad",
+    "storage_bucket": "eventopia-a70ad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:82619158647:android:1848815bb2cb3e88017672",
+        "android_client_info": {
+          "package_name": "com.eventopia.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPnbzGnBaOZmM1Iw6Tt7Yikr3cQvpy4ek"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:82619158647:android:1343e518bb088774017672",
+        "android_client_info": {
+          "package_name": "com.yourcompany.eventopianew"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPnbzGnBaOZmM1Iw6Tt7Yikr3cQvpy4ek"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

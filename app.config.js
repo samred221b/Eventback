@@ -19,7 +19,7 @@ export default {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.eventopia.app',
+      bundleIdentifier: 'com.yourcompany.eventopianew',
       infoPlist: {
         NSPhotoLibraryUsageDescription: 'We need access to your photo library to let you upload event images.',
         NSPhotoLibraryAddUsageDescription: 'We need permission to save images to your photo library.',
@@ -35,7 +35,7 @@ export default {
       hidden: false,
     },
     android: {
-      package: 'com.eventopia.app',
+      package: 'com.yourcompany.eventopianew',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
