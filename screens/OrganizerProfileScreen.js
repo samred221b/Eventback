@@ -11,6 +11,7 @@ import {
   Share,
   Alert,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { formatPrice, formatDate, formatTime, standardizeEventForDetails } from '../utils/dataProcessor';
@@ -30,10 +31,17 @@ export default function OrganizerProfileScreen({ route, navigation }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [imageVersion, setImageVersion] = useState(0);
 
   useEffect(() => {
     fetchOrganizerProfile();
   }, [organizerId]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchOrganizerProfile();
+    }, [organizerId])
+  );
 
   const fetchOrganizerProfile = async () => {
     try {
@@ -50,6 +58,7 @@ export default function OrganizerProfileScreen({ route, navigation }) {
       }
 
       setOrganizer(organizerData);
+      setImageVersion((v) => v + 1);
 
       // Fetch organizer's events
       const eventsResponse = await apiService.get(`/events?organizerId=${organizerId}&limit=10`);
@@ -206,7 +215,12 @@ export default function OrganizerProfileScreen({ route, navigation }) {
             {/* Logo/Profile Image */}
             <View style={styles.logoContainer}>
               {organizer.profileImage ? (
-                <Image source={{ uri: organizer.profileImage }} style={styles.logo} />
+                <Image
+                  source={{
+                    uri: `${organizer.profileImage}${organizer.profileImage.includes('?') ? '&' : '?'}v=${encodeURIComponent(String(organizer.updatedAt || imageVersion))}`,
+                  }}
+                  style={styles.logo}
+                />
               ) : (
                 <View style={styles.logoPlaceholder}>
                   <Feather name="user" size={40} color="#0277BD" />

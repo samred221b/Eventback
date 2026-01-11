@@ -57,10 +57,11 @@ const getNativeAnalytics = async () => {
 
       const appMod = await import('@react-native-firebase/app');
       try {
-        if (!appMod.firebase.apps?.length) {
-          appMod.initializeApp();
+        const app = appMod.default;
+        if (!app.apps?.length) {
+          app.initializeApp();
         }
-        console.log('[Firebase] Native default app ready (from analytics):', appMod.firebase.app().options?.appId);
+        console.log('[Firebase] Native default app ready (from analytics):', app.app().options?.appId);
       } catch (e) {
         console.log('[Firebase] Native app init failed (from analytics):', e?.message);
         return null;
