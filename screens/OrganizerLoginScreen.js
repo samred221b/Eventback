@@ -357,24 +357,30 @@ const handleForgotPassword = () => {
           
           <View style={styles.benefitsGrid}>
             <View style={styles.benefitCard}>
-              <View style={styles.benefitIconContainer}>
-                <Feather name="trending-up" size={20} color="#0277BD" />
+              <View style={styles.benefitDepthLayer} pointerEvents="none">
+                <View style={styles.benefitGlowOrbOne} />
+                <View style={styles.benefitGlowOrbTwo} />
+                <View style={styles.benefitHighlight} />
               </View>
               <Text style={styles.benefitNumber}>200+</Text>
               <Text style={styles.benefitLabel}>Events Created</Text>
             </View>
             
             <View style={styles.benefitCard}>
-              <View style={styles.benefitIconContainer}>
-                <Feather name="users" size={20} color="#10B981" />
+              <View style={styles.benefitDepthLayer} pointerEvents="none">
+                <View style={styles.benefitGlowOrbOne} />
+                <View style={styles.benefitGlowOrbTwo} />
+                <View style={styles.benefitHighlight} />
               </View>
               <Text style={styles.benefitNumber}>25K+</Text>
               <Text style={styles.benefitLabel}>Active Users</Text>
             </View>
             
             <View style={styles.benefitCard}>
-              <View style={styles.benefitIconContainer}>
-                <Feather name="star" size={20} color="#F59E0B" />
+              <View style={styles.benefitDepthLayer} pointerEvents="none">
+                <View style={styles.benefitGlowOrbOne} />
+                <View style={styles.benefitGlowOrbTwo} />
+                <View style={styles.benefitHighlight} />
               </View>
               <Text style={styles.benefitNumber}>150+</Text>
               <Text style={styles.benefitLabel}>Organizers</Text>
@@ -670,15 +676,53 @@ const styles = StyleSheet.create({
   },
   benefitCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#060B14',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.06)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: 'rgba(0, 0, 0, 0.4)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    overflow: 'hidden',
+  },
+  benefitDepthLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  benefitGlowOrbOne: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    top: -100,
+    left: -90,
+    backgroundColor: 'rgba(2, 119, 189, 0.35)',
+  },
+  benefitGlowOrbTwo: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    bottom: -120,
+    right: -120,
+    backgroundColor: 'rgba(1, 87, 155, 0.30)',
+  },
+  benefitHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '55%',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    transform: [{ skewY: '-8deg' }],
+    opacity: 0.5,
   },
   benefitIconContainer: {
     width: 40,
@@ -688,18 +732,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    zIndex: 1,
   },
   benefitNumber: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: '#FFFFFF',
     marginBottom: 4,
+    zIndex: 1,
   },
   benefitLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '600',
     textAlign: 'center',
+    zIndex: 1,
   },
   // Quick Links Section
   quickLinksSection: {

@@ -587,6 +587,12 @@ const EventsScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['top']}>
+      <View pointerEvents="none" style={styles.pageBackground}>
+        <View style={styles.backgroundOrbOne} />
+        <View style={styles.backgroundOrbTwo} />
+        <View style={styles.backgroundOrbThree} />
+        <View style={styles.backgroundOrbFour} />
+      </View>
       {/* Home-style Header */}
       <View style={[homeStyles.homeHeaderContainer, { marginTop: 0 }]} > 
           <LinearGradient
@@ -715,10 +721,16 @@ const EventsScreen = ({ navigation, route }) => {
               }}
               activeOpacity={0.7}
             >
+              <View style={styles.categoryDepthLayer} pointerEvents="none">
+                <View style={styles.categoryGlowOrbOne} />
+                <View style={styles.categoryGlowOrbTwo} />
+                <View style={styles.categoryHighlight} />
+              </View>
               <Feather
                 name={category.icon}
                 size={10}
-                color={selectedCategory === category.key ? '#FFFFFF' : '#1F2937'}
+                color={selectedCategory === category.key ? '#FFFFFF' : 'rgba(255, 255, 255, 0.8)'}
+                style={{ zIndex: 1 }}
               />
               <Text
                 style={[
@@ -810,8 +822,51 @@ const EventsScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#F8FAFC',
+  },
+  pageBackground: {
+    position: 'absolute',
+    top: -140,
+    left: -120,
+    right: -120,
+    height: 520,
+    zIndex: -1,
+  },
+  backgroundOrbOne: {
+    position: 'absolute',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(4, 73, 112, 0.46)',
+    top: 0,
+    left: 0,
+  },
+  backgroundOrbTwo: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 180,
+    backgroundColor: 'rgba(1, 132, 155, 0.67)',
+    top: 700,
+    right: -40,
+  },
+  backgroundOrbThree: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 130,
+    backgroundColor: 'rgba(2, 137, 209, 0.59)',
+    top: 700,
+    left: 0,
+  },
+  backgroundOrbFour: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(1, 87, 155, 0.18)',
+    bottom: -100,
+    right: 10,
   },
   scrollContainer: {
     flex: 1,
@@ -841,32 +896,68 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: '#060B14',
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.10)',
     marginRight: 6,
-    shadowColor: 'rgba(0, 0, 0, 0.05)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    backdropFilter: 'blur(10px)',
+    shadowColor: 'rgba(0, 0, 0, 0.4)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
     gap: 3,
     maxWidth: 100,
+    overflow: 'hidden',
   },
   categoryChipActive: {
-    backgroundColor: 'rgba(2, 119, 189, 0.8)',
-    borderColor: 'rgba(0, 0, 0, 0.5)',
-    shadowColor: 'rgba(2, 119, 189, 0.3)',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
+    backgroundColor: 'rgba(2, 119, 189, 0.6)',
+    borderColor: 'rgba(2, 119, 189, 0.5)',
+    shadowColor: 'rgba(2, 119, 189, 0.4)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  categoryDepthLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  categoryGlowOrbOne: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    top: -60,
+    left: -50,
+    backgroundColor: 'rgba(2, 119, 189, 0.35)',
+  },
+  categoryGlowOrbTwo: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    bottom: -80,
+    right: -80,
+    backgroundColor: 'rgba(1, 87, 155, 0.30)',
+  },
+  categoryHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '55%',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    transform: [{ skewY: '-8deg' }],
+    opacity: 0.5,
   },
   categoryChipText: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#1F2937',
+    color: 'rgba(255, 255, 255, 0.8)',
+    zIndex: 1,
   },
   categoryChipTextActive: {
     color: '#FFFFFF',
@@ -909,7 +1000,7 @@ const styles = StyleSheet.create({
   // Event Card
   eventCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
+    borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
@@ -917,8 +1008,8 @@ const styles = StyleSheet.create({
     elevation: 4,
     overflow: 'hidden',
     flexBasis: '48%', // Change width to flexBasis
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
+    borderWidth: 2,
+    borderColor: 'rgba(210, 211, 211, 0.36)',
     minHeight: 300, // Ensures equal height for all cards
     flexDirection: 'column',
     justifyContent: 'space-between',

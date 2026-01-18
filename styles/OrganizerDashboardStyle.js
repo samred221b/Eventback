@@ -232,10 +232,13 @@ const organizerDashboardStyles = StyleSheet.create({
     marginHorizontal: 20,
   },
   modernDashboardSectionHeader: {
+    flexDirection: 'column',
+    marginBottom: 14,
+  },
+  modernDashboardSectionTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
   },
   modernDashboardSectionTitle: {
     fontSize: 18,
@@ -245,6 +248,20 @@ const organizerDashboardStyles = StyleSheet.create({
   modernDashboardSectionCount: {
     fontSize: 13,
     fontWeight: '700',
+    color: '#0277BD',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    gap: 6,
+  },
+  viewAllButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#0277BD',
   },
   modernDashboardEmptyState: {

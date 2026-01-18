@@ -160,9 +160,51 @@ export default function OrganizerMessageInbox({ navigation }) {
     return date.toLocaleDateString();
   };
 
+  const MessagesHeader = () => (
+    <View style={[styles.messagesHeaderContainer, { paddingTop: insets.top }]}>
+      <LinearGradient
+        colors={['#0277BD', '#01579B']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.messagesHeaderCard}
+      >
+        <View style={styles.messagesHeaderBg} pointerEvents="none">
+          <View style={styles.messagesHeaderOrbOne} />
+          <View style={styles.messagesHeaderOrbTwo} />
+        </View>
+
+        <View style={styles.messagesHeaderTopRow}>
+          <View style={styles.messagesHeaderLeftRow}>
+            <TouchableOpacity 
+              style={styles.messagesBackButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.8}
+            >
+              <Feather name="arrow-left" size={18} color="#0F172A" />
+            </TouchableOpacity>
+            <View style={styles.messagesHeaderTitleBlock}>
+              <Text style={styles.messagesHeaderWelcomeText}>Inbox</Text>
+              <Text style={styles.messagesHeaderNameText}>Messages</Text>
+              <Text style={styles.messagesHeaderCountText}>{messages.length} {messages.length === 1 ? 'Message' : 'Messages'}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.messagesHeaderMetaRow}>
+          <Text style={styles.messagesHeaderMetaText}>Admin Updates</Text>
+          <Text style={styles.messagesHeaderMetaSeparator}>|</Text>
+          <Text style={styles.messagesHeaderMetaText}>Notifications</Text>
+          <Text style={styles.messagesHeaderMetaSeparator}>|</Text>
+          <Text style={styles.messagesHeaderMetaText}>Stay Informed</Text>
+        </View>
+      </LinearGradient>
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
+        <MessagesHeader />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0277BD" />
           <Text style={styles.loadingText}>Loading messages...</Text>
@@ -173,29 +215,9 @@ export default function OrganizerMessageInbox({ navigation }) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <MessagesHeader />
       <AppErrorBanner error={error} onRetry={fetchMessages} />
       
-      {/* Header */}
-      <LinearGradient
-        colors={['#0277BD', '#01579B']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <View style={homeStyles.homeHeaderBg} pointerEvents="none">
-          <View style={homeStyles.homeHeaderOrbOne} />
-          <View style={homeStyles.homeHeaderOrbTwo} />
-        </View>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="arrow-left" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Messages</Text>
-        <View style={styles.headerSpacer} />
-      </LinearGradient>
-
       {/* Messages List */}
       {messages.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -347,30 +369,113 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontSize: 16,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingTop: 20,
+  messagesHeaderContainer: {
+    paddingHorizontal: 10,
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  messagesHeaderCard: {
+    borderRadius: 30,
+    padding: 20,
+    shadowColor: 'rgba(147, 150, 156, 0.4)',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(94, 95, 95, 0.34)',
+    position: 'relative',
     overflow: 'hidden',
   },
-  backButton: {
+  messagesHeaderBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  messagesHeaderOrbOne: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    top: -120,
+    left: -90,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  messagesHeaderOrbTwo: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    bottom: -120,
+    right: -120,
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  messagesHeaderTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  messagesHeaderLeftRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flex: 1,
+    gap: 12,
+  },
+  messagesBackButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
+  messagesHeaderTitleBlock: {
+    flex: 0,
+    alignItems: 'flex-start',
   },
-  headerSpacer: {
-    width: 40,
+  messagesHeaderWelcomeText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    fontFamily: 'System',
+  },
+  messagesHeaderNameText: {
+    fontSize: 22,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    fontFamily: 'System',
+    marginTop: 2,
+  },
+  messagesHeaderCountText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.78)',
+    fontWeight: '600',
+    fontFamily: 'System',
+    marginTop: 4,
+  },
+  messagesHeaderMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  messagesHeaderMetaText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.72)',
+    fontFamily: 'System',
+    fontWeight: '600',
+  },
+  messagesHeaderMetaSeparator: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    marginHorizontal: 8,
+    fontFamily: 'System',
+    fontWeight: '700',
   },
   messagesList: {
     flex: 1,

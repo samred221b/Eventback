@@ -9,7 +9,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../providers/AuthProvider';
@@ -20,6 +20,7 @@ const { width } = Dimensions.get('window');
 
 export default function AnalyticsScreen({ navigation }) {
   const { user, organizerProfile } = useAuth();
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0 };
   const [insights, setInsights] = useState({
     totalViews: 0,
     totalLikes: 0,
@@ -184,16 +185,51 @@ export default function AnalyticsScreen({ navigation }) {
     { key: 'year', label: 'Last Year' },
   ];
 
+  const AnalyticsHeader = () => (
+    <View style={[styles.homeHeaderContainer, { paddingTop: insets.top }]}>
+      <LinearGradient
+        colors={['#0277BD', '#01579B']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.homeHeaderCard}
+      >
+        <View style={styles.homeHeaderBg} pointerEvents="none">
+          <View style={styles.homeHeaderOrbOne} />
+          <View style={styles.homeHeaderOrbTwo} />
+        </View>
+
+        <View style={styles.homeHeaderTopRow}>
+          <View style={styles.homeHeaderLeftRow}>
+            <View style={styles.homeHeaderAvatar}>
+              <View style={styles.homeHeaderAvatarInner}>
+                <Feather name="activity" size={20} color="#0F172A" />
+              </View>
+            </View>
+            <View style={styles.homeHeaderTitleBlock}>
+              <Text style={styles.homeHeaderWelcomeText}>Insights</Text>
+              <Text style={styles.homeHeaderNameText}>Analytics</Text>
+              <Text style={styles.homeHeaderCountText}>
+                {insights.totalEvents} {insights.totalEvents === 1 ? 'Event' : 'Events'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.homeHeaderMetaRow}>
+          <Text style={styles.homeHeaderMetaText}>Track Performance</Text>
+          <Text style={styles.homeHeaderMetaSeparator}>|</Text>
+          <Text style={styles.homeHeaderMetaText}>Monitor Growth</Text>
+          <Text style={styles.homeHeaderMetaSeparator}>|</Text>
+          <Text style={styles.homeHeaderMetaText}>Optimize Strategy</Text>
+        </View>
+      </LinearGradient>
+    </View>
+  );
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Feather name="arrow-left" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Analytics</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <AnalyticsHeader />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0277BD" />
           <Text style={styles.loadingText}>Loading analytics...</Text>
@@ -205,13 +241,7 @@ export default function AnalyticsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Analytics</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <AnalyticsHeader />
 
       <ScrollView 
         style={styles.scrollView}
@@ -370,22 +400,122 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  header: {
+  homeHeaderContainer: {
+    paddingHorizontal: 10,
+    paddingTop: 14,
+    paddingBottom: 1,
+  },
+  homeHeaderCard: {
+    borderRadius: 30,
+    padding: 20,
+    shadowColor: 'rgba(147, 150, 156, 0.4)',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(94, 95, 95, 0.34)',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  homeHeaderBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  homeHeaderOrbOne: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    top: -120,
+    left: -90,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  homeHeaderOrbTwo: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    bottom: -120,
+    right: -120,
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  homeHeaderTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    backgroundColor: '#0277BD',
+    justifyContent: 'flex-start',
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+  homeHeaderLeftRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flex: 1,
+    gap: 12,
+  },
+  homeHeaderAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.26)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  homeHeaderAvatarInner: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeHeaderTitleBlock: {
+    flex: 0,
+    alignItems: 'flex-start',
+  },
+  homeHeaderWelcomeText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    fontFamily: 'System',
+  },
+  homeHeaderNameText: {
+    fontSize: 22,
     color: '#FFFFFF',
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    fontFamily: 'System',
+    marginTop: 2,
   },
-  headerSpacer: {
-    width: 24,
+  homeHeaderCountText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.78)',
+    fontWeight: '600',
+    fontFamily: 'System',
+    marginTop: 4,
+  },
+  homeHeaderMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  homeHeaderMetaText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.72)',
+    fontFamily: 'System',
+    fontWeight: '600',
+  },
+  homeHeaderMetaSeparator: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    marginHorizontal: 8,
+    fontFamily: 'System',
+    fontWeight: '700',
   },
   loadingContainer: {
     flex: 1,
@@ -488,6 +618,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#10B981',
     fontWeight: '500',
+  },
+  homeHeaderCountText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.78)',
+    fontWeight: '600',
+    fontFamily: 'System',
   },
   insightsContainer: {
     paddingHorizontal: 20,

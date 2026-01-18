@@ -363,14 +363,26 @@ export default function CalendarScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: 'transparent', flex: 1 }]} edges={['top']}>
-      <ScrollView 
-        contentContainerStyle={{ flexGrow: 1 ,  zIndex: 5, elevation:4}}
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, zIndex: 5, elevation: 4 }}
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={true}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
       >
+        <View pointerEvents="none" style={styles.pageBackground}>
+          <View style={styles.backgroundOrbOne} />
+          <View style={styles.backgroundOrbTwo} />
+          <View style={styles.backgroundOrbThree} />
+          <View style={styles.backgroundOrbFour} />
+          <LinearGradient
+            colors={['rgba(2, 119, 189, 0.14)', 'rgba(1, 87, 155, 0.08)', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.backgroundRibbon}
+          />
+        </View>
         <AppErrorBanner error={error} onRetry={() => loadEvents(true)} disabled={isRefreshing} />
 
         <View style={[homeStyles.homeHeaderContainer, {  zIndex: 1 }]}> 
@@ -429,71 +441,43 @@ export default function CalendarScreen({ navigation }) {
         )}
 
         {/* Stats Section */}
-        <View style={[styles.statsSection, { zIndex: 1, elevation: 3 }]} > 
-          <LinearGradient
-            colors={['#10B981', '#059669']}
-            style={styles.statCard}
-          >
-            <Feather name="calendar" size={22} color="#FFFFFF" />
-            <Text style={styles.statNumber}>{todayEvents.length}</Text>
-            <Text style={styles.statLabel}>Today</Text>
-          </LinearGradient>
-          <LinearGradient
-            colors={['#F59E0B', '#D97706']}
-            style={styles.statCard}
-          >
-            <Feather name="clock" size={22} color="#FFFFFF" />
-            <Text style={styles.statNumber}>{thisWeekEvents.length}</Text>
-            <Text style={styles.statLabel}>This Week</Text>
-          </LinearGradient>
-          <LinearGradient
-            colors={['#EF4444', '#DC2626']}
-            style={styles.statCard}
-          >
-            <Feather name="trending-up" size={22} color="#FFFFFF" />
-            <Text style={styles.statNumber}>{thisMonthEvents.length}</Text>
-            <Text style={styles.statLabel}>This Month</Text>
-          </LinearGradient>
-        </View>
-
-        {/* Filter Chips */}
-        <View style={styles.filterChipsContainer}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterChipsScroll}
-          >
-            {[
-              { key: 'all', label: 'All', icon: 'grid' },
-              { key: 'thisWeek', label: 'This Week', icon: 'calendar' },
-              { key: 'free', label: 'Free', icon: 'tag' },
-              { key: 'online', label: 'Online', icon: 'wifi' },
-              { key: 'inperson', label: 'In-person', icon: 'users' },
-              { key: 'favorites', label: 'Favorites', icon: 'heart' }
-            ].map((filter) => (
-              <TouchableOpacity
-                key={filter.key}
-                style={[
-                  styles.filterChip,
-                  activeFilter === filter.key && styles.filterChipActive
-                ]}
-                onPress={() => setActiveFilter(filter.key)}
-                activeOpacity={0.8}
-              >
-                <Feather 
-                  name={filter.icon} 
-                  size={14} 
-                  color={activeFilter === filter.key ? '#FFFFFF' : '#6B7280'} 
-                />
-                <Text style={[
-                  styles.filterChipText,
-                  activeFilter === filter.key && styles.filterChipTextActive
-                ]}>
-                  {filter.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+        <View style={[styles.statsSection, { zIndex: 1, elevation: 3 }]}>
+          <View style={[styles.statCardContainer, styles.statCardSpacing]}>
+            <View style={homeStyles.countdownInlineDepthLayer} pointerEvents="none">
+              <View style={styles.statCardGlowOrbOneGreen} />
+              <View style={styles.statCardGlowOrbTwoGreen} />
+              <View style={homeStyles.countdownInlineHighlight} />
+            </View>
+            <View style={styles.statCardContent}>
+              <Feather name="calendar" size={22} color="#FFFFFF" />
+              <Text style={styles.statNumber}>{todayEvents.length}</Text>
+              <Text style={styles.statLabel} numberOfLines={1}>Today</Text>
+            </View>
+          </View>
+          <View style={[styles.statCardContainer, styles.statCardSpacing]}>
+            <View style={homeStyles.countdownInlineDepthLayer} pointerEvents="none">
+              <View style={styles.statCardGlowOrbOneOrange} />
+              <View style={styles.statCardGlowOrbTwoOrange} />
+              <View style={homeStyles.countdownInlineHighlight} />
+            </View>
+            <View style={styles.statCardContent}>
+              <Feather name="clock" size={22} color="#FFFFFF" />
+              <Text style={styles.statNumber}>{thisWeekEvents.length}</Text>
+              <Text style={styles.statLabel} numberOfLines={1}>This Week</Text>
+            </View>
+          </View>
+          <View style={styles.statCardContainer}>
+            <View style={homeStyles.countdownInlineDepthLayer} pointerEvents="none">
+              <View style={styles.statCardGlowOrbOneRed} />
+              <View style={styles.statCardGlowOrbTwoRed} />
+              <View style={homeStyles.countdownInlineHighlight} />
+            </View>
+            <View style={styles.statCardContent}>
+              <Feather name="trending-up" size={22} color="#FFFFFF" />
+              <Text style={styles.statNumber}>{thisMonthEvents.length}</Text>
+              <Text style={styles.statLabel} numberOfLines={1}>This Month</Text>
+            </View>
+          </View>
         </View>
 
         {/* Month Navigation */}
@@ -530,7 +514,11 @@ export default function CalendarScreen({ navigation }) {
           colors={['#0277BD', '#01579B']}
           style={styles.calendarContainer}
         >
-          <View style={styles.calendarContainer}>
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
+          <View style={[styles.calendarContainer, styles.blueCompactCalendarContainer]}>
             {/* Days of Week */}
             <View style={styles.weekDaysRow}>
               {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
@@ -615,6 +603,11 @@ export default function CalendarScreen({ navigation }) {
                   onPress={() => handleEventPress(event)}
                   activeOpacity={0.8}
                 >
+                  <View style={styles.upcomingEventDepthLayer} pointerEvents="none">
+                    <View style={styles.upcomingEventGlowOrbOne} />
+                    <View style={styles.upcomingEventGlowOrbTwo} />
+                    <View style={styles.upcomingEventHighlight} />
+                  </View>
                   <View
                     style={styles.upcomingEventGradient}
                   >
@@ -633,7 +626,7 @@ export default function CalendarScreen({ navigation }) {
                       
                       <View style={styles.upcomingEventMeta}>
                         <View style={styles.upcomingMetaRow}>
-                          <Feather name="calendar" size={14} color="#0277BD" />
+                          <Feather name="calendar" size={14} color="rgba(255, 255, 255, 0.9)" />
                           <Text style={styles.upcomingMetaText}>
                             {new Date(event.date).toLocaleDateString('en-US', { 
                               month: 'short', 
@@ -644,7 +637,7 @@ export default function CalendarScreen({ navigation }) {
                         </View>
                         
                         <View style={styles.upcomingMetaRow}>
-                          <Feather name="clock" size={14} color="#0277BD" />
+                          <Feather name="clock" size={14} color="rgba(255, 255, 255, 0.9)" />
                           <Text style={styles.upcomingMetaText}>
                             {formatTime(event.time)}
                           </Text>
@@ -652,7 +645,7 @@ export default function CalendarScreen({ navigation }) {
                       </View>
 
                       <View style={styles.upcomingMetaRow}>
-                        <Feather name="map-pin" size={14} color="#0277BD" />
+                        <Feather name="map-pin" size={14} color="rgba(255, 255, 255, 0.9)" />
                         <Text style={styles.upcomingMetaText} numberOfLines={1}>
                           {event.location?.city || event.location?.address || 'Location TBA'}
                         </Text>
@@ -660,7 +653,7 @@ export default function CalendarScreen({ navigation }) {
                     </View>
 
                     {/* Arrow Icon */}
-                    <Feather name="chevron-right" size={20} color="#0277BD" />
+                    <Feather name="chevron-right" size={20} color="rgba(255, 255, 255, 0.9)" />
                   </View>
                 </TouchableOpacity>
               ))
@@ -673,8 +666,65 @@ export default function CalendarScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#F8FAFC',
+  },
+  pageBackground: {
+    position: 'absolute',
+    top: -140,
+    left: -120,
+    right: -120,
+    height: 520,
+    zIndex: -1,
+  },
+  backgroundOrbOne: {
+    position: 'absolute',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(4, 73, 112, 0.46)',
+    top: 0,
+    left: 0,
+  },
+  backgroundOrbTwo: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 180,
+    backgroundColor: 'rgba(1, 132, 155, 0.67)',
+    top: 700,
+    right: -40,
+  },
+  backgroundOrbThree: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 130,
+    backgroundColor: 'rgba(2, 137, 209, 0.59)',
+    top: 700,
+    left: 0,
+  },
+  backgroundOrbFour: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(1, 87, 155, 0.18)',
+    bottom: -100,
+    right: 10,
+  },
+  backgroundRibbon: {
+    position: 'absolute',
+    top: 200,
+    left: -60,
+    right: -60,
+    height: 220,
+    transform: [{ rotate: '-6deg' }],
+  },
+  blueCompactCalendarContainer: {
+    maxHeight: 300,
+    backgroundColor: 'rgba(2, 119, 189, 0.05)',
+    borderRadius: 12,
+    padding: 4,
   },
   // Filter Styles
   filterContainer: {
@@ -736,6 +786,8 @@ const styles = StyleSheet.create({
     marginVertical: 0,
     borderRadius: 8,
     backgroundColor: '#F3F4F6',
+    paddingVertical: 1,
+    paddingHorizontal: 1,
   },
   selectedDayCell: {
     backgroundColor: '#0277BD',
@@ -744,10 +796,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#059669',
   },
   dayText: {
-    fontSize: 15,
-    bottom: 'center',
+    fontSize: 12,
     color: '#374151',
     fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   activeDayText: {
     color: '#FFFFFF',
@@ -781,17 +836,61 @@ const styles = StyleSheet.create({
   upcomingEventCard: {
     marginBottom: 12,
     borderRadius: 16,
+    backgroundColor: '#060B14',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    shadowColor: 'rgba(0, 0, 0, 0.4)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
     overflow: 'hidden',
+  },
+  upcomingEventDepthLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  upcomingEventGlowOrbOne: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    top: -100,
+    left: -90,
+    backgroundColor: 'rgba(2, 119, 189, 0.35)',
+  },
+  upcomingEventGlowOrbTwo: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    bottom: -120,
+    right: -120,
+    backgroundColor: 'rgba(1, 87, 155, 0.30)',
+  },
+  upcomingEventHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '55%',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    transform: [{ skewY: '-8deg' }],
+    opacity: 0.5,
   },
   upcomingEventGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     gap: 12,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: 'transparent',
+    zIndex: 1,
   },
   daysLeftBadge: {
-    backgroundColor: '#0277BD',
+    backgroundColor: 'rgba(2, 119, 189, 0.8)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
@@ -811,7 +910,7 @@ const styles = StyleSheet.create({
   upcomingEventTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0277BD',
+    color: '#FFFFFF',
     marginBottom: 4,
     lineHeight: 22,
   },
@@ -827,7 +926,7 @@ const styles = StyleSheet.create({
   },
   upcomingMetaText: {
     fontSize: 13,
-    color: '#0277BD',
+    color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '600',
   },
   // Stats Section
@@ -835,16 +934,98 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    gap: 12,
+    justifyContent: 'space-between',
     backgroundColor: 'transparent',
   },
-  statCard: {
+  statCardContainer: {
     flex: 1,
-    borderRadius: 18,
-    paddingVertical: 18,
+    flexBasis: 0,
+    minWidth: 0,
+    height: 90,
+    borderRadius: 20,
+    backgroundColor: '#060B14',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    shadowColor: 'rgba(0, 0, 0, 1)',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.55,
+    shadowRadius: 22,
+    elevation: 10,
+    overflow: 'hidden',
+  },
+  statCardSpacing: {
+    marginRight: 12,
+  },
+  statCardGlowOrbOneGreen: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    top: -120,
+    left: -110,
+    backgroundColor: 'rgba(2, 119, 189, 0.35)',
+  },
+  statCardGlowOrbTwoGreen: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    bottom: -140,
+    right: -140,
+    backgroundColor: 'rgba(1, 87, 155, 0.30)',
+  },
+  statCardGlowOrbOneOrange: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    top: -120,
+    left: -110,
+    backgroundColor: 'rgba(2, 119, 189, 0.35)',
+  },
+  statCardGlowOrbTwoOrange: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    bottom: -140,
+    right: -140,
+    backgroundColor: 'rgba(1, 87, 155, 0.30)',
+  },
+  statCardGlowOrbOneRed: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    top: -120,
+    left: -110,
+    backgroundColor: 'rgba(2, 119, 189, 0.35)',
+  },
+  statCardGlowOrbTwoRed: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    bottom: -140,
+    right: -140,
+    backgroundColor: 'rgba(1, 87, 155, 0.30)',
+  },
+  statCardGradient: {
+    flex: 1,
+    borderRadius: 20,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  statCardContent: {
+    flex: 1,
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
   },
   statLabel: {
     fontSize: 12,
@@ -853,7 +1034,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#FFFFFF',
   },

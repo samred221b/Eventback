@@ -11,6 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { Asset } from 'expo-asset';
 
 import analyticsService from './services/analyticsService';
+import { logger } from './utils/logger';
 
 import { QueryProvider } from './providers/QueryProvider';
 import { FavoritesProvider } from './providers/FavoritesProvider';
@@ -45,6 +46,7 @@ import UsageStatisticsScreen from './screens/UsageStatisticsScreen';
 import OrganizerProfileScreen from './screens/OrganizerProfileScreen';
 import Organprofilescreenforusers from './screens/Organprofilescreenforusers';
 import OrganizerEventsScreen from './screens/OrganizerEventsScreen';
+import MyEventsScreen from './screens/MyEventsScreen';
 import OrganizerMessageInbox from './components/OrganizerMessageInbox';
 
 import { Provider } from 'react-redux';
@@ -53,6 +55,7 @@ import { store, persistor } from './store';
 import ScreenBackground from './components/ScreenBackground';
 import ErrorBoundary from './components/ErrorBoundary';
 import * as Sentry from '@sentry/react-native';
+import { ThemeProvider, useTheme } from './providers/ThemeProvider';
 
 Sentry.init({
   dsn: 'https://0c1e979aaaad1fbe62132b1617719ce8@o4510617427705856.ingest.de.sentry.io/4510617430589520',
@@ -89,6 +92,7 @@ function OrganizerStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="OrganizerLogin" component={OrganizerLoginScreen} />
       <Stack.Screen name="OrganizerDashboard" component={OrganizerDashboardScreen} />
+      <Stack.Screen name="MyEvents" component={MyEventsScreen} />
       <Stack.Screen name="OrganizerInbox" component={OrganizerMessageInbox} />
       <Stack.Screen name="Analytics" component={AnalyticsScreen} />
       <Stack.Screen name="Pricing" component={PricingScreen} />
@@ -158,6 +162,7 @@ function FavoritesStack() {
 function MainTabs() {
   const insets = useSafeAreaInsets();
   const tabHeight = 65 + insets.bottom;
+  const { colors } = useTheme();
 
   return (
     <Tab.Navigator
@@ -166,14 +171,14 @@ function MainTabs() {
         tabBarStyle: {
           height: tabHeight,
           paddingBottom: insets.bottom,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: colors.tabBar,
           borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
+          borderTopColor: colors.tabBarBorder,
           zIndex: 100,
           elevation: 10,
         },
-        tabBarActiveTintColor: '#0277BD',
-        tabBarInactiveTintColor: '#6B7280',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedText,
       }}
     >
       <Tab.Screen
@@ -222,6 +227,7 @@ function App() {
   const navigationRef = React.useRef(null);
   const routeNameRef = React.useRef(null);
   const appStateRef = React.useRef(AppState.currentState);
+  const { navigationTheme } = useTheme();
 
   // Expo Updates hook
   const { showUpdatePrompt, applyUpdate, dismissUpdate } = useExpoUpdates();
@@ -233,9 +239,9 @@ function App() {
       StatusBar.setBarStyle('light-content', true);
       StatusBar.setBackgroundColor('#000000', true);
       StatusBar.setTranslucent(false);
-      console.log('Status bar set to black with white text (opaque)');
+      logger.log('Status bar set to black with white text (opaque)');
     } catch (error) {
-      console.warn('Error setting status bar:', error);
+      logger.warn('Error setting status bar:', error);
     }
   };
 
@@ -247,7 +253,7 @@ function App() {
   // Handle app state changes
   useEffect(() => {
     const handleAppStateChange = (nextAppState) => {
-      console.log('App state changed to:', nextAppState);
+      logger.log('App state changed to:', nextAppState);
 
       if (nextAppState === 'active') {
         // App came to foreground, ensure status bar is correct
@@ -298,7 +304,7 @@ function App() {
           require('./assets/Logo.png'),
         ]);
       } catch (e) {
-        console.warn('App prepare error:', e);
+        logger.warn('App prepare error:', e);
       } finally {
         if (isMounted) setAppReady(true);
         await SplashScreen.hideAsync();
@@ -333,6 +339,7 @@ function App() {
         />
         <NavigationContainer
           ref={navigationRef}
+          theme={navigationTheme}
           onReady={async () => {
             try {
               // Ensure status bar is set when navigation is ready
@@ -374,6 +381,7 @@ function App() {
             <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
             <Stack.Screen name="Organprofilescreenforusers" component={Organprofilescreenforusers} />
             <Stack.Screen name="OrganizerEvents" component={OrganizerEventsScreen} />
+            <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
             <Stack.Screen name="AdminEvents" component={AdminEventsScreen} />
             <Stack.Screen name="AdminAnalytics" component={AdminAnalyticsScreen} />
             <Stack.Screen name="AdminOrganizers" component={AdminOrganizersScreen} />
@@ -395,7 +403,9 @@ export default function AppWrapper() {
           <QueryProvider>
             <AuthProvider>
               <FavoritesProvider>
-                <App />
+                <ThemeProvider>
+                  <App />
+                </ThemeProvider>
               </FavoritesProvider>
             </AuthProvider>
           </QueryProvider>

@@ -12,10 +12,12 @@ import { logger } from '../utils/logger';
 import AppErrorBanner from '../components/AppErrorBanner';
 import AppErrorState from '../components/AppErrorState';
 import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
+import { useTheme } from '../providers/ThemeProvider';
 import homeStyles from '../styles/homeStyles';
 
 export default function AboutScreen({ navigation }) {
   const appVersion = Constants?.expoConfig?.version || Constants?.manifest?.version || '1.0.2';
+  const { mode, setThemeMode, isDark } = useTheme();
   const [showBugModal, setShowBugModal] = useState(false);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
   const [isUpdateChecking, setIsUpdateChecking] = useState(false);
@@ -298,6 +300,33 @@ export default function AboutScreen({ navigation }) {
               <Feather name="globe" size={20} color="#0277BD" />
               <Text style={styles.contactText}>www.eventopia.com</Text>
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Appearance</Text>
+            <View style={styles.themeToggleContainer}>
+              <TouchableOpacity
+                style={[styles.themeOption, mode === 'system' && styles.themeOptionActive]}
+                onPress={() => setThemeMode('system')}
+              >
+                <Feather name="smartphone" size={18} color={mode === 'system' ? '#FFFFFF' : '#64748B'} />
+                <Text style={[styles.themeOptionText, mode === 'system' && styles.themeOptionTextActive]}>System</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.themeOption, mode === 'light' && styles.themeOptionActive]}
+                onPress={() => setThemeMode('light')}
+              >
+                <Feather name="sun" size={18} color={mode === 'light' ? '#FFFFFF' : '#64748B'} />
+                <Text style={[styles.themeOptionText, mode === 'light' && styles.themeOptionTextActive]}>Light</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.themeOption, mode === 'dark' && styles.themeOptionActive]}
+                onPress={() => setThemeMode('dark')}
+              >
+                <Feather name="moon" size={18} color={mode === 'dark' ? '#FFFFFF' : '#64748B'} />
+                <Text style={[styles.themeOptionText, mode === 'dark' && styles.themeOptionTextActive]}>Dark</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.section}>
@@ -794,6 +823,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9CA3AF',
     fontWeight: '500',
+  },
+  themeToggleContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  themeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    gap: 8,
+  },
+  themeOptionActive: {
+    backgroundColor: '#0277BD',
+    borderColor: '#0277BD',
+  },
+  themeOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  themeOptionTextActive: {
+    color: '#FFFFFF',
   },
   // Modal Styles
   modalOverlay: {

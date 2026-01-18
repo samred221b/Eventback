@@ -293,11 +293,25 @@ const AdminOrganizersScreen = ({ navigation }) => {
       const response = await apiService.get(`/admin/organizers/${organizerId}`, { requireAuth: true });
       if (response.success) {
         navigation.navigate('AdminOrganizerDetails', { organizer: response.data });
+      } else {
+        // Fallback: use the organizer data from the list
+        const organizer = allOrganizers.find(org => org._id === organizerId);
+        if (organizer) {
+          navigation.navigate('AdminOrganizerDetails', { organizer });
+        } else {
+          setError(toAppError(new Error('Organizer not found'), { fallbackMessage: 'Organizer not found' }));
+        }
       }
     } catch (error) {
-      setError(toAppError(error, { fallbackMessage: 'Failed to fetch organizer details' }));
+      // Fallback: use the organizer data from the list
+      const organizer = allOrganizers.find(org => org._id === organizerId);
+      if (organizer) {
+        navigation.navigate('AdminOrganizerDetails', { organizer });
+      } else {
+        setError(toAppError(error, { fallbackMessage: 'Failed to fetch organizer details' }));
+      }
     }
-  }, [navigation]);
+  }, [navigation, allOrganizers]);
 
   const renderOrganizerCard = useCallback((organizer) => (
     <View key={organizer._id} style={adminOrganizersStyles.card}>
@@ -415,6 +429,50 @@ const AdminOrganizersScreen = ({ navigation }) => {
     }
   }, [searchQuery, filters.search]);
 
+  // Apply search filter locally when search query or all organizers change
+  useEffect(() => {
+    if (!filters.search || filters.search.trim() === '') {
+      // No search query, show all organizers (or category-filtered)
+      filterOrganizersByCategory(selectedCategory);
+      return;
+    }
+
+    const query = filters.search.toLowerCase().trim();
+    let filtered = [...allOrganizers];
+    
+    // Apply text search
+    filtered = filtered.filter(organizer => {
+      const nameMatch = organizer.name?.toLowerCase().includes(query);
+      const emailMatch = organizer.email?.toLowerCase().includes(query);
+      const locationMatch = organizer.location?.city?.toLowerCase().includes(query) ||
+                           organizer.location?.address?.toLowerCase().includes(query) ||
+                           (typeof organizer.location === 'string' && organizer.location.toLowerCase().includes(query));
+      
+      return nameMatch || emailMatch || locationMatch;
+    });
+
+    // Apply category filter on top of search results
+    switch (selectedCategory) {
+      case 'active':
+        filtered = filtered.filter(org => org.isActive);
+        break;
+      case 'inactive':
+        filtered = filtered.filter(org => !org.isActive);
+        break;
+      case 'verified':
+        filtered = filtered.filter(org => org.isVerified);
+        break;
+      case 'unverified':
+        filtered = filtered.filter(org => !org.isVerified);
+        break;
+      default:
+        // 'all' - no additional filtering
+        break;
+    }
+    
+    setOrganizers(filtered);
+  }, [filters.search, allOrganizers, selectedCategory]);
+
   if (loading && organizers.length === 0) {
     return (
       <View style={adminOrganizersStyles.container}>
@@ -516,42 +574,25 @@ const AdminOrganizersScreen = ({ navigation }) => {
       {/* Filters */}
       <View style={adminOrganizersStyles.filtersContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity
-            style={[
-              adminOrganizersStyles.filterChip,
-              filters.status === 'all' && adminOrganizersStyles.filterChipActive
-            ]}
-            onPress={() => setFilters(prev => ({ ...prev, status: 'all' }))}
-          >
-            <Text style={[
-              adminOrganizersStyles.filterChipText,
-              filters.status === 'all' && adminOrganizersStyles.filterChipTextActive
-            ]}>All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              adminOrganizersStyles.filterChip,
-              filters.status === 'active' && adminOrganizersStyles.filterChipActive
-            ]}
-            onPress={() => setFilters(prev => ({ ...prev, status: 'active' }))}
-          >
-            <Text style={[
-              adminOrganizersStyles.filterChipText,
-              filters.status === 'active' && adminOrganizersStyles.filterChipTextActive
-            ]}>Active</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              adminOrganizersStyles.filterChip,
-              filters.verified === 'true' && adminOrganizersStyles.filterChipActive
-            ]}
-            onPress={() => setFilters(prev => ({ ...prev, verified: prev.verified === 'true' ? '' : 'true' }))}
-          >
-            <Text style={[
-              adminOrganizersStyles.filterChipText,
-              filters.verified === 'true' && adminOrganizersStyles.filterChipTextActive
-            ]}>Verified</Text>
-          </TouchableOpacity>
+          {categories.map((category) => (
+            <TouchableOpacity
+              key={category.key}
+              style={[
+                adminOrganizersStyles.filterChip,
+                selectedCategory === category.key && adminOrganizersStyles.filterChipActive,
+              ]}
+              onPress={() => handleCategoryPress(category.key)}
+            >
+              <Text
+                style={[
+                  adminOrganizersStyles.filterChipText,
+                  selectedCategory === category.key && adminOrganizersStyles.filterChipTextActive,
+                ]}
+              >
+                {category.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
       </View>
 

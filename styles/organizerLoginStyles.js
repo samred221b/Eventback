@@ -40,6 +40,7 @@ const organizerLoginStyles = StyleSheet.create({
     marginHorizontal: 20,
     borderRadius: 20,
     padding: 24,
+    borderWidth: 2,
     marginTop: -20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },

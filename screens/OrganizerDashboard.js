@@ -169,7 +169,7 @@ export default function OrganizerDashboard({ navigation, route }) {
           category: event.category,
           price: event.price || 0,
           views: event.views || 0,
-          likes: event.likeCount || 0,
+          likes: (event.likes && Array.isArray(event.likes) ? event.likes.length : event.likeCount || 0),
           location: event.location,
           description: event.description,
           featured: event.featured
@@ -193,7 +193,7 @@ export default function OrganizerDashboard({ navigation, route }) {
             category: event.category,
             price: event.price || 0,
             views: event.views || 0,
-            likes: event.likeCount || 0,
+            likes: (event.likes && Array.isArray(event.likes) ? event.likes.length : event.likeCount || 0),
             location: event.location,
             description: event.description,
             featured: event.featured
@@ -798,8 +798,10 @@ export default function OrganizerDashboard({ navigation, route }) {
 
       <View style={styles.modernDashboardSection}>
         <View style={styles.modernDashboardSectionHeader}>
-          <Text style={styles.modernDashboardSectionTitle}>My Events</Text>
-          <Text style={styles.modernDashboardSectionCount}>{organizerEvents.length}</Text>
+          <View style={styles.modernDashboardSectionTitleRow}>
+            <Text style={styles.modernDashboardSectionTitle}>My Events</Text>
+            <Text style={styles.modernDashboardSectionCount}>{organizerEvents.length}</Text>
+          </View>
         </View>
 
         <AppErrorBanner error={error} onRetry={() => loadOrganizerEvents(true)} disabled={isLoading} />
@@ -834,6 +836,19 @@ export default function OrganizerDashboard({ navigation, route }) {
             {organizerEvents.map(renderEventCard)}
           </View>
         )}
+      </View>
+
+      <View style={styles.modernDashboardSection}>
+        <SafeTouchableOpacity 
+          style={styles.modernDashboardActionButton}
+          onPress={() => navigation.navigate('MyEvents')}
+          activeOpacity={0.9}
+        >
+          <View style={[styles.modernDashboardActionGradient, { backgroundColor: '#0277BD' }]}>
+            <Feather name="calendar" size={22} color="#FFFFFF" />
+            <Text style={styles.modernDashboardActionText}>My Events</Text>
+          </View>
+        </SafeTouchableOpacity>
       </View>
 
       {/* Analytics Button */}
@@ -1019,8 +1034,8 @@ export default function OrganizerDashboard({ navigation, route }) {
                   <Feather name="user" size={16} color="#FFFFFF" />
                 </View>
                 <View>
-                  <Text style={styles.dashboardSettingText}>Update Profile</Text>
-                  <Text style={styles.dashboardSettingSubtext}>Edit your personal information</Text>
+                  <Text style={styles.dashboardSettingText}>Organizer Profile</Text>
+                  <Text style={styles.dashboardSettingSubtext}>Edit your organizer information</Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={16} color="#94A3B8" />

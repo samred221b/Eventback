@@ -32,7 +32,7 @@ const AdminAnalyticsScreen = ({ navigation }) => {
 
   const cacheAnalytics = async (analytics) => {
     try {
-      await cacheService.set(ANALYTICS_CACHE_KEY, analytics, { ttlMs: TTL.ONE_HOUR });
+      await cacheService.set(ANALYTICS_CACHE_KEY, analytics, { ttlMs: TTL.THREE_HOURS });
     } catch (e) {
       // Silent fail
     }
@@ -47,9 +47,8 @@ const AdminAnalyticsScreen = ({ navigation }) => {
     }
   };
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (forceRefresh = false) => {
     try {
-      setLoading(true);
       setError(null);
 
       // Check network status
@@ -57,13 +56,18 @@ const AdminAnalyticsScreen = ({ navigation }) => {
       const isConnected = netInfo.isConnected && netInfo.isInternetReachable;
       setIsOffline(!isConnected);
 
-      // If offline, try to load from cache
-      if (!isConnected) {
+      // If not forcing refresh, try cache first
+      if (!forceRefresh) {
         const cachedAnalytics = await loadAnalyticsFromCache();
         if (cachedAnalytics) {
           setAnalytics(cachedAnalytics);
           setLoading(false);
           setRefreshing(false);
+          
+          // If online, fetch fresh data in background
+          if (isConnected) {
+            fetchFreshAnalytics();
+          }
           return;
         }
       }
@@ -78,12 +82,8 @@ const AdminAnalyticsScreen = ({ navigation }) => {
         return;
       }
 
-      const response = await apiService.get('/admin/analytics', { requireAuth: true });
-      
-      if (response.success) {
-        setAnalytics(response.data);
-        cacheAnalytics(response.data); // Cache the data
-      }
+      // Fetch fresh data
+      await fetchFreshAnalytics();
     } catch (error) {
       // If network error, try to load from cache
       const cachedAnalytics = await loadAnalyticsFromCache();
@@ -101,9 +101,18 @@ const AdminAnalyticsScreen = ({ navigation }) => {
     }
   };
 
+  const fetchFreshAnalytics = async () => {
+    const response = await apiService.get('/admin/analytics', { requireAuth: true });
+    
+    if (response.success) {
+      setAnalytics(response.data);
+      cacheAnalytics(response.data); // Cache the data
+    }
+  };
+
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchAnalytics();
+    fetchAnalytics(true); // Force refresh
   };
 
   const formatNumber = (num) => {
@@ -196,7 +205,7 @@ const AdminAnalyticsScreen = ({ navigation }) => {
         setAnalytics(cachedAnalytics);
         setLoading(false);
       }
-      // Always try to fetch fresh data
+      // Always try to fetch fresh data (will use cache-first logic)
       fetchAnalytics();
     };
 

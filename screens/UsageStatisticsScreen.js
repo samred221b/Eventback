@@ -7,11 +7,15 @@ import { useAuth } from '../providers/AuthProvider';
 import homeStyles from '../styles/homeStyles';
 import apiService from '../services/api';
 import { logger } from '../utils/logger';
+import cacheService, { TTL } from '../utils/cacheService';
+import NetInfo from '@react-native-community/netinfo';
 
 export default function UsageStatisticsScreen({ navigation }) {
   const { user, organizerProfile } = useAuth();
   const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const [statistics, setStatistics] = useState({
     totalEvents: 0,
     publishedEvents: 0,
@@ -25,15 +29,84 @@ export default function UsageStatisticsScreen({ navigation }) {
     recentActivity: []
   });
 
+  const STATS_CACHE_KEY = 'organizer:stats';
+
+  const cacheStatistics = async (stats) => {
+    try {
+      await cacheService.set(STATS_CACHE_KEY, stats, { ttlMs: TTL.ONE_HOUR });
+    } catch (e) {
+      // Silent fail
+    }
+  };
+
+  const loadStatisticsFromCache = async () => {
+    try {
+      const { data } = await cacheService.get(STATS_CACHE_KEY);
+      return data || null;
+    } catch (e) {
+      return null;
+    }
+  };
+
   useEffect(() => {
-    fetchUsageStatistics();
+    // Monitor network status
+    const unsubscribe = NetInfo.addEventListener(state => {
+      const isConnected = state.isConnected && state.isInternetReachable;
+      setIsOffline(!isConnected);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const fetchUsageStatistics = async () => {
+  useEffect(() => {
+    loadStatistics();
+  }, []);
+
+  const loadStatistics = async (refresh = false) => {
     try {
-      setIsLoading(true);
+      if (refresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+
+      // Check network status
+      const netInfo = await NetInfo.fetch();
+      const isConnected = netInfo.isConnected && netInfo.isInternetReachable;
+      setIsOffline(!isConnected);
+
+      // If offline and not refreshing, try to load from cache
+      if (!isConnected && !refresh) {
+        const cachedStats = await loadStatisticsFromCache();
+        if (cachedStats) {
+          setStatistics(cachedStats);
+          setIsLoading(false);
+          setIsRefreshing(false);
+          return;
+        }
+      }
+
+      // If offline and no cache, show cached data if available
+      if (!isConnected) {
+        const cachedStats = await loadStatisticsFromCache();
+        if (cachedStats) {
+          setStatistics(cachedStats);
+        }
+        setIsLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
+
+      // Try to load from cache first for instant UI
+      if (!refresh) {
+        const cachedStats = await loadStatisticsFromCache();
+        if (cachedStats) {
+          setStatistics(cachedStats);
+          setIsLoading(false);
+        }
+      }
       
-      // Fetch organizer stats from backend
+      // Fetch fresh data from backend
       const statsResponse = await apiService.get('/organizers/profile/stats', { requireAuth: true });
       const statsData = statsResponse?.data?.stats || {};
       
@@ -93,11 +166,23 @@ export default function UsageStatisticsScreen({ navigation }) {
       };
 
       setStatistics(realStats);
+      // Cache the fresh data
+      await cacheStatistics(realStats);
     } catch (error) {
       logger.error('Error fetching usage statistics:', error);
+      // Try to load from cache on error
+      const cachedStats = await loadStatisticsFromCache();
+      if (cachedStats) {
+        setStatistics(cachedStats);
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadStatistics(true);
   };
   
   const formatTimeAgo = (date) => {
@@ -147,6 +232,10 @@ export default function UsageStatisticsScreen({ navigation }) {
             end={{ x: 1, y: 1 }}
             style={homeStyles.homeHeaderCard}
           >
+            <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+              <View style={homeStyles.homeHeaderOrbOne} />
+              <View style={homeStyles.homeHeaderOrbTwo} />
+            </View>
             <View style={homeStyles.homeHeaderTopRow}>
               <View style={homeStyles.modernDashboardProfile}>
                 <View style={homeStyles.modernDashboardAvatar}>
@@ -160,6 +249,12 @@ export default function UsageStatisticsScreen({ navigation }) {
                 </View>
               </View>
               <View style={homeStyles.homeHeaderActions}>
+                <TouchableOpacity 
+                  style={styles.backButton}
+                  onPress={handleRefresh}
+                >
+                  <Feather name="refresh-cw" size={16} color="rgba(255, 255, 255, 1)" />
+                </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.backButton}
                   onPress={() => navigation.goBack()}
@@ -188,6 +283,10 @@ export default function UsageStatisticsScreen({ navigation }) {
           end={{ x: 1, y: 1 }}
           style={homeStyles.homeHeaderCard}
         >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
           <View style={homeStyles.homeHeaderTopRow}>
             <View style={homeStyles.modernDashboardProfile}>
               <View style={homeStyles.modernDashboardAvatar}>
@@ -203,6 +302,12 @@ export default function UsageStatisticsScreen({ navigation }) {
             <View style={homeStyles.homeHeaderActions}>
               <TouchableOpacity 
                 style={styles.backButton}
+                onPress={handleRefresh}
+              >
+                <Feather name="refresh-cw" size={16} color="rgba(255, 255, 255, 1)" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.backButton}
                 onPress={() => navigation.goBack()}
               >
                 <Text style={styles.backButtonText}>←</Text>
@@ -216,6 +321,12 @@ export default function UsageStatisticsScreen({ navigation }) {
             <Text style={homeStyles.homeHeaderMetaText}>Insights</Text>
             <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
             <Text style={homeStyles.homeHeaderMetaText}>Performance</Text>
+            {isOffline && (
+              <>
+                <Text style={homeStyles.homeHeaderMetaSeparator}>|</Text>
+                <Text style={[homeStyles.homeHeaderMetaText, { color: '#F59E0B' }]}>Offline</Text>
+              </>
+            )}
           </View>
         </LinearGradient>
       </View>
@@ -350,6 +461,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: '#64748B',
+  },
+  refreshButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    marginRight: 8,
   },
   backButton: {
     paddingHorizontal: 12,

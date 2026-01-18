@@ -486,6 +486,55 @@ const AdminEventsScreen = ({ navigation }) => {
     }
   }, [searchQuery, filters.search]);
 
+  // Apply search filter locally when search query or all events change
+  useEffect(() => {
+    if (!filters.search || filters.search.trim() === '') {
+      // No search query, show all events (or category-filtered)
+      filterEventsByCategory(selectedCategory);
+      return;
+    }
+
+    const query = filters.search.toLowerCase().trim();
+    let filtered = [...allEvents];
+    
+    // Apply text search
+    filtered = filtered.filter(event => {
+      const titleMatch = event.title?.toLowerCase().includes(query);
+      const organizerMatch = event.organizerName?.toLowerCase().includes(query) ||
+                           event.organizerId?.name?.toLowerCase().includes(query) ||
+                           event.organizer?.toLowerCase().includes(query);
+      const locationMatch = event.location?.address?.toLowerCase().includes(query) ||
+                           event.location?.city?.toLowerCase().includes(query) ||
+                           (typeof event.location === 'string' && event.location.toLowerCase().includes(query));
+      
+      return titleMatch || organizerMatch || locationMatch;
+    });
+
+    // Apply category filter on top of search results
+    switch (selectedCategory) {
+      case 'published':
+        filtered = filtered.filter(event => event.status === 'published');
+        break;
+      case 'draft':
+        filtered = filtered.filter(event => event.status === 'draft');
+        break;
+      case 'cancelled':
+        filtered = filtered.filter(event => event.status === 'cancelled');
+        break;
+      case 'completed':
+        filtered = filtered.filter(event => event.status === 'completed');
+        break;
+      case 'featured':
+        filtered = filtered.filter(event => event.featured);
+        break;
+      default:
+        // 'all' - no additional filtering
+        break;
+    }
+    
+    setEvents(filtered);
+  }, [filters.search, allEvents, selectedCategory]);
+
   if (loading && events.length === 0) {
     return (
       <View style={adminEventsStyles.container}>

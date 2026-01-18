@@ -580,6 +580,10 @@ const CreateEventScreen = ({ navigation, route }) => {
           end={{ x: 1, y: 1 }}
           style={homeStyles.homeHeaderCard}
         >
+          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+            <View style={homeStyles.homeHeaderOrbOne} />
+            <View style={homeStyles.homeHeaderOrbTwo} />
+          </View>
           <View style={homeStyles.modernDashboardHeaderTop}>
             <View style={homeStyles.modernDashboardProfile}>
               <View style={homeStyles.modernDashboardAvatar}>
@@ -1169,6 +1173,11 @@ const CreateEventScreen = ({ navigation, route }) => {
               onPress={() => handleInputChange('featured', !formData.featured)}
               activeOpacity={0.8}
             >
+              <View style={homeStyles.organizerBoxDepthLayer} pointerEvents="none">
+                <View style={homeStyles.organizerBoxGlowOrbOne} />
+                <View style={homeStyles.organizerBoxGlowOrbTwo} />
+                <View style={homeStyles.organizerBoxHighlight} />
+              </View>
               <View style={[createEventStyles.checkbox, formData.featured && createEventStyles.checkboxActive]}>
                 {formData.featured && <Feather name="check" size={16} color="#FFFFFF" />}
               </View>

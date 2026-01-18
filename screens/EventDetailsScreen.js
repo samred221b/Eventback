@@ -20,6 +20,7 @@ export default function EventDetailsScreen({ route, navigation }) {
   const [userResponse, setUserResponse] = useState(null); // Track user response: 'interested', 'going', 'maybe'
   const [isPricingExpanded, setIsPricingExpanded] = useState(false); // State for pricing dropdown
   const [showFullScreenImage, setShowFullScreenImage] = useState(false);
+  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   const normalizeRemoteImageUri = (uri) => {
   if (!uri || typeof uri !== 'string') return null;
@@ -78,6 +79,35 @@ export default function EventDetailsScreen({ route, navigation }) {
     };
     checkNetworkStatus();
   }, []);
+
+  // Countdown timer effect
+  useEffect(() => {
+    const calculateCountdown = () => {
+      const eventDate = new Date(event.date);
+      const now = new Date();
+      const diff = eventDate - now;
+
+      if (diff <= 0) {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setCountdown({ days, hours, minutes, seconds });
+    };
+
+    calculateCountdown();
+    const interval = setInterval(calculateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [event.date]);
+
+  const getCategoryColor = (category) => {
+    return ['#0277BD', '#01579B'];
+  };
 
   const handleShare = async () => {
     try {
@@ -258,28 +288,28 @@ export default function EventDetailsScreen({ route, navigation }) {
       icon: 'star',
       label: 'VIP',
       value: formatPrice(event.vipPrice, event.currency),
-      color: '#8B5CF6'
+      color: '#0277BD'
     }] : []),
     ...(event.vvipPrice ? [{
       key: 'vvip',
       icon: 'award',
       label: 'VVIP',
       value: formatPrice(event.vvipPrice, event.currency),
-      color: '#7C3AED'
+      color: '#0277BD'
     }] : []),
     ...(event.earlyBirdPrice ? [{
       key: 'earlyBird',
       icon: 'zap',
       label: 'Early Bird',
       value: formatPrice(event.earlyBirdPrice, event.currency),
-      color: '#10B981'
+      color: '#0277BD'
     }] : []),
     ...(event.onDoorPrice ? [{
       key: 'onDoor',
       icon: 'clock',
       label: 'On Door',
       value: formatPrice(event.onDoorPrice, event.currency),
-      color: '#F59E0B'
+      color: '#0277BD'
     }] : []),
   ];
 
@@ -356,6 +386,13 @@ export default function EventDetailsScreen({ route, navigation }) {
                 style={styles.heroImage}
                 resizeMode="cover"
               />
+              <View style={styles.countdownBadge}>
+                <Feather name="clock" size={14} color="#FFFFFF" />
+                <Text style={styles.countdownBadgeText}>
+                  {countdown.days > 0 && `${countdown.days}d `}
+                  {countdown.hours}h {countdown.minutes}m {countdown.seconds}s left
+                </Text>
+              </View>
             </TouchableOpacity>
           ) : (
             <LinearGradient
@@ -374,7 +411,6 @@ export default function EventDetailsScreen({ route, navigation }) {
             <Text style={styles.detailsMeta}>
               {formatDate(event.date)} • {event.location?.city || event.location?.country || 'Location'}{event.category ? ` • ${event.category}` : ''}
             </Text>
-            <Text style={styles.detailsMeta}>Related: {getRelatedHashtags(event.category).join(', ')}</Text>
             <View style={styles.divider} />
             <Text style={styles.cardTitle}>About the Experience</Text>
             <Text style={styles.detailsSubtitle}>
@@ -594,10 +630,17 @@ export default function EventDetailsScreen({ route, navigation }) {
               <Text style={styles.actionSectionTitle}>Get Involved</Text>
               <View style={styles.actionButtonsRow}>
                 <TouchableOpacity style={styles.actionPrimaryButton} onPress={handleGetDirections}>
-                  <LinearGradient colors={['#0277BD', '#01579B']} style={styles.actionButtonGradient}>
-                    <Feather name="navigation" size={18} color="#FFFFFF" />
-                    <Text style={styles.actionButtonText}>Directions</Text>
-                  </LinearGradient>
+                  <View style={styles.actionButtonBox}>
+                    <View style={styles.actionButtonDepthLayer} pointerEvents="none">
+                      <View style={styles.actionButtonGlowOrbOne} />
+                      <View style={styles.actionButtonGlowOrbTwo} />
+                      <View style={styles.actionButtonHighlight} />
+                    </View>
+                    <LinearGradient colors={getCategoryColor(event.category)} style={styles.actionButtonGradient}>
+                      <Feather name="navigation" size={18} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Directions</Text>
+                    </LinearGradient>
+                  </View>
                 </TouchableOpacity>
                 
                 <TouchableOpacity style={styles.actionSecondaryButton} onPress={handleShare}>
@@ -1199,26 +1242,73 @@ const styles = StyleSheet.create({
   },
   actionPrimaryButton: {
     flex: 2,
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
   },
   actionButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    gap: 10,
+    borderRadius: 14,
   },
   actionButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    letterSpacing: 0.5,
+  },
+  actionButtonBox: {
+    flex: 2,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    transform: [{ perspective: 1000 }],
+  },
+  actionButtonDepthLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  actionButtonGlowOrbOne: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    top: -60,
+    left: -50,
+    backgroundColor: 'rgba(1, 87, 155, 0.25)',
+  },
+  actionButtonGlowOrbTwo: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    bottom: -80,
+    right: -80,
+    backgroundColor: 'rgba(0, 60, 110, 0.20)',
+  },
+  actionButtonHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '55%',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    transform: [{ skewY: '-8deg' }],
+    opacity: 0.5,
   },
   actionSecondaryButton: {
     flex: 1,
@@ -1328,5 +1418,30 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: 20,
     padding: 8,
+  },
+  countdownBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.20)',
+    shadowColor: 'rgba(0, 0, 0, 1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  countdownBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 });

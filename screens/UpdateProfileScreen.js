@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { logger } from '../utils/logger';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../providers/AuthProvider';
+import { useTheme } from '../providers/ThemeProvider';
 import apiService from '../services/api';
 import homeStyles from '../styles/homeStyles';
 import AppErrorBanner from '../components/AppErrorBanner';
@@ -14,6 +15,7 @@ import { toAppError, APP_ERROR_SEVERITY } from '../utils/appError';
 
 export default function UpdateProfileScreen({ navigation }) {
   const { user, organizerProfile, updateOrganizerProfile, deleteOrganizerAccount, signOut } = useAuth();
+  const { mode, setThemeMode, colors } = useTheme();
   const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -30,6 +32,25 @@ export default function UpdateProfileScreen({ navigation }) {
     country: 'Ethiopia',
     profileImage: '',
   });
+
+  // Calculate profile completion percentage
+  const calculateProfileCompletion = () => {
+    const fields = [
+      profileData.name,
+      profileData.phone,
+      profileData.bio,
+      profileData.organization,
+      profileData.website,
+      profileData.address,
+      profileData.city,
+      profileData.profileImage,
+    ];
+    
+    const completedFields = fields.filter(field => field && field.trim() !== '').length;
+    const completionPercentage = Math.round((completedFields / fields.length) * 100);
+    
+    return completionPercentage;
+  };
 
   useEffect(() => {
     // Initialize form with existing profile data
@@ -214,7 +235,7 @@ export default function UpdateProfileScreen({ navigation }) {
                 </View>
               </View>
               <View>
-                <Text style={homeStyles.homeHeaderWelcomeText}>Update Profile</Text>
+                <Text style={homeStyles.homeHeaderWelcomeText}>Organizer Profile</Text>
                 <Text style={homeStyles.homeHeaderNameText}>{profileData.name || 'Organizer'}</Text>
               </View>
             </View>
@@ -244,9 +265,26 @@ export default function UpdateProfileScreen({ navigation }) {
       <ScrollView 
         style={styles.content} 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
       >
         <AppErrorBanner error={error} onRetry={() => setError(null)} disabled={isLoading || isUploadingImage} />
+
+        {/* Profile Completion Progress */}
+        <View style={styles.progressSection}>
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressTitle}>Profile Completion</Text>
+            <Text style={styles.progressPercentage}>{calculateProfileCompletion()}%</Text>
+          </View>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { width: `${calculateProfileCompletion()}%` }]} />
+          </View>
+          <Text style={styles.progressSubtext}>
+            {calculateProfileCompletion() === 100 
+              ? '🎉 Excellent! Your profile is complete.' 
+              : `Complete your profile to get ${100 - calculateProfileCompletion()}% more visibility`
+            }
+          </Text>
+        </View>
 
         {/* Profile Picture Section */}
         <View style={styles.profileImageSection}>
@@ -257,17 +295,22 @@ export default function UpdateProfileScreen({ navigation }) {
           >
             {isUploadingImage ? (
               <View style={[styles.profileImage, styles.uploadingContainer]}>
+                <ActivityIndicator size="small" color="#0277BD" />
                 <Text style={styles.uploadingText}>Uploading...</Text>
               </View>
             ) : profileData.profileImage ? (
               <Image source={{ uri: profileData.profileImage }} style={styles.profileImage} />
             ) : (
               <View style={styles.profileImagePlaceholder}>
-                <Text style={styles.profileImageIcon}>👤</Text>
+                <Feather name="user" size={40} color="#0277BD" />
               </View>
             )}
             <View style={styles.editImageBadge}>
-              <Text style={styles.editImageIcon}>{isUploadingImage ? '⏳' : '📷'}</Text>
+              {isUploadingImage ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Feather name="camera" size={16} color="#FFFFFF" />
+              )}
             </View>
           </TouchableOpacity>
           <Text style={styles.profileImageText}>Tap to change profile picture</Text>
@@ -275,7 +318,7 @@ export default function UpdateProfileScreen({ navigation }) {
 
         {/* Basic Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>👤 Basic Information</Text>
+          <Text style={styles.sectionTitle}>Basic Information</Text>
           
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Full Name *</Text>
@@ -325,7 +368,7 @@ export default function UpdateProfileScreen({ navigation }) {
 
         {/* Organization Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏢 Organization Information</Text>
+          <Text style={styles.sectionTitle}>Organization Information</Text>
           
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Organization Name</Text>
@@ -352,7 +395,7 @@ export default function UpdateProfileScreen({ navigation }) {
 
         {/* Location Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📍 Location Information</Text>
+          <Text style={styles.sectionTitle}>Location Information</Text>
           
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Address</Text>
@@ -387,29 +430,57 @@ export default function UpdateProfileScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Appearance / Theme Toggle */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <View style={styles.themeToggleContainer}>
+            <TouchableOpacity
+              style={[styles.themeOption, mode === 'system' && styles.themeOptionActive]}
+              onPress={() => setThemeMode('system')}
+            >
+              <Feather name="smartphone" size={18} color={mode === 'system' ? '#FFFFFF' : '#64748B'} />
+              <Text style={[styles.themeOptionText, mode === 'system' && styles.themeOptionTextActive]}>System</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.themeOption, mode === 'light' && styles.themeOptionActive]}
+              onPress={() => setThemeMode('light')}
+            >
+              <Feather name="sun" size={18} color={mode === 'light' ? '#FFFFFF' : '#64748B'} />
+              <Text style={[styles.themeOptionText, mode === 'light' && styles.themeOptionTextActive]}>Light</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.themeOption, mode === 'dark' && styles.themeOptionActive]}
+              onPress={() => setThemeMode('dark')}
+            >
+              <Feather name="moon" size={18} color={mode === 'dark' ? '#FFFFFF' : '#64748B'} />
+              <Text style={[styles.themeOptionText, mode === 'dark' && styles.themeOptionTextActive]}>Dark</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Account Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⚙️ Account Actions</Text>
+          <Text style={styles.sectionTitle}>Account Actions</Text>
           
           <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonIcon}>🔒</Text>
+            <Feather name="lock" size={20} color="#0277BD" style={styles.actionButtonIcon} />
             <View style={styles.actionButtonContent}>
               <Text style={styles.actionButtonTitle}>Change Password</Text>
               <Text style={styles.actionButtonSubtitle}>Update your account password</Text>
             </View>
-            <Text style={styles.actionButtonArrow}>→</Text>
+            <Feather name="chevron-right" size={16} color="#94A3B8" style={styles.actionButtonArrow} />
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={[styles.actionButton, styles.dangerButton]}
             onPress={handleDeleteAccount}
           >
-            <Text style={styles.actionButtonIcon}>🗑️</Text>
+            <Feather name="trash-2" size={20} color="#DC2626" style={styles.actionButtonIcon} />
             <View style={styles.actionButtonContent}>
               <Text style={[styles.actionButtonTitle, styles.dangerText]}>Delete Account</Text>
               <Text style={styles.actionButtonSubtitle}>Permanently delete your account</Text>
             </View>
-            <Text style={styles.actionButtonArrow}>→</Text>
+            <Feather name="chevron-right" size={16} color="#94A3B8" style={styles.actionButtonArrow} />
           </TouchableOpacity>
         </View>
 
@@ -431,7 +502,7 @@ export default function UpdateProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
@@ -461,7 +532,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   saveButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#0277BD',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -477,83 +548,96 @@ const styles = StyleSheet.create({
   },
   profileImageSection: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#0277BD',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
   },
   profileImageContainer: {
     position: 'relative',
     marginBottom: 12,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
+    borderColor: '#0277BD',
   },
   profileImagePlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#f3f4f6',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#F0F7FF',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#0277BD',
   },
   profileImageIcon: {
-    fontSize: 40,
-    color: '#9ca3af',
+    fontSize: 44,
+    color: '#0277BD',
   },
   editImageBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#3b82f6',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#0277BD',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#ffffff',
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   editImageIcon: {
-    fontSize: 16,
+    fontSize: 18,
   },
   profileImageText: {
     fontSize: 14,
-    color: '#6b7280',
-    fontWeight: '500',
+    color: '#0277BD',
+    fontWeight: '600',
   },
   uploadingContainer: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#F0F7FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   uploadingText: {
     fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '500',
+    color: '#0277BD',
+    fontWeight: '600',
   },
   section: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: '#0277BD',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1f2937',
+    color: '#0277BD',
     marginBottom: 16,
   },
   formGroup: {
@@ -570,21 +654,22 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: '#1F2937',
     marginBottom: 8,
   },
   formInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    padding: 12,
+    borderWidth: 1.5,
+    borderColor: '#E0E7FF',
+    borderRadius: 12,
+    padding: 14,
     fontSize: 14,
-    color: '#1f2937',
-    backgroundColor: '#ffffff',
+    color: '#1F2937',
+    backgroundColor: '#FFFFFF',
   },
   disabledInput: {
-    backgroundColor: '#f9fafb',
-    color: '#6b7280',
+    backgroundColor: '#F8FAFC',
+    color: '#64748B',
+    borderColor: '#E2E8F0',
   },
   textArea: {
     height: 80,
@@ -592,7 +677,7 @@ const styles = StyleSheet.create({
   },
   formNote: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#64748B',
     marginTop: 4,
     fontStyle: 'italic',
   },
@@ -600,15 +685,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
+    backgroundColor: '#F0F7FF',
+    borderRadius: 12,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
   },
   dangerButton: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
   },
   actionButtonIcon: {
-    fontSize: 20,
     marginRight: 12,
   },
   actionButtonContent: {
@@ -617,34 +704,116 @@ const styles = StyleSheet.create({
   actionButtonTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1f2937',
+    color: '#1F2937',
     marginBottom: 2,
   },
   dangerText: {
-    color: '#dc2626',
+    color: '#DC2626',
   },
   actionButtonSubtitle: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#64748B',
   },
   actionButtonArrow: {
     fontSize: 16,
-    color: '#9ca3af',
+    color: '#94A3B8',
     fontWeight: '700',
   },
   saveButtonLarge: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#0277BD',
     borderRadius: 12,
-    padding: 16,
+    padding: 18,
     alignItems: 'center',
     marginBottom: 20,
+    shadowColor: '#0277BD',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   saveButtonDisabled: {
-    backgroundColor: '#9ca3af',
+    backgroundColor: '#94A3B8',
   },
   saveButtonLargeText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
+  },
+  progressSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#0277BD',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  progressTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  progressPercentage: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0277BD',
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: '#E0E7FF',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#0277BD',
+    borderRadius: 4,
+    minWidth: '2%',
+  },
+  progressSubtext: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  themeToggleContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  themeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    gap: 8,
+  },
+  themeOptionActive: {
+    backgroundColor: '#0277BD',
+    borderColor: '#0277BD',
+  },
+  themeOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  themeOptionTextActive: {
+    color: '#FFFFFF',
   },
 });

@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 
 import { useFavorites } from '../providers/FavoritesProvider';
+import { useTheme } from '../providers/ThemeProvider';
 import { SafeScrollView, SafeTouchableOpacity } from '../components/SafeComponents';
 import EnhancedSearch from '../components/EnhancedSearch';
 import AppErrorBanner from '../components/AppErrorBanner';
@@ -75,6 +76,7 @@ const loadHomeBannersFromCache = async () => {
 export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { mode, setThemeMode, isDark } = useTheme();
 
   const [processedEvents, setProcessedEvents] = useState([]);
   const [featuredEvents, setFeaturedEvents] = useState([]);
@@ -98,6 +100,8 @@ export default function HomeScreen({ navigation }) {
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [showNotificationDetailModal, setShowNotificationDetailModal] = useState(false);
+  const [nextEvent, setNextEvent] = useState(null);
+  const [countdown, setCountdown] = useState('');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -125,6 +129,62 @@ export default function HomeScreen({ navigation }) {
       refreshNotifications({ background: true });
     }, [])
   );
+
+  // Find next upcoming event
+  useEffect(() => {
+    if (processedEvents.length === 0) return;
+
+    const now = new Date();
+    const upcoming = processedEvents
+      .filter(event => {
+        if (!event.date) return false;
+        const eventDateTime = new Date(event.date);
+        const isValid = !isNaN(eventDateTime.getTime());
+        const isFuture = eventDateTime > now;
+        return isValid && isFuture;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateA - dateB;
+      })[0];
+
+    setNextEvent(upcoming);
+  }, [processedEvents]);
+
+  // Countdown timer for next event
+  useEffect(() => {
+    if (!nextEvent) return;
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const eventTime = new Date(nextEvent.date);
+      const diff = eventTime - now;
+
+      if (diff <= 0) {
+        setCountdown('Event Started!');
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (days > 0) {
+        setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      } else if (hours > 0) {
+        setCountdown(`${hours}h ${minutes}m ${seconds}s`);
+      } else {
+        setCountdown(`${minutes}m ${seconds}s`);
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [nextEvent]);
 
   const refreshNotifications = async ({ background = false } = {}) => {
     try {
@@ -418,19 +478,12 @@ export default function HomeScreen({ navigation }) {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
     >
-      <ImageBackground
-        source={require('../assets/3.png')}
-        style={{ flex: 1, width: '100%', minHeight: screenHeight }}
-        imageStyle={{ width: '100%', height: '100%' }}
-        resizeMode="cover"
-        resizeMethod="resize"
+      <Modal
+        visible={showNotificationDetailModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseNotificationDetailModal}
       >
-        <Modal
-          visible={showNotificationDetailModal}
-          transparent
-          animationType="fade"
-          onRequestClose={handleCloseNotificationDetailModal}
-        >
           <TouchableOpacity
             activeOpacity={1}
             onPress={handleCloseNotificationDetailModal}
@@ -677,11 +730,91 @@ export default function HomeScreen({ navigation }) {
           />
 
           {!hasInitialLoad && isLoading && processedEvents.length === 0 && (
-            <View style={{ paddingTop: 18, paddingBottom: 18, alignItems: 'center' }}>
-              <ActivityIndicator size="small" color="#0277BD" />
-              <Text style={{ marginTop: 10, color: '#64748B', fontSize: 13, fontWeight: '600' }}>
-                Getting data, please wait...
-              </Text>
+            <View style={{ paddingTop: 18, paddingBottom: 18 }}>
+              {/* Event Cards Skeleton */}
+              <View style={homeStyles.trendingEventsContainer}>
+                <View style={homeStyles.trendingEventsHeader}>
+                  <View style={homeStyles.trendingTitleContainer}>
+                    <View style={[homeStyles.skeleton, { width: 120, height: 20, borderRadius: 10 }]} />
+                    <View style={[homeStyles.skeleton, { width: 60, height: 16, borderRadius: 8, marginLeft: 12 }]} />
+                  </View>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {[1, 2, 3].map((index) => (
+                    <View key={index} style={[homeStyles.trendingEventCard, { marginLeft: index === 0 ? 0 : 12 }]}>
+                      <View style={[homeStyles.skeleton, { width: '100%', height: 120, borderRadius: 8 }]} />
+                      <View style={homeStyles.trendingEventContent}>
+                        <View style={[homeStyles.skeleton, { width: '80%', height: 16, borderRadius: 4, marginBottom: 8 }]} />
+                        <View style={homeStyles.trendingEventMeta}>
+                          <View style={[homeStyles.skeleton, { width: 60, height: 12, borderRadius: 4 }]} />
+                          <View style={[homeStyles.skeleton, { width: 40, height: 12, borderRadius: 4, marginLeft: 8 }]} />
+                        </View>
+                        <View style={homeStyles.trendingEventFooter}>
+                          <View style={[homeStyles.skeleton, { width: 100, height: 12, borderRadius: 4 }]} />
+                          <View style={[homeStyles.skeleton, { width: 50, height: 20, borderRadius: 10, marginLeft: 'auto' }]} />
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Featured Events Skeleton */}
+              <View style={homeStyles.featuredEventsSection}>
+                <View style={homeStyles.featuredEventsHeader}>
+                  <View style={homeStyles.trendingTitleContainer}>
+                    <View style={[homeStyles.skeleton, { width: 140, height: 20, borderRadius: 10 }]} />
+                    <View style={[homeStyles.skeleton, { width: 60, height: 16, borderRadius: 8, marginLeft: 12 }]} />
+                  </View>
+                </View>
+                <View style={homeStyles.premiumFeaturedContainer}>
+                  {[1, 2].map((index) => (
+                    <View key={index} style={[homeStyles.premiumFeaturedCard, { marginLeft: index === 0 ? 0 : 12 }]}>
+                      <View style={[homeStyles.skeleton, { width: '100%', height: 140, borderRadius: 12 }]} />
+                      <View style={homeStyles.premiumFeaturedContent}>
+                        <View style={[homeStyles.skeleton, { width: '70%', height: 16, borderRadius: 4, marginBottom: 8 }]} />
+                        <View style={[homeStyles.skeleton, { width: '50%', height: 12, borderRadius: 4, marginBottom: 8 }]} />
+                        <View style={homeStyles.premiumFeaturedMeta}>
+                          <View style={[homeStyles.skeleton, { width: 80, height: 12, borderRadius: 4 }]} />
+                          <View style={[homeStyles.skeleton, { width: 60, height: 12, borderRadius: 4, marginLeft: 8 }]} />
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Upcoming Events Skeleton */}
+              <View style={homeStyles.upcomingEventsSection}>
+                <View style={homeStyles.upcomingEventsHeader}>
+                  <View style={homeStyles.trendingTitleContainer}>
+                    <View style={[homeStyles.skeleton, { width: 130, height: 20, borderRadius: 10 }]} />
+                    <View style={[homeStyles.skeleton, { width: 60, height: 16, borderRadius: 8, marginLeft: 12 }]} />
+                  </View>
+                </View>
+                <View style={homeStyles.horizontalEventsContainer}>
+                  {[1, 2, 3].map((index) => (
+                    <View key={index} style={[homeStyles.horizontalEventCard, { marginLeft: index === 0 ? 0 : 12 }]}>
+                      <View style={[homeStyles.skeleton, { width: 120, height: 80, borderRadius: 8 }]} />
+                      <View style={homeStyles.horizontalEventDetailsContainer}>
+                        <View style={homeStyles.horizontalEventTopSection}>
+                          <View style={[homeStyles.skeleton, { width: '90%', height: 14, borderRadius: 4, marginBottom: 8 }]} />
+                          <View style={homeStyles.horizontalEventMetaRow}>
+                            <View style={[homeStyles.skeleton, { width: 60, height: 10, borderRadius: 4 }]} />
+                          </View>
+                          <View style={homeStyles.horizontalEventMetaRow}>
+                            <View style={[homeStyles.skeleton, { width: 50, height: 10, borderRadius: 4 }]} />
+                          </View>
+                        </View>
+                        <View style={homeStyles.horizontalEventBottomRow}>
+                          <View style={[homeStyles.skeleton, { width: 40, height: 14, borderRadius: 4 }]} />
+                          <View style={[homeStyles.skeleton, { width: 80, height: 24, borderRadius: 12, marginLeft: 'auto' }]} />
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
             </View>
           )}
           
@@ -698,11 +831,6 @@ export default function HomeScreen({ navigation }) {
               </View>
               <View style={homeStyles.homeHeaderTopRow}>
                 <View style={homeStyles.modernDashboardProfile}>
-                  <View style={homeStyles.modernDashboardAvatar}>
-                    <View style={homeStyles.modernDashboardAvatarInner}>
-                      <Feather name="user" size={20} color="#0F172A" />
-                    </View>
-                  </View>
                   <View>
                     <Text style={homeStyles.homeHeaderWelcomeText}>Welcome Back,</Text>
                     <Text style={homeStyles.homeHeaderNameText}>User</Text>
@@ -763,6 +891,36 @@ export default function HomeScreen({ navigation }) {
             <AutoScrollingPromoCarousel navigation={navigation} />
           </View>
 
+          {nextEvent && (
+            <SafeTouchableOpacity
+              style={homeStyles.countdownInlineContainer}
+              onPress={() => handleEventPress(nextEvent)}
+              activeOpacity={0.85}
+            >
+              <View style={homeStyles.countdownInlineDepthLayer} pointerEvents="none">
+                <View style={homeStyles.countdownInlineGlowOrbOne} />
+                <View style={homeStyles.countdownInlineGlowOrbTwo} />
+                <View style={homeStyles.countdownInlineHighlight} />
+              </View>
+              <View style={homeStyles.countdownInlineContent}>
+                <View style={homeStyles.countdownInlineLeft}>
+                  <View style={homeStyles.countdownInlineIconBadge}>
+                    <Feather name="clock" size={12} color="#FFD700" />
+                  </View>
+                  <View style={homeStyles.countdownInlineTextWrap}>
+                    <Text style={homeStyles.countdownLabel}>Next Event</Text>
+                    <Text style={homeStyles.countdownEventTitle} numberOfLines={1}>
+                      {nextEvent.title}
+                    </Text>
+                  </View>
+                </View>
+                <View style={homeStyles.countdownInlineTimerPill}>
+                  <Text style={homeStyles.countdownTimer}>{countdown}</Text>
+                </View>
+              </View>
+            </SafeTouchableOpacity>
+          )}
+
           {/* Trending Events Section */}
           {trendingEvents.length > 0 && (
             <View style={homeStyles.trendingEventsSection}>
@@ -789,6 +947,9 @@ export default function HomeScreen({ navigation }) {
                       onPress={() => handleEventPress(event)}
                       activeOpacity={0.95}
                     >
+                      <View style={homeStyles.trendingEventCardOrbOne} />
+                      <View style={homeStyles.trendingEventCardOrbTwo} />
+                      <View style={homeStyles.trendingEventCardOrbThree} />
                       <View style={homeStyles.trendingEventImageContainer}>
                         {event.imageUrl ? (
                           <Image
@@ -830,7 +991,7 @@ export default function HomeScreen({ navigation }) {
 
                         <View style={homeStyles.trendingEventMeta}>
                           <View style={homeStyles.trendingMetaItem}>
-                            <Feather name="calendar" size={12} color="#64748B" />
+                            <Feather name="calendar" size={12} color="rgba(255, 255, 255, 0.8)" />
                             <Text style={homeStyles.trendingMetaText}>
                               {new Date(event.date).toLocaleDateString('en-US', {
                                 month: 'short',
@@ -839,14 +1000,14 @@ export default function HomeScreen({ navigation }) {
                             </Text>
                           </View>
                           <View style={homeStyles.trendingMetaItem}>
-                            <Feather name="clock" size={12} color="#64748B" />
+                            <Feather name="clock" size={12} color="rgba(255, 255, 255, 0.8)" />
                             <Text style={homeStyles.trendingMetaText}>{event.time || 'TBD'}</Text>
                           </View>
                         </View>
 
                         <View style={homeStyles.trendingEventFooter}>
                           <View style={homeStyles.trendingLocationItem}>
-                            <Feather name="map-pin" size={12} color="#64748B" />
+                            <Feather name="map-pin" size={12} color="rgba(255, 255, 255, 0.8)" />
                             <Text style={homeStyles.trendingLocationText} numberOfLines={1}>
                               {getEventLocationLabel(event.location)}
                             </Text>
@@ -1065,6 +1226,11 @@ export default function HomeScreen({ navigation }) {
                   colors={['#10B981', '#059669']}
                   style={homeStyles.statsCardGradient}
                 >
+                  <View style={homeStyles.statsCardDepthLayer} pointerEvents="none">
+                    <View style={homeStyles.statsCardGlowOrbOne} />
+                    <View style={homeStyles.statsCardGlowOrbTwo} />
+                    <View style={homeStyles.statsCardHighlight} />
+                  </View>
                   <Feather name="calendar" size={24} color="#FFFFFF" />
                   <Text style={homeStyles.statsCardNumber}>{processedEvents.length}</Text>
                   <Text style={homeStyles.statsCardLabel}>Total Events</Text>
@@ -1075,6 +1241,11 @@ export default function HomeScreen({ navigation }) {
                   colors={['#F59E0B', '#D97706']}
                   style={homeStyles.statsCardGradient}
                 >
+                  <View style={homeStyles.statsCardDepthLayer} pointerEvents="none">
+                    <View style={homeStyles.statsCardGlowOrbOne} />
+                    <View style={homeStyles.statsCardGlowOrbTwo} />
+                    <View style={homeStyles.statsCardHighlight} />
+                  </View>
                   <Feather name="star" size={24} color="#FFFFFF" />
                   <Text style={homeStyles.statsCardNumber}>{featuredEvents.length}</Text>
                   <Text style={homeStyles.statsCardLabel}>Featured</Text>
@@ -1085,37 +1256,44 @@ export default function HomeScreen({ navigation }) {
                   colors={['#EF4444', '#DC2626']}
                   style={homeStyles.statsCardGradient}
                 >
+                  <View style={homeStyles.statsCardDepthLayer} pointerEvents="none">
+                    <View style={homeStyles.statsCardGlowOrbOne} />
+                    <View style={homeStyles.statsCardGlowOrbTwo} />
+                    <View style={homeStyles.statsCardHighlight} />
+                  </View>
                   <Feather name="heart" size={24} color="#FFFFFF" />
                   <Text style={homeStyles.statsCardNumber}>{processedEvents.filter(event => isFavorite(event.id)).length}</Text>
                   <Text style={homeStyles.statsCardLabel}>Favorites</Text>
                 </LinearGradient>
               </View>
             </View>
+          </View>
 
-            <View style={homeStyles.organizerBox}>
-              <LinearGradient
-                colors={['#1F2937', '#111827']}
-                style={homeStyles.organizerBoxGradient}
-              >
-                <View style={homeStyles.organizerContent}>
-                  <View style={homeStyles.organizerTextSection}>
-                    <Text style={homeStyles.organizerTitle}>Are you an organizer?</Text>
-                    <Text style={homeStyles.organizerSubtitle}>Create and manage amazing events</Text>
-                  </View>
-                  <SafeTouchableOpacity
-                    style={homeStyles.organizerButton}
-                    onPress={() => navigation.navigate('Organizer', { screen: 'OrganizerLogin' })}
-                    activeOpacity={0.8}
-                  >
-                    <Feather name="user-plus" size={18} color="#FFFFFF" />
-                    <Text style={homeStyles.organizerButtonText}>Get Started</Text>
-                  </SafeTouchableOpacity>
+          <View style={homeStyles.organizerBox}>
+            <View style={homeStyles.organizerBoxGradient}>
+              <View style={homeStyles.organizerBoxDepthLayer} pointerEvents="none">
+                <View style={homeStyles.organizerBoxGlowOrbOne} />
+                <View style={homeStyles.organizerBoxGlowOrbTwo} />
+                <View style={homeStyles.organizerBoxHighlight} />
+              </View>
+              <View style={homeStyles.organizerContent}>
+                <View style={homeStyles.organizerTextSection}>
+                  <Text style={homeStyles.organizerTitle}>Are you an organizer?</Text>
+                  <Text style={homeStyles.organizerSubtitle}>Create and manage amazing events</Text>
                 </View>
-              </LinearGradient>
+                <SafeTouchableOpacity
+                  style={homeStyles.organizerButton}
+                  onPress={() => navigation.navigate('Organizer', { screen: 'OrganizerLogin' })}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="user-plus" size={18} color="#FFFFFF" />
+                  <Text style={homeStyles.organizerButtonText}>Get Started</Text>
+                </SafeTouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
-      </ImageBackground>
+
     </SafeScrollView>
   );
 }
