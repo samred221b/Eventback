@@ -809,7 +809,7 @@ const EventsScreen = ({ navigation, route }) => {
               onRefresh={handleRefresh}
                   colors={['#0277BD', '#01579B']}
                   tintColor="#0277BD"
-                  progressBackgroundColor="#FFFFFF"
+                  progressBackgroundColor="transparent"
                 />
               }
               ListEmptyComponent={renderEmptyComponent}
@@ -893,8 +893,8 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 1,
     borderRadius: 12,
     backgroundColor: '#060B14',
     borderWidth: 1,
@@ -906,7 +906,8 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     gap: 3,
-    maxWidth: 100,
+    maxWidth: 120,
+    maxHeight: 30,
     overflow: 'hidden',
   },
   categoryChipActive: {
@@ -991,7 +992,8 @@ const styles = StyleSheet.create({
   },
   eventsContainer: {
     paddingHorizontal: 8,
-    paddingVertical: 20,
+    paddingTop: 0,
+    paddingBottom: 20,
     gap: 12,
     alignItems: 'stretch',
     position: 'relative',

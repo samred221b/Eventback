@@ -55,7 +55,7 @@ const CreateEventScreen = ({ navigation, route }) => {
     importantInfo: '',
     ticketsAvailableAt: '', // New field for where tickets can be purchased
   });
-  const [imageUri, setImageUri] = useState(null);
+  const [imageUris, setImageUris] = useState([]);
   const [isPricingExpanded, setIsPricingExpanded] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   
@@ -213,7 +213,10 @@ const CreateEventScreen = ({ navigation, route }) => {
         importantInfo: event.importantInfo || '',
         ticketsAvailableAt: event.ticketsAvailableAt || '',
       });
-      setImageUri(event.imageUrl || null);
+      const existingImages = Array.isArray(event.images) ? event.images : [];
+      const fallback = event.imageUrl || event.image || null;
+      const hydrated = (existingImages.length > 0 ? existingImages : (fallback ? [fallback] : []));
+      setImageUris(hydrated);
     }
   }, [route?.params?.editEvent]);
 
@@ -310,7 +313,7 @@ const CreateEventScreen = ({ navigation, route }) => {
   };
 
   const uploadImageToCloudinary = async (localUri) => {
-    setImageUri(localUri); // Show local preview immediately
+    setImageUris(prev => [...prev, localUri]);
     setError(toAppError(new Error('Please wait while your image is uploaded.'), { kind: 'INFO', severity: APP_ERROR_SEVERITY.INFO }));
 
     const cloudinaryFormData = new FormData();
@@ -331,6 +334,11 @@ const CreateEventScreen = ({ navigation, route }) => {
       );
 
       if (response.data.secure_url) {
+        setImageUris(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = response.data.secure_url;
+          return updated;
+        });
         setFormData(prev => ({
           ...prev,
           imageUrl: response.data.secure_url,
@@ -347,7 +355,7 @@ const CreateEventScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       setError(toAppError(error, { fallbackMessage: 'Failed to upload image to Cloudinary. Please try again or use an image URL.' }));
-      removeImage();
+      setImageUris(prev => prev.slice(0, -1));
     }
   };
 
@@ -366,8 +374,10 @@ const CreateEventScreen = ({ navigation, route }) => {
       });
 
       const localUri = extractPickerUri(result);
-      if (localUri) {
+      if (localUri && imageUris.length < 5) {
         await uploadImageToCloudinary(localUri);
+      } else if (imageUris.length >= 5) {
+        setError(toAppError(new Error('Maximum 5 images allowed.'), { kind: 'VALIDATION_ERROR', severity: APP_ERROR_SEVERITY.WARNING }));
       }
     } catch (error) {
       logger.error('Error in pickImage:', error);
@@ -375,12 +385,15 @@ const CreateEventScreen = ({ navigation, route }) => {
     }
   };
 
-  const removeImage = () => {
-    setImageUri(null);
-    setFormData(prev => ({
-      ...prev,
-      imageUrl: null
-    }));
+  const removeImage = (index) => {
+    setImageUris(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      setFormData(formPrev => ({
+        ...formPrev,
+        imageUrl: updated.find(u => typeof u === 'string' && u.startsWith('http')) || null
+      }));
+      return updated;
+    });
   };
 
   const validateForm = () => {
@@ -459,6 +472,10 @@ const CreateEventScreen = ({ navigation, route }) => {
     setIsLoading(true);
 
     try {
+      const imagesPayload = (imageUris || []).filter(u => typeof u === 'string' && u.startsWith('http'));
+      const fallbackUrl = (formData.imageUrl && String(formData.imageUrl).startsWith('http')) ? String(formData.imageUrl) : null;
+      const finalImages = imagesPayload.length > 0 ? imagesPayload : (fallbackUrl ? [fallbackUrl] : []);
+
       const eventData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
@@ -486,7 +503,8 @@ const CreateEventScreen = ({ navigation, route }) => {
         onDoorPrice: formData.onDoorPrice ? parseFloat(formData.onDoorPrice) : undefined,
         earlyBirdPrice: formData.earlyBirdPrice ? parseFloat(formData.earlyBirdPrice) : undefined,
         featured: formData.featured,
-        image: formData.imageUrl || undefined,  // Backend uses 'image' not 'imageUrl'
+        image: finalImages[0] || undefined,
+        images: finalImages.length > 0 ? finalImages : undefined,
         organizerName: formData.organizerName.trim(),
         importantInfo: formData.importantInfo.trim() || undefined,  // Optional field
         ticketsAvailableAt: formData.ticketsAvailableAt.trim() || undefined  // Optional field
@@ -526,7 +544,7 @@ const CreateEventScreen = ({ navigation, route }) => {
                   importantInfo: '',
                   ticketsAvailableAt: '',
                 });
-                setImageUri(null);
+                setImageUris([]);
                 // Navigate back to dashboard (this will trigger refresh)
                 navigation.navigate('OrganizerDashboard', { refresh: true });
               }
@@ -702,48 +720,47 @@ const CreateEventScreen = ({ navigation, route }) => {
               </View>
               <Text style={createEventStyles.label}>Make it visual ✨</Text>
             </View>
-            {imageUri ? (
-              <View style={createEventStyles.imagePreviewContainer}>
-                <Image source={{ uri: imageUri }} style={createEventStyles.imagePreview} resizeMode="contain" />
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.7)']}
-                  style={createEventStyles.imageOverlay}
-                />
-                <TouchableOpacity 
-                  style={createEventStyles.removeImageButton}
-                  onPress={removeImage}
+            <View style={createEventStyles.imagesRow}>
+              {(imageUris || []).map((uri, index) => (
+                <View key={`${uri}-${index}`} style={createEventStyles.imagePreviewContainerSmall}>
+                  <Image source={{ uri }} style={createEventStyles.imagePreviewSmall} resizeMode="cover" />
+                  <TouchableOpacity
+                    style={createEventStyles.removeImageButtonSmall}
+                    onPress={() => removeImage(index)}
+                    activeOpacity={0.85}
+                  >
+                    <LinearGradient
+                      colors={['#EF4444', '#DC2626']}
+                      style={createEventStyles.removeButtonGradientSmall}
+                    >
+                      <Feather name="x" size={12} color="#FFFFFF" />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {imageUris.length < 5 && (
+                <TouchableOpacity
+                  style={createEventStyles.uploadButtonInline}
+                  onPress={pickImage}
                   activeOpacity={0.8}
                 >
-                  <LinearGradient
-                    colors={['#EF4444', '#DC2626']}
-                    style={createEventStyles.removeButtonGradient}
-                  >
-                    <Feather name="x" size={16} color="#FFFFFF" />
-                    <Text style={createEventStyles.removeImageText}>Remove</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity 
-                style={createEventStyles.uploadButton}
-                onPress={pickImage}
-                activeOpacity={0.8}
-              >
-                <View style={createEventStyles.uploadContent}>
-                  <View style={createEventStyles.uploadIconContainer}>
-                    <LinearGradient
-                      colors={['#0277BD', '#01579B']}
-                      style={createEventStyles.uploadIconGradient}
-                    >
-                      <Feather name="camera" size={32} color="#FFFFFF" />
-                    </LinearGradient>
+                  <View style={createEventStyles.uploadContentInline}>
+                    <View style={createEventStyles.uploadIconContainer}>
+                      <LinearGradient
+                        colors={['#0277BD', '#01579B']}
+                        style={createEventStyles.uploadIconGradient}
+                      >
+                        <Feather name={imageUris.length === 0 ? 'camera' : 'plus'} size={24} color="#FFFFFF" />
+                      </LinearGradient>
+                    </View>
+                    <Text style={createEventStyles.uploadText}>Add ({imageUris.length}/5)</Text>
+                    <Text style={createEventStyles.uploadHint}>Gallery</Text>
+                    <View style={createEventStyles.uploadBorder} />
                   </View>
-                  <Text style={createEventStyles.uploadText}>Add a stunning photo</Text>
-                  <Text style={createEventStyles.uploadHint}>Choose from gallery • Max 10MB</Text>
-                  <View style={createEventStyles.uploadBorder} />
-                </View>
-              </TouchableOpacity>
-            )}
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Image URL Alternative */}
@@ -763,7 +780,7 @@ const CreateEventScreen = ({ navigation, route }) => {
                 onChangeText={(value) => {
                   handleInputChange('imageUrl', value);
                   if (value.startsWith('http')) {
-                    setImageUri(null); // Clear local image if URL is provided
+                    setImageUris([]); // Clear local images if URL is provided
                   }
                 }}
                 keyboardType="url"

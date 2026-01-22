@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -40,6 +40,7 @@ export default function CalendarScreen({ navigation }) {
   const [allEvents, setAllEvents] = useState([]); // Store all events for search
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState('calendar');
   const [isLoading, setIsLoading] = useState(true);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -480,90 +481,214 @@ export default function CalendarScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Month Navigation */}
-        <View style={styles.monthNavigation}>
-          <TouchableOpacity 
-            style={styles.monthChevron}
-            onPress={() => changeMonth(-1)}
-            activeOpacity={0.7}
-          >
-            <Feather name="chevron-left" size={24} color="#0277BD" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.monthLabel}
-            onPress={() => setShowMonthPicker(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.monthText}>
-              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.monthChevron}
-            onPress={() => changeMonth(1)}
-            activeOpacity={0.7}
-          >
-            <Feather name="chevron-right" size={24} color="#0277BD" />
-          </TouchableOpacity>
+        {/* View Tabs */}
+        <View style={styles.viewToggleContainer}>
+          <View style={styles.viewTogglePill}>
+            <TouchableOpacity
+              style={[styles.viewToggleButton, viewMode === 'calendar' && styles.viewToggleButtonActive]}
+              onPress={() => setViewMode('calendar')}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.viewToggleText, viewMode === 'calendar' && styles.viewToggleTextActive]}>Calendar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.viewToggleButton, viewMode === 'timeline' && styles.viewToggleButtonActive]}
+              onPress={() => setViewMode('timeline')}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.viewToggleText, viewMode === 'timeline' && styles.viewToggleTextActive]}>Timeline</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Calendar Grid */}
-        <LinearGradient
-          colors={['#0277BD', '#01579B']}
-          style={styles.calendarContainer}
-        >
-          <View style={homeStyles.homeHeaderBg} pointerEvents="none">
-            <View style={homeStyles.homeHeaderOrbOne} />
-            <View style={homeStyles.homeHeaderOrbTwo} />
-          </View>
-          <View style={[styles.calendarContainer, styles.blueCompactCalendarContainer]}>
-            {/* Days of Week */}
-            <View style={styles.weekDaysRow}>
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
-                <Text key={`${day}-${index}`} style={styles.weekDayText}>{day}</Text>
-              ))}
+        {viewMode === 'calendar' ? (
+          <>
+            {/* Month Navigation */}
+            <View style={styles.monthNavigation}>
+              <TouchableOpacity
+                style={styles.monthChevron}
+                onPress={() => changeMonth(-1)}
+                activeOpacity={0.7}
+              >
+                <Feather name="chevron-left" size={24} color="#0277BD" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.monthLabel}
+                onPress={() => setShowMonthPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.monthText}>
+                  {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.monthChevron}
+                onPress={() => changeMonth(1)}
+                activeOpacity={0.7}
+              >
+                <Feather name="chevron-right" size={24} color="#0277BD" />
+              </TouchableOpacity>
             </View>
 
-            {/* Calendar Days Grid */}
-            <View style={styles.daysGrid}>
-              {getDaysInMonth().map((day, index) => {
-                if (!day) {
-                  return <View key={`empty-${index}`} style={styles.dayCell} />;
-                }
+            {/* Calendar Grid */}
+            <LinearGradient
+              colors={['#0277BD', '#01579B']}
+              style={styles.calendarContainer}
+            >
+              <View style={homeStyles.homeHeaderBg} pointerEvents="none">
+                <View style={homeStyles.homeHeaderOrbOne} />
+                <View style={homeStyles.homeHeaderOrbTwo} />
+              </View>
+              <View style={[styles.calendarContainer, styles.blueCompactCalendarContainer]}>
+                {/* Days of Week */}
+                <View style={styles.weekDaysRow}>
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
+                    <Text key={`${day}-${index}`} style={styles.weekDayText}>{day}</Text>
+                  ))}
+                </View>
 
-                const dayEvents = getEventsForDate(day);
-                const isToday = day.toDateString() === new Date().toDateString();
-                const isSelected = day.toDateString() === selectedDate.toDateString();
-                const hasEvents = dayEvents.length > 0;
+                {/* Calendar Days Grid */}
+                <View style={styles.daysGrid}>
+                  {getDaysInMonth().map((day, index) => {
+                    if (!day) {
+                      return <View key={`empty-${index}`} style={styles.dayCell} />;
+                    }
 
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.dayCell,
-                      isSelected && styles.selectedDayCell,
-                      isToday && !isSelected && styles.todayCell,
-                    ]}
-                    onPress={() => setSelectedDate(day)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[
-                      styles.dayText,
-                      (isToday || isSelected) && styles.activeDayText,
-                    ]}>
-                      {day.getDate()}
-                    </Text>
-                    {hasEvents && (
-                      <View style={styles.eventBadge} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+                    const dayEvents = getEventsForDate(day);
+                    const isToday = day.toDateString() === new Date().toDateString();
+                    const isSelected = day.toDateString() === selectedDate.toDateString();
+                    const hasEvents = dayEvents.length > 0;
+
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.dayCell,
+                          isSelected && styles.selectedDayCell,
+                          isToday && !isSelected && styles.todayCell,
+                        ]}
+                        onPress={() => setSelectedDate(day)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          styles.dayText,
+                          (isToday || isSelected) && styles.activeDayText,
+                        ]}>
+                          {day.getDate()}
+                        </Text>
+                        {hasEvents && (
+                          <View style={styles.eventBadge} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </LinearGradient>
+          </>
+        ) : (
+          <>
+            {/* Timeline */}
+            <View style={styles.timelineSection}>
+              <Text style={styles.timelineTitle}>Timeline</Text>
+
+              {events
+                .filter(event => new Date(event.date) >= new Date())
+                .sort((a, b) => new Date(a.date) - new Date(b.date))
+                .slice(0, 6)
+                .length === 0 && !isLoading ? (
+                <EmptyState
+                  icon="calendar"
+                  iconSize={48}
+                  title="No Upcoming Events"
+                  description={
+                    searchQuery.trim()
+                      ? `No events found for "${searchQuery}"`
+                      : 'There are no upcoming events right now.'
+                  }
+                  primaryAction={searchQuery.trim() ? () => setSearchQuery('') : () => navigation.navigate('Events')}
+                  primaryActionText={searchQuery.trim() ? 'Clear Search' : 'Browse Events'}
+                  primaryActionIcon={searchQuery.trim() ? 'x' : 'calendar'}
+                  secondaryAction={() => navigation.navigate('Home')}
+                  secondaryActionText="Go Home"
+                  secondaryActionIcon="home"
+                  gradientColors={['#0277BD', '#01579B']}
+                />
+              ) : (
+                <View style={styles.timelineContainer}>
+                  {events
+                    .filter(event => new Date(event.date) >= new Date())
+                    .sort((a, b) => new Date(a.date) - new Date(b.date))
+                    .slice(0, 6)
+                    .map((event, index, list) => {
+                      const isLeft = index % 2 === 0;
+                      const showTop = index !== 0;
+                      const showBottom = index !== list.length - 1;
+                      const timelineImageUri =
+                        event?.imageUrl ||
+                        event?.image ||
+                        event?.image?.url ||
+                        event?.coverImageUrl ||
+                        event?.coverImage ||
+                        null;
+
+                      return (
+                        <View key={event._id || event.id || `${event.title}:${index}`} style={styles.timelineRow}>
+                          <View style={[styles.timelineSide, !isLeft && styles.timelineSideSpacer]}>
+                            {isLeft && (
+                              <TouchableOpacity
+                                style={styles.timelineCard}
+                                onPress={() => handleEventPress(event)}
+                                activeOpacity={0.85}
+                              >
+                                <Text style={styles.timelineCardTitle} numberOfLines={2}>{event.title}</Text>
+                                <Text style={styles.timelineCardMeta} numberOfLines={1}>
+                                  {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  {event.time ? ` • ${formatTime(event.time)}` : ''}
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+
+                          <View style={styles.timelineCenter}>
+                            {showTop && <View style={[styles.timelineLine, styles.timelineLineTop]} />}
+                            <View style={styles.timelineNode}>
+                              {timelineImageUri ? (
+                                <Image source={{ uri: timelineImageUri }} style={styles.timelineNodeImage} resizeMode="cover" />
+                              ) : (
+                                <LinearGradient colors={['#0277BD', '#01579B']} style={styles.timelineNodeImage}>
+                                  <Feather name="image" size={18} color="#FFFFFF" />
+                                </LinearGradient>
+                              )}
+                            </View>
+                            {showBottom && <View style={[styles.timelineLine, styles.timelineLineBottom]} />}
+                          </View>
+
+                          <View style={[styles.timelineSide, isLeft && styles.timelineSideSpacer]}>
+                            {!isLeft && (
+                              <TouchableOpacity
+                                style={styles.timelineCard}
+                                onPress={() => handleEventPress(event)}
+                                activeOpacity={0.85}
+                              >
+                                <Text style={styles.timelineCardTitle} numberOfLines={2}>{event.title}</Text>
+                                <Text style={styles.timelineCardMeta} numberOfLines={1}>
+                                  {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  {event.time ? ` • ${formatTime(event.time)}` : ''}
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
+                </View>
+              )}
             </View>
-          </View>
-        </LinearGradient>
+          </>
+        )}
 
         {/* Upcoming Events Section */}
         <View style={styles.upcomingEventsSection}>
@@ -667,6 +792,138 @@ export default function CalendarScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#F8FAFC',
+  },
+  viewToggleContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 6,
+  },
+  viewTogglePill: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(15, 23, 42, 0.06)',
+    borderRadius: 999,
+    padding: 4,
+  },
+  viewToggleButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewToggleButtonActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: 'rgba(15, 23, 42, 0.12)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  viewToggleText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  viewToggleTextActive: {
+    color: '#0F172A',
+  },
+  timelineSection: {
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 10,
+  },
+  timelineTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  timelineContainer: {
+    paddingBottom: 6,
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    paddingVertical: 10,
+  },
+  timelineSide: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  timelineSideSpacer: {
+    opacity: 0,
+  },
+  timelineCenter: {
+    width: 64,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  timelineLine: {
+    position: 'absolute',
+    width: 4,
+    backgroundColor: 'rgba(2, 119, 189, 0.22)',
+    left: (64 - 4) / 2,
+    borderRadius: 2,
+  },
+  timelineLineTop: {
+    top: -10,
+    bottom: '50%',
+  },
+  timelineLineBottom: {
+    top: '50%',
+    bottom: -10,
+  },
+  timelineNode: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(2, 119, 189, 0.25)',
+    shadowColor: 'rgba(15, 23, 42, 0.18)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  timelineNodeImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  timelineCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 23, 42, 0.08)',
+    shadowColor: 'rgba(15, 23, 42, 0.08)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  timelineCardTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  timelineCardMeta: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   pageBackground: {
     position: 'absolute',

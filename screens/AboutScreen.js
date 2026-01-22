@@ -300,6 +300,22 @@ export default function AboutScreen({ navigation }) {
               <Feather name="globe" size={20} color="#0277BD" />
               <Text style={styles.contactText}>www.eventopia.com</Text>
             </TouchableOpacity>
+            
+            {/* Social Media Icons */}
+            <View style={styles.socialMediaContainer}>
+              <TouchableOpacity style={styles.socialMediaIcon} onPress={() => Linking.openURL('https://facebook.com/eventopia')}>
+                <Feather name="facebook" size={20} color="#0277BD" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialMediaIcon} onPress={() => Linking.openURL('https://instagram.com/eventopia')}>
+                <Feather name="instagram" size={20} color="#0277BD" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialMediaIcon} onPress={() => Linking.openURL('https://twitter.com/eventopia')}>
+                <Feather name="twitter" size={20} color="#0277BD" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialMediaIcon} onPress={() => Linking.openURL('https://tiktok.com/@eventopia')}>
+                <Feather name="video" size={20} color="#0277BD" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.section}>
@@ -747,6 +763,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#374151',
     fontWeight: '500',
+  },
+  socialMediaContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 8,
+  },
+  socialMediaIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(2, 119, 189, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(2, 119, 189, 0.2)',
   },
   linkButton: {
     flexDirection: 'row',

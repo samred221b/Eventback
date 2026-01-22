@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -80,6 +80,7 @@ export default function HomeScreen({ navigation }) {
 
   const [processedEvents, setProcessedEvents] = useState([]);
   const [featuredEvents, setFeaturedEvents] = useState([]);
+  const [recommendedEvents, setRecommendedEvents] = useState([]);
   const [trendingEvents, setTrendingEvents] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,6 +103,49 @@ export default function HomeScreen({ navigation }) {
   const [showNotificationDetailModal, setShowNotificationDetailModal] = useState(false);
   const [nextEvent, setNextEvent] = useState(null);
   const [countdown, setCountdown] = useState('');
+
+  const curatedChips = [
+    { key: 'popular_venues', icon: 'map-pin', label: 'Popular Venues' },
+    { key: 'city_spotlight', icon: 'map', label: 'City Spotlight' },
+    { key: 'sports_types', icon: 'activity', label: 'Sports Types' },
+    { key: 'workshops', icon: 'tool', label: 'Workshops' },
+    { key: 'music_genres', icon: 'music', label: 'Music Genres' },
+    { key: 'organizer_spotlight', icon: 'users', label: 'Organizer Spotlight' },
+    { key: 'weekly_editorial', icon: 'book-open', label: 'Weekly Editorial' },
+  ];
+
+  const popularOrganizers = useMemo(() => {
+    const map = new Map();
+
+    for (const event of processedEvents) {
+      const organizerName = (event?.organizerName || '').trim();
+      const organizerKeyRaw = event?.organizerId?._id || event?.organizerId?.id || event?.organizerId || organizerName;
+      const organizerKey = organizerKeyRaw ? String(organizerKeyRaw) : '';
+      if (!organizerKey || !organizerName) continue;
+
+      const existing = map.get(organizerKey);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(organizerKey, { id: organizerKey, name: organizerName, count: 1 });
+      }
+    }
+
+    return Array.from(map.values())
+      .sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name))
+      .slice(0, 10);
+  }, [processedEvents]);
+
+  const filteredEvents = searchQuery.trim()
+    ? processedEvents.filter(event =>
+        event.title?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : processedEvents;
+
+  const recentEventsForModal = [...processedEvents]
+    .filter(e => e?.date)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 10);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -291,6 +335,20 @@ export default function HomeScreen({ navigation }) {
         setProcessedEvents(cachedEventsPrefill);
         setFeaturedEvents(cachedEventsPrefill.filter(e => e.featured).slice(0, 6));
 
+        const featuredIdsPrefill = new Set(cachedEventsPrefill.filter(e => e.featured).map(e => e.id));
+        const nowRecommendedPrefill = new Date();
+        const recommendedPrefill = cachedEventsPrefill
+          .filter(e => !featuredIdsPrefill.has(e.id) || e.featured)
+          .filter(e => e.date && new Date(e.date) >= nowRecommendedPrefill)
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+          .reduce((acc, event) => {
+            const cat = event.category || 'general';
+            if (!acc[cat]) acc[cat] = [];
+            if (acc[cat].length < 2) acc[cat].push(event);
+            return acc;
+          }, {});
+        setRecommendedEvents([...Object.values(recommendedPrefill).flat()]);
+
         const nowPrefill = new Date();
         const upcomingPrefill = cachedEventsPrefill
           .filter(event => new Date(event.date) >= nowPrefill)
@@ -356,6 +414,20 @@ export default function HomeScreen({ navigation }) {
           setProcessedEvents(transformedEvents);
           setFeaturedEvents(transformedEvents.filter(e => e.featured).slice(0, 6));
 
+          const featuredIds = new Set(transformedEvents.filter(e => e.featured).map(e => e.id));
+          const nowRecommended = new Date();
+          const recommended = transformedEvents
+            .filter(e => !featuredIds.has(e.id) || e.featured)
+            .filter(e => e.date && new Date(e.date) >= nowRecommended)
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .reduce((acc, event) => {
+              const cat = event.category || 'general';
+              if (!acc[cat]) acc[cat] = [];
+              if (acc[cat].length < 2) acc[cat].push(event);
+              return acc;
+            }, {});
+          setRecommendedEvents([...Object.values(recommended).flat()]);
+
           const now = new Date();
           const upcoming = transformedEvents
             .filter(event => new Date(event.date) >= now)
@@ -377,6 +449,7 @@ export default function HomeScreen({ navigation }) {
           if (cachedEventsPrefill.length === 0) {
             setProcessedEvents([]);
             setFeaturedEvents([]);
+            setRecommendedEvents([]);
             setUpcomingEvents([]);
           }
         }
@@ -436,17 +509,6 @@ export default function HomeScreen({ navigation }) {
     return location?.venue || location?.name || location?.address || location?.formattedAddress || location?.city || 'Location TBA';
   };
 
-  const filteredEvents = searchQuery.trim()
-    ? processedEvents.filter(event =>
-        event.title?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : processedEvents;
-
-  const recentEventsForModal = [...processedEvents]
-    .filter(e => e?.date)
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 10);
-
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   const popoverWidth = Math.min(280, Math.max(240, screenWidth - 40));
   const popoverMaxHeight = Math.min(600, Math.max(240, screenHeight * 0.65));
@@ -472,256 +534,302 @@ export default function HomeScreen({ navigation }) {
   })();
 
   return (
-    <SafeScrollView
-      style={{ flex: 1, backgroundColor: 'transparent' }}
-      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom, flexGrow: 1 }}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-    >
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      {/* Background Decoratives */}
+      <View style={homeStyles.backgroundDecorative} />
+      <View style={homeStyles.backgroundOrbOne} />
+      <View style={homeStyles.backgroundOrbTwo} />
+      <View style={homeStyles.backgroundOrbThree} />
+      <View style={homeStyles.backgroundPatternOne} />
+      <View style={homeStyles.backgroundPatternTwo} />
+
       <Modal
         visible={showNotificationDetailModal}
         transparent
         animationType="fade"
         onRequestClose={handleCloseNotificationDetailModal}
       >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={handleCloseNotificationDetailModal}
-            style={{
-              flex: 1,
-              backgroundColor: 'rgba(15, 23, 42, 0.55)',
-              paddingTop: insets.top,
-              paddingBottom: insets.bottom,
-              justifyContent: 'center',
-              paddingHorizontal: 18,
-            }}
-          >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => {}}
-              style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: 20,
-                overflow: 'hidden',
-                maxHeight: '80%',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.14,
-                shadowRadius: 24,
-                elevation: 14,
-              }}
-            >
-              <LinearGradient
-                colors={['#0277BD', '#01579B']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderBottomWidth: 1,
-                  borderBottomColor: 'rgba(255,255,255,0.18)',
-                }}
-              >
-                <View
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    backgroundColor: 'rgba(255,255,255,0.22)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Feather name="mail" size={16} color="#FFFFFF" />
-                </View>
-                <View style={{ width: 12 }} />
-                <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', flex: 1 }} numberOfLines={1}>
-                  Eventopia Admin
-                </Text>
-                <TouchableOpacity
-                  onPress={handleCloseNotificationDetailModal}
-                  style={{ padding: 6 }}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Feather name="x" size={18} color="#FFFFFF" />
-                </TouchableOpacity>
-              </LinearGradient>
-
-              <ScrollView
-                style={{ paddingHorizontal: 18, paddingVertical: 18 }}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 20 }}
-              >
-                <Text style={{ color: '#1F2937', fontSize: 15, lineHeight: 24, fontWeight: '500' }}>
-                  {selectedNotification?.message || ''}
-                </Text>
-              </ScrollView>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
-
-        <Modal
-          visible={showRecentEventsModal}
-          transparent
-          animationType="fade"
-          onRequestClose={handleCloseRecentEventsModal}
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={handleCloseNotificationDetailModal}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.55)',
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+            justifyContent: 'center',
+            paddingHorizontal: 18,
+          }}
         >
           <TouchableOpacity
             activeOpacity={1}
-            onPress={handleCloseRecentEventsModal}
+            onPress={() => {}}
             style={{
-              flex: 1,
-              backgroundColor: 'rgba(15, 23, 42, 0.42)',
+              backgroundColor: '#FFFFFF',
+              borderRadius: 20,
+              overflow: 'hidden',
+              maxHeight: '80%',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.14,
+              shadowRadius: 24,
+              elevation: 14,
             }}
           >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => {}}
+            <LinearGradient
+              colors={['#0277BD', '#01579B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={{
-                position: 'absolute',
-                top: popoverTop,
-                left: popoverLeft,
-                width: popoverWidth,
-                maxHeight: popoverMaxHeight,
-                backgroundColor: '#FFFFFF',
-                borderRadius: 20,
-                shadowColor: '#0277BD',
-                shadowOpacity: 0.28,
-                shadowRadius: 24,
-                shadowOffset: { width: 0, height: 12 },
-                elevation: 16,
-                transform: [{ scale: showRecentEventsModal ? 1 : 0.9 }],
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderBottomWidth: 1,
+                borderBottomColor: 'rgba(255,255,255,0.18)',
               }}
             >
               <View
                 style={{
-                  position: 'absolute',
-                  top: -8,
-                  left: arrowLeft,
-                  width: 16,
-                  height: 16,
-                  backgroundColor: '#FFFFFF',
-                  transform: [{ rotate: '45deg' }],
-                  shadowColor: '#0277BD',
-                  shadowOpacity: 0.2,
-                  shadowRadius: 8,
-                  shadowOffset: { width: 0, height: 4 },
-                  elevation: 8,
-                }}
-              />
-
-              <LinearGradient
-                colors={['#0277BD', '#01579B']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  borderTopLeftRadius: 20,
-                  borderTopRightRadius: 20,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  flexDirection: 'row',
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: 'rgba(255,255,255,0.22)',
                   alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
-                  <Feather name="bell" size={14} color="#FFFFFF" />
-                </View>
-                <View style={{ width: 8 }} />
-                <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
-                  Notifications
-                </Text>
-                <TouchableOpacity
-                  onPress={handleCloseRecentEventsModal}
-                  style={{ marginLeft: 'auto', padding: 4 }}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Feather name="x" size={16} color="#FFFFFF" />
-                </TouchableOpacity>
-              </LinearGradient>
+                <Feather name="mail" size={16} color="#FFFFFF" />
+              </View>
+              <View style={{ width: 12 }} />
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', flex: 1 }} numberOfLines={1}>
+                Eventopia Admin
+              </Text>
+              <TouchableOpacity
+                onPress={handleCloseNotificationDetailModal}
+                style={{ padding: 6 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Feather name="x" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </LinearGradient>
 
-              <View style={{ paddingHorizontal: 12, paddingBottom: 12, flex: 1 }}>
-                <View style={{ height: 8 }} />
+            <ScrollView
+              style={{ paddingHorizontal: 18, paddingVertical: 18 }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 20 }}
+            >
+              <Text style={{ color: '#1F2937', fontSize: 15, lineHeight: 24, fontWeight: '500' }}>
+                {selectedNotification?.message || ''}
+              </Text>
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
-                <View style={{ flex: 1 }}>
-                  {isNotificationsLoading ? (
-                    <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 8 }}>
-                      <ActivityIndicator size="small" color="#0277BD" />
-                    </View>
-                  ) : broadcastNotifications.length === 0 ? (
-                    <View style={{ alignItems: 'center', paddingTop: 24 }}>
-                      <Feather name="bell" size={32} color="#CBD5E1" />
-                      <Text style={{ color: '#64748B', marginTop: 8, fontSize: 13 }}>No notifications yet.</Text>
-                    </View>
-                  ) : (
-                    <ScrollView
-                      style={{ flex: 1 }}
-                      contentContainerStyle={{ paddingBottom: 10 }}
-                      showsVerticalScrollIndicator={false}
-                    >
-                      {broadcastNotifications.map((n) => (
-                        <TouchableOpacity
-                          key={n.id}
-                          onPress={() => handleNotificationPress(n)}
-                          activeOpacity={0.84}
-                          style={{
-                            paddingVertical: 10,
-                            paddingHorizontal: 10,
-                            borderRadius: 12,
-                            backgroundColor: n.isRead ? '#F8FAFC' : '#EFF6FF',
-                            marginBottom: 6,
-                            borderWidth: 1,
-                            borderColor: n.isRead ? '#E2E8F0' : '#BFDBFE',
-                          }}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: n.isRead ? '#E2E8F0' : '#3B82F6', alignItems: 'center', justifyContent: 'center' }}>
-                              <Feather name="volume-2" size={12} color={n.isRead ? '#475569' : '#FFFFFF'} />
-                            </View>
-                            <View style={{ width: 8 }} />
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
-                                {n.title || 'Announcement'}
-                              </Text>
-                              <Text style={{ fontSize: 12, color: '#475569', marginTop: 2 }} numberOfLines={2}>
-                                {n.message}
-                              </Text>
-                            </View>
-                            {!n.isRead && (
-                              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }} />
-                            )}
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  )}
-                </View>
+      <Modal
+        visible={showRecentEventsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseRecentEventsModal}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={handleCloseRecentEventsModal}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.42)',
+          }}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {}}
+            style={{
+              position: 'absolute',
+              top: popoverTop,
+              left: popoverLeft,
+              width: popoverWidth,
+              maxHeight: popoverMaxHeight,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 20,
+              shadowColor: '#0277BD',
+              shadowOpacity: 0.28,
+              shadowRadius: 24,
+              shadowOffset: { width: 0, height: 12 },
+              elevation: 16,
+              transform: [{ scale: showRecentEventsModal ? 1 : 0.9 }],
+            }}
+          >
+            <View
+              style={{
+                position: 'absolute',
+                top: -8,
+                left: arrowLeft,
+                width: 16,
+                height: 16,
+                backgroundColor: '#FFFFFF',
+                transform: [{ rotate: '45deg' }],
+                shadowColor: '#0277BD',
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 8,
+              }}
+            />
 
-                {broadcastNotifications.length > 0 && (
-                  <View style={{ paddingTop: 10, alignItems: 'flex-end' }}>
-                    <LinearGradient
-                      colors={['#0277BD', '#01579B']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{
-                        borderRadius: 6,
-                        paddingVertical: 6,
-                        paddingHorizontal: 16,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <TouchableOpacity onPress={handleClearNotifications} activeOpacity={0.8}>
-                        <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>Clear All</Text>
-                      </TouchableOpacity>
-                    </LinearGradient>
+            <LinearGradient
+              colors={['#0277BD', '#01579B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
+                <Feather name="bell" size={14} color="#FFFFFF" />
+              </View>
+              <View style={{ width: 8 }} />
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
+                Notifications
+              </Text>
+              <TouchableOpacity
+                onPress={handleCloseRecentEventsModal}
+                style={{ marginLeft: 'auto', padding: 4 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Feather name="x" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </LinearGradient>
+
+            <View style={{ paddingHorizontal: 12, paddingBottom: 12, flex: 1 }}>
+              <View style={{ height: 8 }} />
+
+              <View style={{ flex: 1 }}>
+                {isNotificationsLoading ? (
+                  <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 8 }}>
+                    <ActivityIndicator size="small" color="#0277BD" />
                   </View>
+                ) : broadcastNotifications.length === 0 ? (
+                  <View style={{ alignItems: 'center', paddingTop: 24 }}>
+                    <Feather name="bell" size={32} color="#CBD5E1" />
+                    <Text style={{ color: '#64748B', marginTop: 8, fontSize: 13 }}>No notifications yet.</Text>
+                  </View>
+                ) : (
+                  <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ paddingBottom: 10 }}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {broadcastNotifications.map((n) => (
+                      <TouchableOpacity
+                        key={n.id}
+                        onPress={() => handleNotificationPress(n)}
+                        activeOpacity={0.84}
+                        style={{
+                          paddingVertical: 10,
+                          paddingHorizontal: 10,
+                          borderRadius: 12,
+                          backgroundColor: n.isRead ? '#F8FAFC' : '#EFF6FF',
+                          marginBottom: 6,
+                          borderWidth: 1,
+                          borderColor: n.isRead ? '#E2E8F0' : '#BFDBFE',
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: n.isRead ? '#E2E8F0' : '#3B82F6', alignItems: 'center', justifyContent: 'center' }}>
+                            <Feather name="volume-2" size={12} color={n.isRead ? '#475569' : '#FFFFFF'} />
+                          </View>
+                          <View style={{ width: 8 }} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
+                              {n.title || 'Announcement'}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: '#475569', marginTop: 2 }} numberOfLines={2}>
+                              {n.message}
+                            </Text>
+                          </View>
+                          {!n.isRead && (
+                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }} />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 )}
               </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
 
+              {broadcastNotifications.length > 0 && (
+                <View style={{ paddingTop: 10, alignItems: 'flex-end' }}>
+                  <LinearGradient
+                    colors={['#0277BD', '#01579B']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      borderRadius: 6,
+                      paddingVertical: 6,
+                      paddingHorizontal: 16,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <TouchableOpacity onPress={handleClearNotifications} activeOpacity={0.8}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>Clear All</Text>
+                    </TouchableOpacity>
+                  </LinearGradient>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      <SafeScrollView
+        style={{ flex: 1, backgroundColor: 'transparent' }}
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom, flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+      >
+        {/* Background Decoratives - Now scroll with content */}
+        <View style={homeStyles.backgroundDecorative} />
+        <View style={homeStyles.backgroundOrbOne} />
+        <View style={homeStyles.backgroundOrbTwo} />
+        <View style={homeStyles.backgroundOrbThree} />
+        <View style={homeStyles.backgroundPatternOne} />
+        <View style={homeStyles.backgroundPatternTwo} />
+        <View style={homeStyles.waveOne} />
+        <View style={homeStyles.waveTwo} />
+        <View style={homeStyles.circleOne} />
+        <View style={homeStyles.circleTwo} />
+        <View style={homeStyles.triangleOne} />
+        <View style={homeStyles.hexagonOne} />
+        <View style={homeStyles.backgroundOrbFour} />
+        <View style={homeStyles.backgroundOrbFive} />
+        <View style={homeStyles.backgroundRingOne} />
+        <View style={homeStyles.backgroundRingTwo} />
+        <View style={homeStyles.backgroundDotOne} />
+        <View style={homeStyles.backgroundDotTwo} />
+        <View style={homeStyles.backgroundDotThree} />
+        <View style={homeStyles.backgroundStripeOne} />
+        <View style={homeStyles.backgroundStripeTwo} />
+        <View style={homeStyles.decorativeBlobOne} />
+        <View style={homeStyles.decorativeBlobTwo} />
+        <View style={homeStyles.decorativeBlobThree} />
+        <View style={homeStyles.decorativeOrbSix} />
+        <View style={homeStyles.decorativeOrbSeven} />
+        <View style={homeStyles.decorativeCircleThree} />
+        <View style={homeStyles.decorativeCircleFour} />
+        <View style={homeStyles.decorativeWaveThree} />
+        <View style={homeStyles.decorativeWaveFour} />
+        <View style={homeStyles.decorativeCrossOne} />
+        <View style={homeStyles.decorativeCrossTwo} />
+        <View style={homeStyles.decorativeDotFour} />
+        <View style={homeStyles.decorativeDotFive} />
+        <View style={homeStyles.decorativeDotSix} />
+        
         <View style={{ flex: 1 }}>
           <AppErrorBanner
             error={error}
@@ -891,37 +999,44 @@ export default function HomeScreen({ navigation }) {
             <AutoScrollingPromoCarousel navigation={navigation} />
           </View>
 
-          {nextEvent && (
-            <SafeTouchableOpacity
-              style={homeStyles.countdownInlineContainer}
-              onPress={() => handleEventPress(nextEvent)}
-              activeOpacity={0.85}
+          <View style={homeStyles.categoriesContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={homeStyles.categoriesContent}
             >
-              <View style={homeStyles.countdownInlineDepthLayer} pointerEvents="none">
-                <View style={homeStyles.countdownInlineGlowOrbOne} />
-                <View style={homeStyles.countdownInlineGlowOrbTwo} />
-                <View style={homeStyles.countdownInlineHighlight} />
-              </View>
-              <View style={homeStyles.countdownInlineContent}>
-                <View style={homeStyles.countdownInlineLeft}>
-                  <View style={homeStyles.countdownInlineIconBadge}>
-                    <Feather name="clock" size={12} color="#FFD700" />
+              {curatedChips.map((category) => (
+                <SafeTouchableOpacity
+                  key={category.key}
+                  style={[
+                    homeStyles.categoryChip,
+                  ]}
+                  onPress={() => {}}
+                  activeOpacity={0.7}
+                >
+                  <View style={homeStyles.categoryDepthLayer} pointerEvents="none">
+                    <View style={homeStyles.categoryGlowOrbOne} />
+                    <View style={homeStyles.categoryGlowOrbTwo} />
+                    <View style={homeStyles.categoryHighlight} />
                   </View>
-                  <View style={homeStyles.countdownInlineTextWrap}>
-                    <Text style={homeStyles.countdownLabel}>Next Event</Text>
-                    <Text style={homeStyles.countdownEventTitle} numberOfLines={1}>
-                      {nextEvent.title}
-                    </Text>
-                  </View>
-                </View>
-                <View style={homeStyles.countdownInlineTimerPill}>
-                  <Text style={homeStyles.countdownTimer}>{countdown}</Text>
-                </View>
-              </View>
-            </SafeTouchableOpacity>
-          )}
+                  <Feather
+                    name={category.icon}
+                    size={10}
+                    color={'rgba(255, 255, 255, 0.8)'}
+                    style={{ zIndex: 1 }}
+                  />
+                  <Text
+                    style={[
+                      homeStyles.categoryChipText,
+                    ]}
+                  >
+                    {category.label}
+                  </Text>
+                </SafeTouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
 
-          {/* Trending Events Section */}
           {trendingEvents.length > 0 && (
             <View style={homeStyles.trendingEventsSection}>
               <View style={homeStyles.trendingEventsHeader}>
@@ -1057,86 +1172,175 @@ export default function HomeScreen({ navigation }) {
               </SafeTouchableOpacity>
             </View>
 
-            <View style={homeStyles.premiumFeaturedContainer}>
-              {featuredEvents.map((event, index) => (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={homeStyles.recommendedEventsScrollContainer}
+            >
+              {featuredEvents.map((event) => (
                 <SafeTouchableOpacity
                   key={event.id}
-                  style={homeStyles.horizontalEventCard}
+                  style={homeStyles.recommendedEventCard}
                   onPress={() => handleEventPress(event)}
-                  activeOpacity={0.95}
+                  activeOpacity={0.92}
                 >
-                  <View style={homeStyles.horizontalEventImageContainer}>
-                    {event.imageUrl ? (
-                      <Image
-                        source={{ uri: event.imageUrl }}
-                        style={homeStyles.horizontalEventImage}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <LinearGradient
-                        colors={
-                          index % 3 === 0 ? ['#0277BD', '#01579B'] :
-                          index % 3 === 1 ? ['#8B5CF6', '#7C3AED'] :
-                          ['#059669', '#047857']
-                        }
-                        style={homeStyles.horizontalEventImagePlaceholder}
-                      >
-                        <Feather name="image" size={24} color="#FFFFFF" />
-                      </LinearGradient>
-                    )}
-                    {/* Featured Badge on Left Side */}
-                    <View style={homeStyles.premiumFeaturedBadgeLeft}>
-                      <LinearGradient
-                        colors={['#FFD700', '#FFA500']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={homeStyles.premiumBadgeGradient}
-                      >
-                        <Feather name="star" size={10} color="#FFFFFF" />
-                        <Text style={homeStyles.premiumBadgeText}>FEATURED</Text>
-                      </LinearGradient>
-                    </View>
-                  </View>
+                  {event.imageUrl ? (
+                    <Image
+                      source={{ uri: event.imageUrl }}
+                      style={homeStyles.recommendedEventImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={['#0277BD', '#01579B']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={homeStyles.recommendedEventImage}
+                    />
+                  )}
 
-                  <View style={homeStyles.horizontalEventDetailsContainer}>
-                    <View style={homeStyles.horizontalEventTopSection}>
-                      <Text style={homeStyles.horizontalEventTitle} numberOfLines={2}>
+                  <LinearGradient
+                    colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.88)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={homeStyles.recommendedEventOverlay}
+                  >
+                    <View style={homeStyles.recommendedEventOverlayContent}>
+                      <Text style={homeStyles.recommendedEventTitle} numberOfLines={2}>
                         {event.title}
                       </Text>
-
-                      <View style={homeStyles.horizontalEventMetaRow}>
-                        <Feather name="map-pin" size={12} color="#6B7280" />
-                        <Text style={homeStyles.horizontalEventMetaText} numberOfLines={1}>
-                          {getEventLocationLabel(event.location)}
-                        </Text>
-                      </View>
-
-                      <View style={homeStyles.horizontalEventMetaRow}>
-                        <Feather name="calendar" size={12} color="#6B7280" />
-                        <Text style={homeStyles.horizontalEventMetaText}>
+                      <View style={homeStyles.recommendedEventMetaRow}>
+                        <Feather name="calendar" size={12} color="rgba(255,255,255,0.92)" />
+                        <Text style={homeStyles.recommendedEventMetaText}>
                           {formatDateTimeShort(event.date, event.time)}
                         </Text>
                       </View>
                     </View>
-
-                    <View style={homeStyles.horizontalEventBottomRow}>
-                      <Text style={homeStyles.horizontalEventPrice}>
-                        {formatPrice(event.price, event.currency)}
-                      </Text>
-
-                      <SafeTouchableOpacity
-                        style={homeStyles.horizontalEventViewButton}
-                        onPress={() => handleEventPress(event)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={homeStyles.horizontalEventViewButtonText}>View Details</Text>
-                      </SafeTouchableOpacity>
-                    </View>
-                  </View>
+                  </LinearGradient>
                 </SafeTouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
+
+          {recommendedEvents.length > 0 && (
+            <View style={homeStyles.recommendedEventsSection}>
+              <View style={homeStyles.featuredEventsHeader}>
+                <View style={homeStyles.trendingTitleContainer}>
+                  <Feather name="thumbs-up" size={20} color="#000000" />
+                  <Text style={homeStyles.featuredEventsTitle}>Recommended Events</Text>
+                </View>
+              </View>
+
+              <View style={homeStyles.premiumFeaturedContainer}>
+                {recommendedEvents.map((event, index) => (
+                  <SafeTouchableOpacity
+                    key={event.id}
+                    style={homeStyles.horizontalEventCard}
+                    onPress={() => handleEventPress(event)}
+                    activeOpacity={0.95}
+                  >
+                    <View style={homeStyles.horizontalEventImageContainer}>
+                      {event.imageUrl ? (
+                        <Image
+                          source={{ uri: event.imageUrl }}
+                          style={homeStyles.horizontalEventImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <LinearGradient
+                          colors={
+                            index % 3 === 0 ? ['#0277BD', '#01579B'] :
+                            index % 3 === 1 ? ['#8B5CF6', '#7C3AED'] :
+                            ['#059669', '#047857']
+                          }
+                          style={homeStyles.horizontalEventImagePlaceholder}
+                        >
+                          <Feather name="image" size={24} color="rgba(255,255,255,0.7)" />
+                        </LinearGradient>
+                      )}
+                    </View>
+
+                    <View style={homeStyles.horizontalEventDetailsContainer}>
+                      <View style={homeStyles.horizontalEventTopSection}>
+                        <Text style={homeStyles.horizontalEventTitle} numberOfLines={2}>
+                          {event.title}
+                        </Text>
+
+                        <View style={homeStyles.horizontalEventMetaRow}>
+                          <Feather name="map-pin" size={12} color="#6B7280" />
+                          <Text style={homeStyles.horizontalEventMetaText} numberOfLines={1}>
+                            {getEventLocationLabel(event.location)}
+                          </Text>
+                        </View>
+
+                        <View style={homeStyles.horizontalEventMetaRow}>
+                          <Feather name="calendar" size={12} color="#6B7280" />
+                          <Text style={homeStyles.horizontalEventMetaText}>
+                            {formatDateTimeShort(event.date, event.time)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={homeStyles.horizontalEventBottomRow}>
+                        <Text style={homeStyles.horizontalEventPrice}>
+                          {formatPrice(event.price, event.currency)}
+                        </Text>
+
+                        <SafeTouchableOpacity
+                          style={homeStyles.horizontalEventViewButton}
+                          onPress={() => handleEventPress(event)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={homeStyles.horizontalEventViewButtonText}>View Details</Text>
+                        </SafeTouchableOpacity>
+                      </View>
+                    </View>
+                  </SafeTouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {nextEvent && (
+            <SafeTouchableOpacity
+              style={homeStyles.countdownInlineContainer}
+              onPress={() => handleEventPress(nextEvent)}
+              activeOpacity={0.85}
+            >
+              <View style={homeStyles.countdownInlineDepthLayer} pointerEvents="none">
+                <View style={homeStyles.countdownInlineGlowOrbOne} />
+                <View style={homeStyles.countdownInlineGlowOrbTwo} />
+                <View style={homeStyles.countdownInlineHighlight} />
+              </View>
+              <View style={homeStyles.countdownInlineContent}>
+                <View style={homeStyles.countdownInlineLeft}>
+                  {nextEvent.imageUrl ? (
+                    <Image
+                      source={{ uri: nextEvent.imageUrl }}
+                      style={homeStyles.countdownEventImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={['#0277BD', '#01579B']}
+                      style={homeStyles.countdownEventImage}
+                    >
+                      <Feather name="calendar" size={24} color="#FFFFFF" />
+                    </LinearGradient>
+                  )}
+                  <View style={homeStyles.countdownInlineTextWrap}>
+                    <Text style={homeStyles.countdownLabel}>Next Event</Text>
+                    <Text style={homeStyles.countdownEventTitle} numberOfLines={1}>
+                      {nextEvent.title}
+                    </Text>
+                  </View>
+                </View>
+                <View style={homeStyles.countdownInlineTimerPill}>
+                  <Text style={homeStyles.countdownTimer}>{countdown}</Text>
+                </View>
+              </View>
+            </SafeTouchableOpacity>
+          )}
 
           <View style={homeStyles.featuredEventsSection}>
             <View style={homeStyles.featuredEventsHeader}>
@@ -1219,9 +1423,72 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
 
+          {popularOrganizers.length > 0 && (
+            <View style={homeStyles.popularOrganizersSection}>
+              <View style={homeStyles.featuredEventsHeader}>
+                <View style={homeStyles.trendingTitleContainer}>
+                  <Feather name="users" size={20} color="#000000" />
+                  <Text style={homeStyles.featuredEventsTitle}>Popular Organizers</Text>
+                </View>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={homeStyles.popularOrganizersScrollContainer}
+              >
+                {popularOrganizers.map((organizer, index) => (
+                  <SafeTouchableOpacity
+                    key={`${organizer.id}:${index}`}
+                    style={homeStyles.popularOrganizerCard}
+                    activeOpacity={0.9}
+                    onPress={() =>
+                      navigation.navigate('Organprofilescreenforusers', {
+                        organizerId: organizer.id,
+                        organizerName: organizer.name,
+                      })
+                    }
+                  >
+                    {organizer.imageUrl ? (
+                      <Image
+                        source={{ uri: organizer.imageUrl }}
+                        style={homeStyles.popularOrganizerAvatar}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <LinearGradient
+                        colors={['#0277BD', '#01579B']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={homeStyles.popularOrganizerAvatar}
+                      >
+                        <Feather name="user" size={18} color="#FFFFFF" />
+                      </LinearGradient>
+                    )}
+
+                    <Text style={homeStyles.popularOrganizerName} numberOfLines={1}>
+                      {organizer.name}
+                    </Text>
+                    <View style={homeStyles.popularOrganizerRatingRow}>
+                      <Feather name="star" size={12} color="#F59E0B" />
+                      <Feather name="star" size={12} color="#F59E0B" />
+                      <Feather name="star" size={12} color="#F59E0B" />
+                      <Feather name="star" size={12} color="#F59E0B" />
+                      <Feather name="star" size={12} color="#E5E7EB" />
+                      <Text style={homeStyles.popularOrganizerRatingText}>4.5</Text>
+                    </View>
+                    <Text style={homeStyles.popularOrganizerMeta} numberOfLines={1}>
+                      {organizer.count} events
+                    </Text>
+                  </SafeTouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={homeStyles.creativeElementsSection}>
             <View style={homeStyles.statsCardsContainer}>
-              <View style={homeStyles.statsCard}>
+              <View style={[homeStyles.statsCard, { marginRight: 12 }]}> 
                 <LinearGradient
                   colors={['#10B981', '#059669']}
                   style={homeStyles.statsCardGradient}
@@ -1229,14 +1496,19 @@ export default function HomeScreen({ navigation }) {
                   <View style={homeStyles.statsCardDepthLayer} pointerEvents="none">
                     <View style={homeStyles.statsCardGlowOrbOne} />
                     <View style={homeStyles.statsCardGlowOrbTwo} />
-                    <View style={homeStyles.statsCardHighlight} />
+                    <LinearGradient
+                      colors={['rgba(255, 255, 255, 0.20)', 'rgba(255, 255, 255, 0)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0, y: 1 }}
+                      style={homeStyles.statsCardHighlight}
+                    />
                   </View>
                   <Feather name="calendar" size={24} color="#FFFFFF" />
                   <Text style={homeStyles.statsCardNumber}>{processedEvents.length}</Text>
                   <Text style={homeStyles.statsCardLabel}>Total Events</Text>
                 </LinearGradient>
               </View>
-              <View style={homeStyles.statsCard}>
+              <View style={[homeStyles.statsCard, { marginRight: 12 }]}> 
                 <LinearGradient
                   colors={['#F59E0B', '#D97706']}
                   style={homeStyles.statsCardGradient}
@@ -1244,7 +1516,12 @@ export default function HomeScreen({ navigation }) {
                   <View style={homeStyles.statsCardDepthLayer} pointerEvents="none">
                     <View style={homeStyles.statsCardGlowOrbOne} />
                     <View style={homeStyles.statsCardGlowOrbTwo} />
-                    <View style={homeStyles.statsCardHighlight} />
+                    <LinearGradient
+                      colors={['rgba(255, 255, 255, 0.20)', 'rgba(255, 255, 255, 0)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0, y: 1 }}
+                      style={homeStyles.statsCardHighlight}
+                    />
                   </View>
                   <Feather name="star" size={24} color="#FFFFFF" />
                   <Text style={homeStyles.statsCardNumber}>{featuredEvents.length}</Text>
@@ -1259,7 +1536,12 @@ export default function HomeScreen({ navigation }) {
                   <View style={homeStyles.statsCardDepthLayer} pointerEvents="none">
                     <View style={homeStyles.statsCardGlowOrbOne} />
                     <View style={homeStyles.statsCardGlowOrbTwo} />
-                    <View style={homeStyles.statsCardHighlight} />
+                    <LinearGradient
+                      colors={['rgba(255, 255, 255, 0.20)', 'rgba(255, 255, 255, 0)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0, y: 1 }}
+                      style={homeStyles.statsCardHighlight}
+                    />
                   </View>
                   <Feather name="heart" size={24} color="#FFFFFF" />
                   <Text style={homeStyles.statsCardNumber}>{processedEvents.filter(event => isFavorite(event.id)).length}</Text>
@@ -1293,9 +1575,10 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
         </View>
-
-    </SafeScrollView>
+      </SafeScrollView>
+    </View>
   );
+
 }
 
 function AutoScrollingPromoCarousel({ navigation }) {

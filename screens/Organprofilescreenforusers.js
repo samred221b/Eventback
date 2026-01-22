@@ -734,209 +734,274 @@ function Organprofilescreenforusers({ route, navigation }) {
                 </TouchableOpacity>
               )}
             </View>
-          </View>
 
-          {/* Contact Info */}
-          <View style={{
-            backgroundColor: '#FFFFFF',
-            padding: 20,
-            marginHorizontal: 16,
-            marginTop: 8,
-            borderRadius: 16,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3
-          }}>
-            <Text style={{
-              fontSize: 16,
-              fontWeight: '600',
-              color: '#1F2937',
-              marginBottom: 16
-            }}>
-              Contact Information
-            </Text>
+            {/* Contact Information */}
+            <View style={{ marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: '#1F2937',
+                marginBottom: 12
+              }}>
+                Contact Information
+              </Text>
 
-            {/* Email */}
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 8,
-              marginBottom: 8
-            }}>
-              <Feather name="mail" size={16} color="#64748B" />
-              {organizer?.email && organizer.email.trim() !== '' ? (
-                <TouchableOpacity onPress={() => Linking.openURL(`mailto:${organizer.email}`)}>
+              {(() => {
+                const emailValue = organizer?.email || organizer?.user?.email || organizer?.contactEmail || '';
+                const phoneValue = organizer?.phone || organizer?.contactPhone || '';
+                const loc = organizer?.location || {};
+                const addressValue = loc?.address || organizer?.address || '';
+                const cityValue = loc?.city || organizer?.city || '';
+                const countryValue = loc?.country || organizer?.country || '';
+                const locationLabel = [addressValue, cityValue, countryValue].filter(Boolean).join(', ');
+
+                return (
+                  <>
+
+              {/* Email */}
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 8,
+                marginBottom: 8
+              }}>
+                <Feather name="mail" size={16} color="#64748B" />
+                {emailValue && String(emailValue).trim() !== '' ? (
+                  <TouchableOpacity onPress={() => Linking.openURL(`mailto:${emailValue}`)}>
+                    <Text style={{
+                      marginLeft: 12,
+                      fontSize: 14,
+                      color: '#374151',
+                      textDecorationLine: 'underline'
+                    }}>
+                      {emailValue}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
                   <Text style={{
                     marginLeft: 12,
                     fontSize: 14,
-                    color: '#374151',
-                    textDecorationLine: 'underline'
+                    color: '#9CA3AF',
+                    fontStyle: 'italic'
                   }}>
-                    {organizer.email}
+                    Email not provided
                   </Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={{
-                  marginLeft: 12,
-                  fontSize: 14,
-                  color: '#9CA3AF',
-                  fontStyle: 'italic'
-                }}>
-                  Email not provided
-                </Text>
-              )}
-            </View>
+                )}
+              </View>
 
-            {/* Phone */}
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 8,
-              marginBottom: 8
-            }}>
-              <Feather name="phone" size={16} color="#64748B" />
-              {organizer?.phone && organizer.phone.trim() !== '' ? (
-                <TouchableOpacity onPress={() => Linking.openURL(`tel:${organizer.phone}`)}>
+              {/* Phone */}
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 8,
+                marginBottom: 8
+              }}>
+                <Feather name="phone" size={16} color="#64748B" />
+                {phoneValue && String(phoneValue).trim() !== '' ? (
+                  <TouchableOpacity onPress={() => Linking.openURL(`tel:${phoneValue}`)}>
+                    <Text style={{
+                      marginLeft: 12,
+                      fontSize: 14,
+                      color: '#374151',
+                      textDecorationLine: 'underline'
+                    }}>
+                      {phoneValue}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
                   <Text style={{
                     marginLeft: 12,
                     fontSize: 14,
-                    color: '#374151',
-                    textDecorationLine: 'underline'
+                    color: '#9CA3AF',
+                    fontStyle: 'italic'
                   }}>
-                    {organizer.phone}
+                    Phone not provided
                   </Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={{
-                  marginLeft: 12,
-                  fontSize: 14,
-                  color: '#9CA3AF',
-                  fontStyle: 'italic'
-                }}>
-                  Phone not provided
-                </Text>
-              )}
-            </View>
+                )}
+              </View>
 
-            {/* Location */}
-            {organizer.location && (
+              {/* Location */}
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 paddingVertical: 8
               }}>
                 <Feather name="map-pin" size={16} color="#64748B" />
-                <TouchableOpacity onPress={() => handleLocationPress(organizer.location)}>
+                {locationLabel ? (
+                  <TouchableOpacity
+                    onPress={() => handleLocationPress({ address: addressValue, city: cityValue, country: countryValue })}
+                  >
+                    <Text style={{
+                      marginLeft: 12,
+                      fontSize: 14,
+                      color: '#374151',
+                      textDecorationLine: 'underline'
+                    }}>
+                      {locationLabel}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
                   <Text style={{
                     marginLeft: 12,
                     fontSize: 14,
-                    color: '#374151',
-                    textDecorationLine: 'underline'
+                    color: '#9CA3AF',
+                    fontStyle: 'italic'
                   }}>
-                    {organizer.location.address || organizer.location.city || 'Location not specified'}
+                    Location not provided
                   </Text>
+                )}
+              </View>
+
+              {/* Social Media */}
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 12,
+                gap: 12
+              }}>
+                <TouchableOpacity
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: '#F3F4F6',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB'
+                  }}
+                  onPress={() => organizer.facebook ? Linking.openURL(organizer.facebook) : null}
+                >
+                  <MaterialIcons name="facebook" size={20} color="#1877F2" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: '#F3F4F6',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB'
+                  }}
+                  onPress={() => organizer.instagram ? Linking.openURL(organizer.instagram) : null}
+                >
+                  <MaterialIcons name="photo-camera" size={20} color="#E4405F" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: '#F3F4F6',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB'
+                  }}
+                  onPress={() => organizer.tiktok ? Linking.openURL(organizer.tiktok) : null}
+                >
+                  <MaterialIcons name="music-note" size={20} color="#000000" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: '#F3F4F6',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB'
+                  }}
+                  onPress={() => organizer.twitter ? Linking.openURL(organizer.twitter) : null}
+                >
+                  <MaterialIcons name="alternate-email" size={20} color="#1DA1F2" />
                 </TouchableOpacity>
               </View>
-            )}
+                  </>
+                );
+              })()}
+            </View>
           </View>
 
           {/* Events Section */}
-          <View style={{
-            backgroundColor: '#FFFFFF',
-            padding: 20,
-            marginHorizontal: 16,
-            marginTop: 8,
-            borderRadius: 16,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3
-          }}>
-            <Text style={{
-              fontSize: 16,
-              fontWeight: '600',
-              color: '#1F2937',
-              marginBottom: 16
-            }}>
-              Events hosted by the organizer ({events.length})
-            </Text>
+          <View style={homeStyles.featuredEventsSection}>
+            <View style={homeStyles.featuredEventsHeader}>
+              <View style={homeStyles.trendingTitleContainer}>
+                <Feather name="calendar" size={20} color="#000000" />
+                <Text style={homeStyles.featuredEventsTitle}>Events hosted by the organizer ({events.length})</Text>
+              </View>
+            </View>
 
-            {events.slice(0, 3).map((event) => (
-              <TouchableOpacity
-                key={event._id}
-                style={{
-                  flexDirection: 'row',
-                  paddingVertical: 12,
-                  borderBottomWidth: 1,
-                  borderBottomColor: '#F3F4F6'
-                }}
-                onPress={() => navigation.navigate('EventDetails', { event })}
-              >
-                <View style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 8,
-                  backgroundColor: '#F3F4F6',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  overflow: 'hidden'
-                }}>
-                  {event.image ? (
-                    <Image
-                      source={{ uri: normalizeRemoteImageUri(event.image) }}
-                      style={{ width: 48, height: 48 }}
-                    />
-                  ) : (
-                    <Feather name="calendar" size={20} color="#9CA3AF" />
-                  )}
-                </View>
+            <View style={homeStyles.premiumFeaturedContainer}>
+              {events.slice(0, 5).map((event, index) => (
+                <TouchableOpacity
+                  key={event._id || event.id || index}
+                  style={homeStyles.horizontalEventCard}
+                  onPress={() => navigation.navigate('EventDetails', { event })}
+                  activeOpacity={0.95}
+                >
+                  <View style={homeStyles.horizontalEventImageContainer}>
+                    {event.image || event.imageUrl ? (
+                      <Image
+                        source={{ uri: normalizeRemoteImageUri(event.image || event.imageUrl) }}
+                        style={homeStyles.horizontalEventImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <LinearGradient
+                        colors={
+                          index % 3 === 0 ? ['#0277BD', '#01579B'] :
+                          index % 3 === 1 ? ['#8B5CF6', '#7C3AED'] :
+                          ['#059669', '#047857']
+                        }
+                        style={homeStyles.horizontalEventImagePlaceholder}
+                      >
+                        <Feather name="image" size={24} color="rgba(255,255,255,0.7)" />
+                      </LinearGradient>
+                    )}
+                  </View>
 
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={{
-                    fontSize: 14,
-                    fontWeight: '500',
-                    color: '#1F2937',
-                    marginBottom: 4
-                  }}>
-                    {event.title}
-                  </Text>
-                  <Text style={{
-                    fontSize: 12,
-                    color: '#64748B',
-                    marginBottom: 2
-                  }}>
-                    {new Date(event.date).toLocaleDateString()} • {event.time || 'TBD'}
-                  </Text>
-                  <Text style={{
-                    fontSize: 12,
-                    color: '#64748B'
-                  }}>
-                    {event.location?.name || event.location?.city || 'Location TBA'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <View style={homeStyles.horizontalEventDetailsContainer}>
+                    <View style={homeStyles.horizontalEventTopSection}>
+                      <Text style={homeStyles.horizontalEventTitle} numberOfLines={2}>
+                        {event.title}
+                      </Text>
 
-            {events.length > 3 && (
-              <TouchableOpacity
-                style={{
-                  alignItems: 'center',
-                  paddingVertical: 12,
-                  marginTop: 8
-                }}
-              >
-                <Text style={{
-                  fontSize: 14,
-                  color: '#0277BD',
-                  fontWeight: '500'
-                }}>
-                  View all events
-                </Text>
-              </TouchableOpacity>
-            )}
+                      <View style={homeStyles.horizontalEventMetaRow}>
+                        <Feather name="map-pin" size={12} color="#6B7280" />
+                        <Text style={homeStyles.horizontalEventMetaText} numberOfLines={1}>
+                          {event.location?.name || event.location?.city || 'Location TBA'}
+                        </Text>
+                      </View>
+
+                      <View style={homeStyles.horizontalEventMetaRow}>
+                        <Feather name="calendar" size={12} color="#6B7280" />
+                        <Text style={homeStyles.horizontalEventMetaText}>
+                          {formatDate(event.date)} • {event.time || 'TBD'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={homeStyles.horizontalEventBottomRow}>
+                      <Text style={homeStyles.horizontalEventPrice}>
+                        {formatPrice(event.price, event.currency)}
+                      </Text>
+
+                      <TouchableOpacity
+                        style={homeStyles.horizontalEventViewButton}
+                        onPress={() => navigation.navigate('EventDetails', { event })}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={homeStyles.horizontalEventViewButtonText}>View Details</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </ScrollView>
       </View>

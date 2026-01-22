@@ -270,7 +270,10 @@ class ApiService {
 
   async getEventsByCategory(category, params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    const endpoint = queryString ? `/events/categories/${category}?${queryString}` : `/events/categories/${category}`;
+    const encodedCategory = encodeURIComponent(String(category ?? '').trim());
+    const endpoint = queryString
+      ? `/events/categories/${encodedCategory}?${queryString}`
+      : `/events/categories/${encodedCategory}`;
     return this.get(endpoint, { requireAuth: false });
   }
 

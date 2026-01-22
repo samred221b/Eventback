@@ -1,26 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Alert, Share, Image, ScrollView, TouchableOpacity, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // StatusBar removed; use root StatusBar in App.js
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useFavorites } from '../providers/FavoritesProvider';
-import { formatPrice, formatDate, formatTime } from '../utils/dataProcessor';
+import { formatPrice, formatDate, formatTime, standardizeEventForDetails } from '../utils/dataProcessor';
 import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for network status
 import { logger } from '../utils/logger';
 import Constants from 'expo-constants';
+import apiService from '../services/api';
 
 const { width, height } = Dimensions.get('window');
 
 export default function EventDetailsScreen({ route, navigation }) {
-  const { event } = route.params;
+  const { event: initialEvent } = route.params;
+  const [event, setEvent] = useState(initialEvent);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const [similarEvents, setSimilarEvents] = useState([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [offline, setOffline] = useState(false); // State to track offline status
   const [userResponse, setUserResponse] = useState(null); // Track user response: 'interested', 'going', 'maybe'
   const [isPricingExpanded, setIsPricingExpanded] = useState(false); // State for pricing dropdown
   const [showFullScreenImage, setShowFullScreenImage] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const heroSliderRef = useRef(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchLatestEvent = async () => {
+      try {
+        const eventId = initialEvent?._id || initialEvent?.id;
+        if (!eventId) return;
+
+        const resp = await apiService.getEvent(eventId);
+        const nextEvent = resp?.data || resp?.event || resp;
+        if (mounted && nextEvent) {
+          setEvent(nextEvent);
+          setCurrentImageIndex(0);
+        }
+      } catch (e) {
+        const message = String(e?.message || e || '');
+        const status = e?.status;
+        const isNotFound =
+          status === 404 ||
+          message.toLowerCase().includes('not found') ||
+          message.toLowerCase().includes('no matching document found');
+
+        // If the event can't be re-fetched (deleted/out-of-sync), keep showing the
+        // passed-in event payload instead of surfacing an error.
+        if (!isNotFound) {
+          logger.error('Failed to fetch event details:', e);
+        }
+      }
+    };
+
+    fetchLatestEvent();
+    return () => {
+      mounted = false;
+    };
+  }, [initialEvent?._id, initialEvent?.id]);
 
   const normalizeRemoteImageUri = (uri) => {
   if (!uri || typeof uri !== 'string') return null;
@@ -72,6 +113,26 @@ export default function EventDetailsScreen({ route, navigation }) {
       null
   );
 
+  const eventImages = (() => {
+    const imgs = [];
+    if (Array.isArray(event?.images)) {
+      for (const img of event.images) {
+        const uri = normalizeRemoteImageUri(img);
+        if (uri) imgs.push(uri);
+      }
+    }
+    if (imgs.length === 0 && heroImageUri) imgs.push(heroImageUri);
+    return imgs.slice(0, 5);
+  })();
+
+  const scrollToImageIndex = (index) => {
+    const clamped = Math.max(0, Math.min(index, eventImages.length - 1));
+    setCurrentImageIndex(clamped);
+    if (heroSliderRef.current && typeof heroSliderRef.current.scrollTo === 'function') {
+      heroSliderRef.current.scrollTo({ x: clamped * width, animated: true });
+    }
+  };
+
   useEffect(() => {
     const checkNetworkStatus = async () => {
       const netInfo = await NetInfo.fetch();
@@ -107,6 +168,86 @@ export default function EventDetailsScreen({ route, navigation }) {
 
   const getCategoryColor = (category) => {
     return ['#0277BD', '#01579B'];
+  };
+
+  const getCategoryName = (value) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value.trim();
+    if (typeof value === 'object') {
+      const candidate =
+        (typeof value?.name === 'string' && value.name) ||
+        (typeof value?.title === 'string' && value.title) ||
+        (typeof value?.label === 'string' && value.label) ||
+        '';
+      return String(candidate || '').trim();
+    }
+    return '';
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchSimilarEvents = async () => {
+      try {
+        const category = getCategoryName(event?.category);
+
+        if (!category) {
+          if (mounted) setSimilarEvents([]);
+          return;
+        }
+
+        logger.info('SimilarEvents: fetching for category', category);
+
+        const resp = await apiService.getEventsByCategory(category, { limit: 20 });
+        const raw = resp?.data || resp?.events || resp;
+        const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+
+        logger.info('SimilarEvents: category endpoint returned', Array.isArray(list) ? list.length : 0);
+
+        const currentId = String(event?._id || event?.id || '');
+        const normalizedCategory = category.toLowerCase();
+
+        const filterListByCategory = (events) =>
+          (Array.isArray(events) ? events : [])
+            .filter((e) => {
+              if (!e) return false;
+              const id = String(e?._id || e?.id || '');
+              if (currentId && id && id === currentId) return false;
+              const cat = getCategoryName(e?.category).toLowerCase();
+              return !!cat && cat === normalizedCategory;
+            })
+            .slice(0, 10);
+
+        let filtered = filterListByCategory(list);
+
+        if (filtered.length === 0) {
+          logger.info('SimilarEvents: falling back to getEvents + local filtering');
+          const respAll = await apiService.getEvents({ limit: 50 });
+          const rawAll = respAll?.data || respAll?.events || respAll;
+          const listAll = Array.isArray(rawAll) ? rawAll : Array.isArray(rawAll?.data) ? rawAll.data : [];
+          filtered = filterListByCategory(listAll);
+        }
+
+        logger.info('SimilarEvents: filtered count', filtered.length);
+
+        if (mounted) setSimilarEvents(filtered);
+      } catch (e) {
+        logger.error('SimilarEvents: failed to fetch', e);
+        if (mounted) setSimilarEvents([]);
+      }
+    };
+
+    fetchSimilarEvents();
+    return () => {
+      mounted = false;
+    };
+  }, [event?._id, event?.id, event?.category]);
+
+  const handleSimilarEventPress = (selectedEvent) => {
+    const standardized = standardizeEventForDetails(selectedEvent);
+    const eventId = standardized?._id || standardized?.id;
+    if (!eventId) return;
+    navigation.navigate('EventDetails', { event: standardized });
   };
 
   const handleShare = async () => {
@@ -375,17 +516,35 @@ export default function EventDetailsScreen({ route, navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroContainer}>
-          {heroImageUri ? (
-            <TouchableOpacity
-              activeOpacity={0.92}
-              onPress={() => setShowFullScreenImage(true)}
-              style={{ flex: 1 }}
-            >
-              <Image 
-                source={{ uri: heroImageUri }} 
-                style={styles.heroImage}
-                resizeMode="cover"
-              />
+          {eventImages.length > 0 ? (
+            <View style={styles.heroSliderWrap}>
+              <ScrollView
+                ref={heroSliderRef}
+                horizontal
+                pagingEnabled
+                style={{ flex: 1 }}
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={(e) => {
+                  const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+                  setCurrentImageIndex(idx);
+                }}
+              >
+                {eventImages.map((uri, idx) => (
+                  <TouchableOpacity
+                    key={`${uri}-${idx}`}
+                    activeOpacity={0.92}
+                    onPress={() => setShowFullScreenImage(true)}
+                    style={{ width, height: 400 }}
+                  >
+                    <Image
+                      source={{ uri }}
+                      style={styles.heroImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
               <View style={styles.countdownBadge}>
                 <Feather name="clock" size={14} color="#FFFFFF" />
                 <Text style={styles.countdownBadgeText}>
@@ -393,7 +552,41 @@ export default function EventDetailsScreen({ route, navigation }) {
                   {countdown.hours}h {countdown.minutes}m {countdown.seconds}s left
                 </Text>
               </View>
-            </TouchableOpacity>
+
+              {eventImages.length > 1 && (
+                <>
+                  <TouchableOpacity
+                    style={styles.heroNavLeft}
+                    onPress={() => scrollToImageIndex(currentImageIndex - 1)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.heroNavButton}>
+                      <Feather name="chevron-left" size={22} color="#FFFFFF" />
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.heroNavRight}
+                    onPress={() => scrollToImageIndex(currentImageIndex + 1)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.heroNavButton}>
+                      <Feather name="chevron-right" size={22} color="#FFFFFF" />
+                    </View>
+                  </TouchableOpacity>
+
+                  <View style={styles.heroDotsRow}>
+                    {eventImages.map((_, i) => (
+                      <TouchableOpacity
+                        key={`dot-${i}`}
+                        style={[styles.heroDot, i === currentImageIndex && styles.heroDotActive]}
+                        onPress={() => scrollToImageIndex(i)}
+                        activeOpacity={0.9}
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
+            </View>
           ) : (
             <LinearGradient
               colors={['#0277BD', '#01579B']}
@@ -652,6 +845,71 @@ export default function EventDetailsScreen({ route, navigation }) {
               </View>
             </View>
           </View>
+
+          {similarEvents.length > 0 && (
+            <View style={styles.similarEventsSection}>
+              <View style={styles.similarEventsHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Feather name="layers" size={18} color="#0F172A" />
+                  <Text style={styles.similarEventsTitle}>Similar Events</Text>
+                </View>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.similarEventsScrollContainer}
+              >
+                {similarEvents.map((e, idx) => {
+                  const id = e?._id || e?.id || `similar-${idx}`;
+                  const img = normalizeRemoteImageUri(
+                    (typeof e?.imageUrl === 'string' && e.imageUrl) ||
+                      (typeof e?.image === 'string' && e.image) ||
+                      null
+                  );
+
+                  return (
+                    <TouchableOpacity
+                      key={String(id)}
+                      style={styles.similarEventCard}
+                      activeOpacity={0.92}
+                      onPress={() => handleSimilarEventPress(e)}
+                    >
+                      {img ? (
+                        <Image source={{ uri: img }} style={styles.similarEventImage} resizeMode="cover" />
+                      ) : (
+                        <LinearGradient
+                          colors={['#0277BD', '#01579B']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.similarEventImage}
+                        />
+                      )}
+
+                      <LinearGradient
+                        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.88)']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 0, y: 1 }}
+                        style={styles.similarEventOverlay}
+                      >
+                        <View style={styles.similarEventOverlayContent}>
+                          <Text style={styles.similarEventTitle} numberOfLines={2}>
+                            {e?.title || ''}
+                          </Text>
+                          <View style={styles.similarEventMetaRow}>
+                            <Feather name="calendar" size={12} color="rgba(255,255,255,0.92)" />
+                            <Text style={styles.similarEventMetaText}>
+                              {formatDate(e?.date)}
+                            </Text>
+                          </View>
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -676,7 +934,7 @@ export default function EventDetailsScreen({ route, navigation }) {
 
       <Modal
         visible={showFullScreenImage}
-        transparent
+        transparent={true}
         animationType="fade"
         onRequestClose={() => setShowFullScreenImage(false)}
       >
@@ -686,9 +944,9 @@ export default function EventDetailsScreen({ route, navigation }) {
             activeOpacity={1}
             onPress={() => setShowFullScreenImage(false)}
           >
-            {!!heroImageUri && (
+            {eventImages.length > 0 && (
               <Image
-                source={{ uri: heroImageUri }}
+                source={{ uri: eventImages[currentImageIndex] }}
                 style={styles.fullScreenImage}
                 resizeMode="contain"
               />
@@ -719,6 +977,9 @@ const styles = StyleSheet.create({
     height: 400,
     position: 'relative',
   },
+  heroSliderWrap: {
+    flex: 1,
+  },
   heroImage: {
     ...StyleSheet.absoluteFillObject,
     width: '100%',
@@ -732,6 +993,57 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  heroNavLeft: {
+    position: 'absolute',
+    left: 16,
+    top: '50%',
+    marginTop: -24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    zIndex: 10,
+  },
+  heroNavRight: {
+    position: 'absolute',
+    right: 16,
+    top: '50%',
+    marginTop: -24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    zIndex: 10,
+  },
+  heroNavButton: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroDotsRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 18,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 10,
+  },
+  heroDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+  },
+  heroDotActive: {
+    backgroundColor: '#FFFFFF',
+    width: 22,
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -965,6 +1277,65 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: 12,
+  },
+  similarEventsSection: {
+    paddingHorizontal: 10,
+    marginBottom: 24,
+  },
+  similarEventsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 0,
+  },
+  similarEventsTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginLeft: 8,
+  },
+  similarEventsScrollContainer: {
+    paddingRight: 10,
+    paddingLeft: 0,
+  },
+  similarEventCard: {
+    width: width * 0.82,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    marginRight: 16,
+  },
+  similarEventImage: {
+    width: '100%',
+    height: 200,
+  },
+  similarEventOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+  },
+  similarEventOverlayContent: {
+    padding: 14,
+  },
+  similarEventTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  similarEventMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  similarEventMetaText: {
+    marginLeft: 6,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.92)',
+    fontWeight: '600',
   },
   offlineBanner: {
     backgroundColor: '#FEF3C7',
