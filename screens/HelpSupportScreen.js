@@ -130,9 +130,9 @@ export default function HelpSupportScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F8FF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F8FF' }} edges={['top']}>
       {/* Header - Home Style */}
-      <View style={[homeStyles.homeHeaderContainer, { paddingTop: insets.top }]}>
+      <View style={homeStyles.homeHeaderContainer}>
         <LinearGradient
           colors={['#0277BD', '#01579B']}
           start={{ x: 0, y: 0 }}

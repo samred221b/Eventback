@@ -13,7 +13,7 @@ export default function PricingScreen({ navigation }) {
     {
       id: 'starter',
       name: 'Starter',
-      price: '800',
+      price: '1300',
       events: '10',
       period: 'month',
       color: '#10B981',
@@ -31,7 +31,7 @@ export default function PricingScreen({ navigation }) {
     {
       id: 'professional',
       name: 'Professional',
-      price: '1500',
+      price: '2500',
       events: '30',
       period: 'month',
       color: '#0277BD',
@@ -48,9 +48,9 @@ export default function PricingScreen({ navigation }) {
       popular: true
     },
     {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: '3000',
+      id: 'premium',
+      name: 'Premium',
+      price: '5000',
       events: '50+',
       period: 'month',
       color: '#7C3AED',
@@ -74,9 +74,9 @@ export default function PricingScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F8FF' }}>
+    <View style={{ flex: 1, backgroundColor: '#F4F8FF', paddingTop: insets.top }}>
       {/* Header - Home Style */}
-      <View style={[homeStyles.homeHeaderContainer, { paddingTop: insets.top }]}>
+      <View style={homeStyles.homeHeaderContainer}>
         <LinearGradient
           colors={['#0277BD', '#01579B']}
           start={{ x: 0, y: 0 }}
@@ -313,7 +313,7 @@ export default function PricingScreen({ navigation }) {
           </View>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -327,7 +327,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 8,
   },
   packageCard: {
     backgroundColor: '#FFFFFF',

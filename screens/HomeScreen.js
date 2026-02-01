@@ -40,6 +40,28 @@ const HOME_EVENTS_CACHE_KEY = 'home:events';
 const HOME_BANNERS_CACHE_KEY = 'home:banners';
 const HOME_NOTIFICATIONS_CLEARED_AT_KEY = 'home:notifications:clearedAt';
 
+const normalizeRemoteImageUri = (uri) => {
+  if (!uri || typeof uri !== 'string') return null;
+
+  const trimmed = uri.trim();
+  if (!trimmed) return null;
+
+  // Handle Firebase Storage URLs
+  if (trimmed.includes('firebasestorage.googleapis.com') || trimmed.includes('firebase')) {
+    // Add cache-busting parameter if not already present
+    const separator = trimmed.includes('?') ? '&' : '?';
+    return `${trimmed}${separator}t=${Date.now()}`;
+  }
+
+  // Handle other remote URLs
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+
+  // Handle relative paths or other formats
+  return trimmed;
+};
+
 const cacheHomeEvents = async (events) => {
   try {
     await cacheService.set(HOME_EVENTS_CACHE_KEY, events, { ttlMs: TTL.ONE_DAY });
@@ -197,11 +219,34 @@ export default function HomeScreen({ navigation }) {
       const organizerKey = organizerKeyRaw ? String(organizerKeyRaw) : '';
       if (!organizerKey || !organizerName) continue;
 
+      // Extract organizer profile image from event data
+      const getOrganizerProfileImage = (organizer) => {
+        if (!organizer) return null;
+        return organizer.profileImage ||
+               organizer.avatar ||
+               organizer.image ||
+               organizer.photo ||
+               organizer.profileImageUrl ||
+               organizer.avatarUrl ||
+               null;
+      };
+
+      const profileImage = getOrganizerProfileImage(event?.organizerId) ? normalizeRemoteImageUri(getOrganizerProfileImage(event?.organizerId)) : null;
+
       const existing = map.get(organizerKey);
       if (existing) {
         existing.count += 1;
+        // Update profile image if this event has one and the existing doesn't
+        if (profileImage && !existing.profileImage) {
+          existing.profileImage = profileImage;
+        }
       } else {
-        map.set(organizerKey, { id: organizerKey, name: organizerName, count: 1 });
+        map.set(organizerKey, { 
+          id: organizerKey, 
+          name: organizerName, 
+          count: 1,
+          profileImage: profileImage
+        });
       }
     }
 
@@ -255,8 +300,8 @@ export default function HomeScreen({ navigation }) {
 
   useFocusEffect(
     React.useCallback(() => {
-      refreshNotifications({ background: true });
-    }, [])
+      refreshNotifications({ background: true, clearedAtOverride: notificationsClearedAt });
+    }, [notificationsClearedAt])
   );
 
   // Find next upcoming event
@@ -1901,9 +1946,9 @@ export default function HomeScreen({ navigation }) {
                       })
                     }
                   >
-                    {organizer.imageUrl ? (
+                    {organizer.profileImage ? (
                       <Image
-                        source={{ uri: organizer.imageUrl }}
+                        source={{ uri: organizer.profileImage }}
                         style={homeStyles.popularOrganizerAvatar}
                         resizeMode="cover"
                       />

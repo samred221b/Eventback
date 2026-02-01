@@ -208,7 +208,7 @@ export default function AboutScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header matching HomeScreen */}
       <View style={homeStyles.homeHeaderContainer}>
         <LinearGradient
