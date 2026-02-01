@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Alert, Share, Image, ScrollView, TouchableOpacity, Dimensions, Modal } from 'react-native';
+import { View, Text, StyleSheet, Alert, Share, Image, ScrollView, TouchableOpacity, Dimensions, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // StatusBar removed; use root StatusBar in App.js
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ import NetInfo from '@react-native-community/netinfo'; // Import NetInfo for net
 import { logger } from '../utils/logger';
 import Constants from 'expo-constants';
 import apiService from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -198,6 +199,31 @@ export default function EventDetailsScreen({ route, navigation }) {
 
         logger.info('SimilarEvents: fetching for category', category);
 
+        // Try to get from cache first
+        const cacheKey = `similar_events:${category}`;
+        try {
+          const cached = await AsyncStorage.getItem(cacheKey);
+          if (cached) {
+            const { data, timestamp } = JSON.parse(cached);
+            const now = Date.now();
+            // Use cache if less than 10 minutes old
+            if (now - timestamp < 10 * 60 * 1000) {
+              const currentId = String(event?._id || event?.id || '');
+              const filtered = Array.isArray(data)
+                ? data.filter((e) => {
+                    const id = String(e?._id || e?.id || '');
+                    return currentId !== id;
+                  })
+                : [];
+              if (mounted) setSimilarEvents(filtered.slice(0, 3));
+              return;
+            }
+          }
+        } catch (cacheErr) {
+          logger.warn('SimilarEvents: cache read failed', cacheErr);
+        }
+
+        // Fallback to network if cache miss/expired
         const resp = await apiService.getEventsByCategory(category, { limit: 20 });
         const raw = resp?.data || resp?.events || resp;
         const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
@@ -230,7 +256,17 @@ export default function EventDetailsScreen({ route, navigation }) {
 
         logger.info('SimilarEvents: filtered count', filtered.length);
 
-        if (mounted) setSimilarEvents(filtered);
+        // Cache the result for 10 minutes
+        try {
+          await AsyncStorage.setItem(cacheKey, JSON.stringify({
+            data: filtered,
+            timestamp: Date.now(),
+          }));
+        } catch (cacheWriteErr) {
+          logger.warn('SimilarEvents: cache write failed', cacheWriteErr);
+        }
+
+        if (mounted) setSimilarEvents(filtered.slice(0, 3));
       } catch (e) {
         logger.error('SimilarEvents: failed to fetch', e);
         if (mounted) setSimilarEvents([]);
@@ -356,8 +392,8 @@ export default function EventDetailsScreen({ route, navigation }) {
       `Get directions to ${locationName}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Open Google Maps', 
+        {
+          text: 'Open Google Maps',
           onPress: () => {
             import('react-native').then(({ Linking }) => {
               Linking.openURL(url).catch(err => {
@@ -369,6 +405,34 @@ export default function EventDetailsScreen({ route, navigation }) {
         },
       ]
     );
+  };
+
+  const handleAddToCalendar = async () => {
+    try {
+      const eventDate = new Date(event.date);
+      const eventTime = event.time ? new Date(`2000-01-01T${event.time}`) : null;
+      
+      // Format date and time for calendar
+      const startDate = eventDate.toISOString();
+      const endDate = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000).toISOString(); // Add 2 hours
+      
+      // Create calendar URL for iOS
+      const iosUrl = `calshow://${eventDate.getTime() / 1000}`;
+      
+      // Create calendar URL for Android
+      const androidUrl = `content://com.android.calendar/time/${eventDate.getTime()}?beginTime=${eventDate.getTime()}&endTime=${new Date(eventDate.getTime() + 2 * 60 * 60 * 1000).getTime()}&title=${encodeURIComponent(event.title)}&description=${encodeURIComponent(event.description || '')}&location=${encodeURIComponent(event.location?.name || '')}`;
+      
+      // Try to open calendar
+      const supported = await Linking.canOpenURL(iosUrl);
+      if (supported) {
+        await Linking.openURL(iosUrl);
+      } else {
+        await Linking.openURL(androidUrl);
+      }
+    } catch (error) {
+      logger.error('Error opening calendar:', error);
+      Alert.alert('Error', 'Could not open calendar. Please try again.');
+    }
   };
 
 
@@ -816,6 +880,16 @@ export default function EventDetailsScreen({ route, navigation }) {
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
+
+            {/* Add to Calendar/Reminder Button */}
+            <TouchableOpacity 
+              style={styles.addToCalendarButton}
+              onPress={handleAddToCalendar}
+              activeOpacity={0.8}
+            >
+              <Feather name="calendar" size={18} color="#0277BD" />
+              <Text style={styles.addToCalendarButtonText}>Add to Calendar / Reminder</Text>
+            </TouchableOpacity>
             </View>
 
             {/* Action Buttons */}
@@ -848,62 +922,36 @@ export default function EventDetailsScreen({ route, navigation }) {
 
           {similarEvents.length > 0 && (
             <View style={styles.similarEventsSection}>
-              <View style={styles.similarEventsHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Feather name="layers" size={18} color="#0F172A" />
-                  <Text style={styles.similarEventsTitle}>Similar Events</Text>
-                </View>
-              </View>
-
+              <Text style={styles.similarEventsTitle}>Similar Events</Text>
               <ScrollView
                 horizontal
-                showsHorizontalScrollIndicator={false}
+                showsHorizontalScrollIndicator={true}
                 contentContainerStyle={styles.similarEventsScrollContainer}
               >
-                {similarEvents.map((e, idx) => {
+                {similarEvents.slice(0, 3).map((e, idx) => {
                   const id = e?._id || e?.id || `similar-${idx}`;
-                  const img = normalizeRemoteImageUri(
-                    (typeof e?.imageUrl === 'string' && e.imageUrl) ||
-                      (typeof e?.image === 'string' && e.image) ||
-                      null
-                  );
-
                   return (
                     <TouchableOpacity
                       key={String(id)}
-                      style={styles.similarEventCard}
+                      style={styles.similarEventSimpleCard}
                       activeOpacity={0.92}
                       onPress={() => handleSimilarEventPress(e)}
                     >
-                      {img ? (
-                        <Image source={{ uri: img }} style={styles.similarEventImage} resizeMode="cover" />
-                      ) : (
-                        <LinearGradient
-                          colors={['#0277BD', '#01579B']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.similarEventImage}
-                        />
-                      )}
-
-                      <LinearGradient
-                        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.88)']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 0, y: 1 }}
-                        style={styles.similarEventOverlay}
-                      >
-                        <View style={styles.similarEventOverlayContent}>
-                          <Text style={styles.similarEventTitle} numberOfLines={2}>
-                            {e?.title || ''}
+                      <View style={styles.similarEventSimpleHeader}>
+                        <Text style={styles.similarEventSimpleTitle} numberOfLines={2}>
+                          {e?.title || ''}
+                        </Text>
+                      </View>
+                      <View style={styles.similarEventSimpleMeta}>
+                        <View style={styles.similarEventSimpleCategory}>
+                          <Text style={styles.similarEventSimpleCategoryText}>
+                            {e?.category || 'Event'}
                           </Text>
-                          <View style={styles.similarEventMetaRow}>
-                            <Feather name="calendar" size={12} color="rgba(255,255,255,0.92)" />
-                            <Text style={styles.similarEventMetaText}>
-                              {formatDate(e?.date)}
-                            </Text>
-                          </View>
                         </View>
-                      </LinearGradient>
+                        <Text style={styles.similarEventSimpleDate}>
+                          {formatDate(e?.date)}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -1279,63 +1327,62 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   similarEventsSection: {
-    paddingHorizontal: 10,
     marginBottom: 24,
   },
-  similarEventsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 0,
-  },
   similarEventsTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     color: '#0F172A',
-    marginLeft: 8,
+    marginBottom: 16,
   },
   similarEventsScrollContainer: {
-    paddingRight: 10,
+    paddingRight: 20,
     paddingLeft: 0,
+    gap: 12,
   },
-  similarEventCard: {
-    width: width * 0.82,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    marginRight: 16,
+  similarEventSimpleCard: {
+    width: width * 0.72,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  similarEventImage: {
-    width: '100%',
-    height: 200,
+  similarEventSimpleHeader: {
+    marginBottom: 12,
   },
-  similarEventOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'flex-end',
+  similarEventSimpleTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1F2937',
+    lineHeight: 20,
   },
-  similarEventOverlayContent: {
-    padding: 14,
+  similarEventSimpleMeta: {
+    gap: 8,
   },
-  similarEventTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 8,
+  similarEventSimpleCategory: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  similarEventMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  similarEventSimpleCategoryText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0277BD',
+    textTransform: 'uppercase',
+    fontFamily: 'System',
   },
-  similarEventMetaText: {
-    marginLeft: 6,
+  similarEventSimpleDate: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.92)',
-    fontWeight: '600',
+    fontWeight: '500',
+    color: '#64748B',
   },
   offlineBanner: {
     backgroundColor: '#FEF3C7',
@@ -1814,5 +1861,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.5,
+  },
+  addToCalendarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#0277BD',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginHorizontal: 20,
+    marginTop: 16,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  addToCalendarButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0277BD',
   },
 });

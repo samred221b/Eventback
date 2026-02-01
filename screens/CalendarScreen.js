@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, ActivityIndicator, Image } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, ActivityIndicator, Image, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -49,6 +49,7 @@ export default function CalendarScreen({ navigation }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all'); // New filter state
+  const [showDateModal, setShowDateModal] = useState(false); // Modal for showing events on selected date
 
   // Refresh events when screen comes into focus
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
@@ -219,10 +220,11 @@ export default function CalendarScreen({ navigation }) {
 
   const getEventsForDate = (date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return events.filter(event => {
+    const filtered = events.filter(event => {
       const eventDate = new Date(event.date).toISOString().split('T')[0];
       return eventDate === dateStr;
     });
+    return filtered;
   };
 
   const getDaysInMonth = () => {
@@ -356,7 +358,12 @@ export default function CalendarScreen({ navigation }) {
            eventDate.getFullYear() === currentMonth.getFullYear();
   });
 
-  const selectedDayEvents = getEventsForDate(selectedDate);
+  const handleDatePress = (date) => {
+    setSelectedDate(date);
+    setShowDateModal(true);
+  };
+
+  const selectedDayEvents = useMemo(() => getEventsForDate(selectedDate), [selectedDate, events]);
 
   const onRefresh = () => {
     loadEvents(true);
@@ -400,19 +407,12 @@ export default function CalendarScreen({ navigation }) {
             <View style={homeStyles.homeHeaderTopRow}>
               <Text style={homeStyles.homeHeaderNameText}>Calendar</Text>
               <View style={homeStyles.homeHeaderActions}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={homeStyles.homeHeaderIconButton}
                   onPress={() => setShowSearch(!showSearch)}
                   activeOpacity={0.7}
                 >
                   <Feather name="search" size={20} color="rgba(255, 255, 255, 1)" />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={homeStyles.homeHeaderIconButton}
-                  onPress={goToToday}
-                  activeOpacity={0.7}
-                >
-                  <Feather name="calendar" size={20} color="rgba(255, 255, 255, 1)" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -569,7 +569,7 @@ export default function CalendarScreen({ navigation }) {
                           isSelected && styles.selectedDayCell,
                           isToday && !isSelected && styles.todayCell,
                         ]}
-                        onPress={() => setSelectedDate(day)}
+                        onPress={() => handleDatePress(day)}
                         activeOpacity={0.7}
                       >
                         <Text style={[
@@ -785,6 +785,84 @@ export default function CalendarScreen({ navigation }) {
           )}
         </View>
       </ScrollView>
+
+      {/* Date Events Modal */}
+      <Modal
+        visible={showDateModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDateModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {selectedDayEvents.length} {selectedDayEvents.length === 1 ? 'Event' : 'Events'} on {selectedDate.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </Text>
+              <TouchableOpacity onPress={() => setShowDateModal(false)}>
+                <Feather name="x" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              {selectedDayEvents.length === 0 ? (
+                <View style={styles.modalEmpty}>
+                  <Feather name="calendar" size={48} color="#CBD5E1" />
+                  <Text style={styles.modalEmptyText}>No events on this date</Text>
+                </View>
+              ) : (
+                selectedDayEvents.map((event, index) => (
+                  <TouchableOpacity
+                    key={event._id || event.id || index}
+                    style={styles.modalEventCard}
+                    onPress={() => {
+                      setShowDateModal(false);
+                      navigation.navigate('EventDetails', { event });
+                    }}
+                  >
+                    <View style={styles.modalEventLeft}>
+                      <Text style={styles.modalEventDay}>
+                        {new Date(event.date).getDate()}
+                      </Text>
+                      <Text style={styles.modalEventMonth}>
+                        {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
+                      </Text>
+                    </View>
+                    <View style={styles.modalEventRight}>
+                      <Text style={styles.modalEventTitle} numberOfLines={2}>
+                        {event.title}
+                      </Text>
+                      <View style={styles.modalEventMetaRow}>
+                        <View style={styles.modalEventMeta}>
+                          <Feather name="clock" size={12} color="#64748B" />
+                          <Text style={styles.modalEventMetaText}>
+                            {event.time || 'TBD'}
+                          </Text>
+                        </View>
+                        <Text style={styles.modalEventMetaSeparator}> • </Text>
+                        <View style={styles.modalEventMeta}>
+                          <Feather name="map-pin" size={12} color="#64748B" />
+                          <Text style={styles.modalEventMetaText} numberOfLines={1}>
+                            {event.location?.city || event.location?.address || 'Location TBA'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+          <TouchableOpacity
+            style={styles.modalOverlayCloseArea}
+            onPress={() => setShowDateModal(false)}
+          />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1345,5 +1423,121 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: 'transparent',
+  },
+  // Date Events Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '100%',
+    maxHeight: '60%',
+    minWidth: 20,
+    minHeight: 180,
+    shadowColor: '#0277BD',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 14,
+    backgroundColor: '#0277BD',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  modalScroll: {
+    maxHeight: 300,
+    backgroundColor: '#FFFFFF',
+  },
+  modalEmpty: {
+    padding: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 180,
+  },
+  modalEmptyText: {
+    fontSize: 15,
+    color: '#64748B',
+    marginTop: 16,
+    fontWeight: '500',
+  },
+  modalEventCard: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+    minHeight: 60,
+    marginHorizontal: 0,
+  },
+  modalEventLeft: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0277BD',
+    borderRadius: 10,
+    marginRight: 10,
+  },
+  modalEventDay: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    lineHeight: 20,
+  },
+  modalEventMonth: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.9)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    lineHeight: 10,
+  },
+  modalEventRight: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  modalEventTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  modalEventMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalEventMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  modalEventMetaSeparator: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginHorizontal: 4,
+  },
+  modalEventMetaText: {
+    fontSize: 14,
+    color: '#64748B',
+    marginLeft: 8,
+    fontWeight: '500',
   },
 });

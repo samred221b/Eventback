@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
+  Animated,
+  Easing,
 } from 'react-native';
 
 import { useFocusEffect } from '@react-navigation/native';
@@ -36,6 +38,7 @@ import { toAppError, createOfflineCachedNotice } from '../utils/appError';
 
 const HOME_EVENTS_CACHE_KEY = 'home:events';
 const HOME_BANNERS_CACHE_KEY = 'home:banners';
+const HOME_NOTIFICATIONS_CLEARED_AT_KEY = 'home:notifications:clearedAt';
 
 const cacheHomeEvents = async (events) => {
   try {
@@ -84,7 +87,7 @@ export default function HomeScreen({ navigation }) {
   const [trendingEvents, setTrendingEvents] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
+  const [showSearch, setShowSearch] = useState(true);
   const [showRecentEventsModal, setShowRecentEventsModal] = useState(false);
   const [recentEventsAnchor, setRecentEventsAnchor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,10 +102,81 @@ export default function HomeScreen({ navigation }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [broadcastNotifications, setBroadcastNotifications] = useState([]);
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
+  const [notificationsClearedAt, setNotificationsClearedAt] = useState(0);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [showNotificationDetailModal, setShowNotificationDetailModal] = useState(false);
   const [nextEvent, setNextEvent] = useState(null);
   const [countdown, setCountdown] = useState('');
+  const [promotionEvents, setPromotionEvents] = useState([]);
+
+  const promotionShineAnim = useRef(new Animated.Value(0)).current;
+  const cardGlowAnim = useRef(new Animated.Value(0)).current;
+  const countdownRotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const shineLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(promotionShineAnim, {
+          toValue: 1,
+          duration: 2400,
+          useNativeDriver: true,
+        }),
+        Animated.delay(900),
+        Animated.timing(promotionShineAnim, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.delay(400),
+      ])
+    );
+
+    shineLoop.start();
+
+    return () => {
+      shineLoop.stop();
+    };
+  }, [promotionShineAnim]);
+
+  useEffect(() => {
+    const glowLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(cardGlowAnim, {
+          toValue: 1,
+          duration: 3200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardGlowAnim, {
+          toValue: 0,
+          duration: 3200,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    glowLoop.start();
+
+    return () => {
+      glowLoop.stop();
+    };
+  }, [cardGlowAnim]);
+
+  useEffect(() => {
+    const rotateLoop = Animated.loop(
+      Animated.timing(countdownRotateAnim, {
+        toValue: 1,
+        duration: 9000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    rotateLoop.start();
+
+    return () => {
+      rotateLoop.stop();
+    };
+  }, [countdownRotateAnim]);
 
   const curatedChips = [
     { key: 'popular_venues', icon: 'map-pin', label: 'Popular Venues' },
@@ -165,7 +239,18 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     // Prefill from cache and refresh in background on first mount
     loadEventsFromBackend({ background: true });
-    refreshNotifications({ background: true });
+    (async () => {
+      try {
+        const { data } = await cacheService.get(HOME_NOTIFICATIONS_CLEARED_AT_KEY);
+        const clearedAt = typeof data === 'number' ? data : 0;
+        if (clearedAt) {
+          setNotificationsClearedAt(clearedAt);
+        }
+        refreshNotifications({ background: true, clearedAtOverride: clearedAt });
+      } catch (e) {
+        refreshNotifications({ background: true });
+      }
+    })();
   }, []);
 
   useFocusEffect(
@@ -230,7 +315,7 @@ export default function HomeScreen({ navigation }) {
     return () => clearInterval(interval);
   }, [nextEvent]);
 
-  const refreshNotifications = async ({ background = false } = {}) => {
+  const refreshNotifications = async ({ background = false, clearedAtOverride } = {}) => {
     try {
       if (!background) {
         setIsNotificationsLoading(true);
@@ -247,9 +332,20 @@ export default function HomeScreen({ navigation }) {
       }
 
       const nextList = Array.isArray(listRes?.data) ? listRes.data : [];
+      const effectiveClearedAt = typeof clearedAtOverride === 'number' ? clearedAtOverride : notificationsClearedAt;
       // UI behavior: only show unread notifications in the bell popover.
       // ("Clear All" marks everything as read; this prevents read items from reappearing on next refresh.)
-      setBroadcastNotifications(nextList.filter((n) => !n?.isRead).slice(0, 5));
+      setBroadcastNotifications(
+        nextList
+          .filter((n) => !n?.isRead)
+          .filter((n) => {
+            if (!effectiveClearedAt) return true;
+            const createdAtMs = new Date(n?.createdAt).getTime();
+            if (Number.isNaN(createdAtMs)) return true;
+            return createdAtMs > effectiveClearedAt;
+          })
+          .slice(0, 5)
+      );
     } catch (e) {
       // Silent fail: notifications are non-blocking
     } finally {
@@ -307,10 +403,17 @@ export default function HomeScreen({ navigation }) {
   const handleClearNotifications = async () => {
     try {
       if (broadcastNotifications.length === 0) return;
-      await apiService.markAllNotificationsRead();
+      const clearedAt = Date.now();
+      setNotificationsClearedAt(clearedAt);
       setBroadcastNotifications([]);
       setUnreadCount(0);
-      refreshNotifications({ background: true });
+      await cacheService.set(HOME_NOTIFICATIONS_CLEARED_AT_KEY, clearedAt);
+
+      try {
+        await apiService.markAllNotificationsRead();
+      } catch (_) {
+        // Silent fail
+      }
     } catch (e) {
       // Silent fail
     }
@@ -333,7 +436,7 @@ export default function HomeScreen({ navigation }) {
       const cachedEventsPrefill = await loadHomeEventsFromCache();
       if (cachedEventsPrefill.length > 0) {
         setProcessedEvents(cachedEventsPrefill);
-        setFeaturedEvents(cachedEventsPrefill.filter(e => e.featured).slice(0, 6));
+        setFeaturedEvents(cachedEventsPrefill.filter(e => e.featured).slice(0, 10));
 
         const featuredIdsPrefill = new Set(cachedEventsPrefill.filter(e => e.featured).map(e => e.id));
         const nowRecommendedPrefill = new Date();
@@ -347,16 +450,19 @@ export default function HomeScreen({ navigation }) {
             if (acc[cat].length < 2) acc[cat].push(event);
             return acc;
           }, {});
-        setRecommendedEvents([...Object.values(recommendedPrefill).flat()]);
+        setRecommendedEvents([...Object.values(recommendedPrefill).flat()].slice(0, 7));
 
         const nowPrefill = new Date();
         const upcomingPrefill = cachedEventsPrefill
           .filter(event => new Date(event.date) >= nowPrefill)
           .sort((a, b) => new Date(a.date) - new Date(b.date));
-        setUpcomingEvents(upcomingPrefill.slice(0, 3));
+        setUpcomingEvents(upcomingPrefill.slice(0, 5));
 
         // Set trending events to ALL upcoming events
-        setTrendingEvents(upcomingPrefill);
+        setTrendingEvents(upcomingPrefill.slice(0, 10));
+
+        // Set promotion events (featured events for promotion)
+        setPromotionEvents(cachedEventsPrefill.filter(e => e.featured).slice(0, 3));
       }
 
       // Check network status first
@@ -412,7 +518,7 @@ export default function HomeScreen({ navigation }) {
             }));
 
           setProcessedEvents(transformedEvents);
-          setFeaturedEvents(transformedEvents.filter(e => e.featured).slice(0, 6));
+          setFeaturedEvents(transformedEvents.filter(e => e.featured).slice(0, 10));
 
           const featuredIds = new Set(transformedEvents.filter(e => e.featured).map(e => e.id));
           const nowRecommended = new Date();
@@ -426,16 +532,19 @@ export default function HomeScreen({ navigation }) {
               if (acc[cat].length < 2) acc[cat].push(event);
               return acc;
             }, {});
-          setRecommendedEvents([...Object.values(recommended).flat()]);
+          setRecommendedEvents([...Object.values(recommended).flat()].slice(0, 7));
 
           const now = new Date();
           const upcoming = transformedEvents
             .filter(event => new Date(event.date) >= now)
             .sort((a, b) => new Date(a.date) - new Date(b.date));
-          setUpcomingEvents(upcoming.slice(0, 3));
+          setUpcomingEvents(upcoming.slice(0, 5));
 
           // Set trending events to ALL upcoming events
-          setTrendingEvents(upcoming);
+          setTrendingEvents(upcoming.slice(0, 10));
+
+          // Set promotion events (featured events for promotion)
+          setPromotionEvents(transformedEvents.filter(e => e.featured).slice(0, 3));
 
           await cacheHomeEvents(transformedEvents);
           setError(null);
@@ -534,7 +643,7 @@ export default function HomeScreen({ navigation }) {
   })();
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+    <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
       {/* Background Decoratives */}
       <View style={homeStyles.backgroundDecorative} />
       <View style={homeStyles.backgroundOrbOne} />
@@ -788,49 +897,26 @@ export default function HomeScreen({ navigation }) {
       </Modal>
 
       <SafeScrollView
-        style={{ flex: 1, backgroundColor: 'transparent' }}
-        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom, flexGrow: 1 }}
+        style={{ flex: 1, backgroundColor: '#f4f3f8ff' }}
+        contentContainerStyle={{ paddingTop: insets.top, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
       >
-        {/* Background Decoratives - Now scroll with content */}
-        <View style={homeStyles.backgroundDecorative} />
-        <View style={homeStyles.backgroundOrbOne} />
-        <View style={homeStyles.backgroundOrbTwo} />
-        <View style={homeStyles.backgroundOrbThree} />
-        <View style={homeStyles.backgroundPatternOne} />
-        <View style={homeStyles.backgroundPatternTwo} />
-        <View style={homeStyles.waveOne} />
-        <View style={homeStyles.waveTwo} />
-        <View style={homeStyles.circleOne} />
-        <View style={homeStyles.circleTwo} />
-        <View style={homeStyles.triangleOne} />
-        <View style={homeStyles.hexagonOne} />
-        <View style={homeStyles.backgroundOrbFour} />
-        <View style={homeStyles.backgroundOrbFive} />
-        <View style={homeStyles.backgroundRingOne} />
-        <View style={homeStyles.backgroundRingTwo} />
-        <View style={homeStyles.backgroundDotOne} />
-        <View style={homeStyles.backgroundDotTwo} />
-        <View style={homeStyles.backgroundDotThree} />
-        <View style={homeStyles.backgroundStripeOne} />
-        <View style={homeStyles.backgroundStripeTwo} />
-        <View style={homeStyles.decorativeBlobOne} />
-        <View style={homeStyles.decorativeBlobTwo} />
-        <View style={homeStyles.decorativeBlobThree} />
-        <View style={homeStyles.decorativeOrbSix} />
-        <View style={homeStyles.decorativeOrbSeven} />
-        <View style={homeStyles.decorativeCircleThree} />
-        <View style={homeStyles.decorativeCircleFour} />
-        <View style={homeStyles.decorativeWaveThree} />
-        <View style={homeStyles.decorativeWaveFour} />
-        <View style={homeStyles.decorativeCrossOne} />
-        <View style={homeStyles.decorativeCrossTwo} />
-        <View style={homeStyles.decorativeDotFour} />
-        <View style={homeStyles.decorativeDotFive} />
-        <View style={homeStyles.decorativeDotSix} />
-        
         <View style={{ flex: 1 }}>
+          {/* Background Decorative Elements */}
+          <View style={homeStyles.backgroundDecorative}>
+            <View style={homeStyles.backgroundOrbOne} />
+            <View style={homeStyles.backgroundOrbFour} />
+            <View style={homeStyles.backgroundOrbSix} />
+            <View style={homeStyles.backgroundOrbEight} />
+            <View style={homeStyles.backgroundOrbNine} />
+            <View style={homeStyles.backgroundOrbEleven} />
+            <View style={homeStyles.backgroundOrbTwelve} />
+            <View style={homeStyles.creativeBlobBlue} />
+            <View style={homeStyles.creativeBlobGreen} />
+            <View style={homeStyles.creativeBlobYellow} />
+          </View>
+          
           <AppErrorBanner
             error={error}
             onRetry={handleRetry}
@@ -1080,13 +1166,100 @@ export default function HomeScreen({ navigation }) {
                             <Feather name="image" size={24} color="#6366F1" />
                           </LinearGradient>
                         )}
+                        <Animated.View
+                          pointerEvents="none"
+                          style={{
+                            position: 'absolute',
+                            top: -90,
+                            left: -160,
+                            width: 180,
+                            height: 420,
+                            opacity: 0.50,
+                            transform: [
+                              {
+                                translateX: promotionShineAnim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [-200, 380],
+                                }),
+                              },
+                              {
+                                translateY: promotionShineAnim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [160, -160],
+                                }),
+                              },
+                              { rotate: '22deg' },
+                            ],
+                          }}
+                        >
+                          <LinearGradient
+                            colors={[
+                              'rgba(255,255,255,0)',
+                              'rgba(255,255,255,0.32)',
+                              'rgba(255,255,255,0)',
+                            ]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={{ width: '100%', height: '100%' }}
+                          />
+                        </Animated.View>
+
+                        <Animated.View
+                          pointerEvents="none"
+                          style={{
+                            position: 'absolute',
+                            top: -50,
+                            right: -60,
+                            width: 160,
+                            height: 160,
+                            borderRadius: 80,
+                            backgroundColor: 'rgba(255,255,255,0.14)',
+                            opacity: cardGlowAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0.10, 0.20],
+                            }),
+                            transform: [
+                              {
+                                scale: cardGlowAnim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [1, 1.08],
+                                }),
+                              },
+                            ],
+                          }}
+                        />
+
+                        <Animated.View
+                          pointerEvents="none"
+                          style={{
+                            position: 'absolute',
+                            bottom: -60,
+                            left: -70,
+                            width: 180,
+                            height: 180,
+                            borderRadius: 90,
+                            backgroundColor: 'rgba(2,119,189,0.12)',
+                            opacity: cardGlowAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0.08, 0.16],
+                            }),
+                            transform: [
+                              {
+                                scale: cardGlowAnim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [1, 1.06],
+                                }),
+                              },
+                            ],
+                          }}
+                        />
                       </View>
 
                       {/* Featured Badge for Trending Events */}
                       {event.featured && (
                         <View style={homeStyles.premiumFeaturedBadgeLeft}>
                           <LinearGradient
-                            colors={['#FFD700', '#FFA500']}
+                            colors={['#0277BD', '#01579B']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={homeStyles.premiumBadgeGradient}
@@ -1198,6 +1371,93 @@ export default function HomeScreen({ navigation }) {
                       style={homeStyles.recommendedEventImage}
                     />
                   )}
+                  <Animated.View
+                    pointerEvents="none"
+                    style={{
+                      position: 'absolute',
+                      top: -60,
+                      left: -100,
+                      width: 200,
+                      height: 560,
+                      opacity: 0.55,
+                      transform: [
+                        {
+                          translateX: promotionShineAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-200, 400],
+                          }),
+                        },
+                        {
+                          translateY: promotionShineAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [180, -180],
+                          }),
+                        },
+                        { rotate: '25deg' },
+                      ],
+                    }}
+                  >
+                    <LinearGradient
+                      colors={[
+                        'rgba(255,255,255,0)',
+                        'rgba(255,255,255,0.35)',
+                        'rgba(255,255,255,0)',
+                      ]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  </Animated.View>
+
+                  <Animated.View
+                    pointerEvents="none"
+                    style={{
+                      position: 'absolute',
+                      top: -40,
+                      right: -50,
+                      width: 180,
+                      height: 180,
+                      borderRadius: 90,
+                      backgroundColor: 'rgba(255,255,255,0.18)',
+                      opacity: cardGlowAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.12, 0.25],
+                      }),
+                      transform: [
+                        {
+                          scale: cardGlowAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [1, 1.12],
+                          }),
+                        },
+                      ],
+                    }}
+                  />
+
+                  <Animated.View
+                    pointerEvents="none"
+                    style={{
+                      position: 'absolute',
+                      bottom: -50,
+                      left: -60,
+                      width: 200,
+                      height: 200,
+                      borderRadius: 100,
+                      backgroundColor: 'rgba(2,119,189,0.16)',
+                      opacity: cardGlowAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.10, 0.20],
+                      }),
+                      transform: [
+                        {
+                          scale: cardGlowAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [1, 1.10],
+                          }),
+                        },
+                      ],
+                    }}
+                  />
 
                   <LinearGradient
                     colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.88)']}
@@ -1302,44 +1562,236 @@ export default function HomeScreen({ navigation }) {
           )}
 
           {nextEvent && (
-            <SafeTouchableOpacity
-              style={homeStyles.countdownInlineContainer}
-              onPress={() => handleEventPress(nextEvent)}
-              activeOpacity={0.85}
-            >
-              <View style={homeStyles.countdownInlineDepthLayer} pointerEvents="none">
-                <View style={homeStyles.countdownInlineGlowOrbOne} />
-                <View style={homeStyles.countdownInlineGlowOrbTwo} />
-                <View style={homeStyles.countdownInlineHighlight} />
-              </View>
-              <View style={homeStyles.countdownInlineContent}>
-                <View style={homeStyles.countdownInlineLeft}>
-                  {nextEvent.imageUrl ? (
-                    <Image
-                      source={{ uri: nextEvent.imageUrl }}
-                      style={homeStyles.countdownEventImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <LinearGradient
-                      colors={['#0277BD', '#01579B']}
-                      style={homeStyles.countdownEventImage}
+            <View style={homeStyles.countdownInlineContainer}>
+              <SafeTouchableOpacity
+                onPress={() => handleEventPress(nextEvent)}
+                activeOpacity={0.85}
+                style={{ position: 'relative' }}
+              >
+                <View style={homeStyles.countdownInlineDepthLayer} pointerEvents="none">
+                  <View style={homeStyles.countdownInlineGlowOrbOne} />
+                  <View style={homeStyles.countdownInlineGlowOrbTwo} />
+                  <View style={homeStyles.countdownInlineHighlight} />
+                </View>
+                <View style={homeStyles.countdownInlineContent}>
+                  <View style={homeStyles.countdownInlineLeft}>
+                    <Animated.View
+                      style={[
+                        homeStyles.countdownEventImageWrapper,
+                        {
+                          transform: [
+                            {
+                              rotate: countdownRotateAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: ['0deg', '360deg'],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
                     >
-                      <Feather name="calendar" size={24} color="#FFFFFF" />
-                    </LinearGradient>
-                  )}
-                  <View style={homeStyles.countdownInlineTextWrap}>
-                    <Text style={homeStyles.countdownLabel}>Next Event</Text>
-                    <Text style={homeStyles.countdownEventTitle} numberOfLines={1}>
-                      {nextEvent.title}
-                    </Text>
+                      {nextEvent.imageUrl ? (
+                        <Image
+                          source={{ uri: nextEvent.imageUrl }}
+                          style={homeStyles.countdownEventImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <LinearGradient
+                          colors={['#0277BD', '#01579B']}
+                          style={homeStyles.countdownEventImage}
+                        >
+                          <Feather name="calendar" size={24} color="#FFFFFF" />
+                        </LinearGradient>
+                      )}
+                    </Animated.View>
+
+                    <View style={homeStyles.countdownInlineTextWrap}>
+                      <Text style={homeStyles.countdownLabel}>Next Event</Text>
+                      <Text style={homeStyles.countdownEventTitle} numberOfLines={1}>
+                        {nextEvent.title}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={homeStyles.countdownInlineTimerPill}>
+                    <Text style={homeStyles.countdownTimer}>{countdown}</Text>
                   </View>
                 </View>
-                <View style={homeStyles.countdownInlineTimerPill}>
-                  <Text style={homeStyles.countdownTimer}>{countdown}</Text>
+              </SafeTouchableOpacity>
+
+              {promotionEvents.length > 0 && (
+                <View style={homeStyles.promotionSection}>
+                  <View style={homeStyles.promotionLayout}>
+                    {promotionEvents[0] && (
+                      <SafeTouchableOpacity
+                        style={homeStyles.promotionVerticalCard}
+                        onPress={() => handleEventPress(promotionEvents[0])}
+                        activeOpacity={0.9}
+                      >
+                        <View style={homeStyles.promotionVerticalImageContainer}>
+                          {promotionEvents[0].imageUrl ? (
+                            <Image
+                              source={{ uri: promotionEvents[0].imageUrl }}
+                              style={homeStyles.promotionVerticalImage}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <LinearGradient
+                              colors={['#0277BD', '#01579B']}
+                              style={homeStyles.promotionVerticalImage}
+                            >
+                              <Feather name="image" size={32} color="rgba(255,255,255,0.7)" />
+                            </LinearGradient>
+                          )}
+
+                          <Animated.View
+                            pointerEvents="none"
+                            style={{
+                              position: 'absolute',
+                              top: -80,
+                              left: -140,
+                              width: 180,
+                              height: 520,
+                              opacity: 0.45,
+                              transform: [
+                                {
+                                  translateX: promotionShineAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-180, 360],
+                                  }),
+                                },
+                                {
+                                  translateY: promotionShineAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [140, -140],
+                                  }),
+                                },
+                                { rotate: '20deg' },
+                              ],
+                            }}
+                          >
+                            <LinearGradient
+                              colors={[
+                                'rgba(255,255,255,0)',
+                                'rgba(255,255,255,0.30)',
+                                'rgba(255,255,255,0)',
+                              ]}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={{ width: '100%', height: '100%' }}
+                            />
+                          </Animated.View>
+
+                          <LinearGradient
+                            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.88)']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 0, y: 1 }}
+                            style={homeStyles.recommendedEventOverlay}
+                          >
+                            <View style={homeStyles.recommendedEventOverlayContent}>
+                              <Text style={homeStyles.promotionOverlayTitle} numberOfLines={2}>
+                                {promotionEvents[0].title}
+                              </Text>
+                              <View style={homeStyles.recommendedEventMetaRow}>
+                                <Feather name="calendar" size={10} color="rgba(255,255,255,0.92)" />
+                                <Text style={homeStyles.promotionOverlayMetaText}>
+                                  {formatDateTimeShort(promotionEvents[0].date, promotionEvents[0].time)}
+                                </Text>
+                              </View>
+                            </View>
+                          </LinearGradient>
+                        </View>
+                      </SafeTouchableOpacity>
+                    )}
+
+                    <View style={homeStyles.promotionHorizontalContainer}>
+                      {promotionEvents.slice(1, 3).map((event, index) => (
+                        <SafeTouchableOpacity
+                          key={event.id}
+                          style={homeStyles.promotionHorizontalCard}
+                          onPress={() => handleEventPress(event)}
+                          activeOpacity={0.9}
+                        >
+                          <View style={homeStyles.promotionHorizontalImageContainer}>
+                            {event.imageUrl ? (
+                              <Image
+                                source={{ uri: event.imageUrl }}
+                                style={homeStyles.promotionHorizontalImage}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <LinearGradient
+                                colors={index % 2 === 0 ? ['#8B5CF6', '#7C3AED'] : ['#059669', '#047857']}
+                                style={homeStyles.promotionHorizontalImage}
+                              >
+                                <Feather name="image" size={20} color="rgba(255,255,255,0.7)" />
+                              </LinearGradient>
+                            )}
+
+                            <Animated.View
+                              pointerEvents="none"
+                              style={{
+                                position: 'absolute',
+                                top: -90,
+                                left: -160,
+                                width: 180,
+                                height: 420,
+                                opacity: 0.45,
+                                transform: [
+                                  {
+                                    translateX: promotionShineAnim.interpolate({
+                                      inputRange: [0, 1],
+                                      outputRange: [-180, 340],
+                                    }),
+                                  },
+                                  {
+                                    translateY: promotionShineAnim.interpolate({
+                                      inputRange: [0, 1],
+                                      outputRange: [120, -120],
+                                    }),
+                                  },
+                                  { rotate: '20deg' },
+                                ],
+                              }}
+                            >
+                              <LinearGradient
+                                colors={[
+                                  'rgba(255,255,255,0)',
+                                  'rgba(255,255,255,0.30)',
+                                  'rgba(255,255,255,0)',
+                                ]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={{ width: '100%', height: '100%' }}
+                              />
+                            </Animated.View>
+
+                            <LinearGradient
+                              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.88)']}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 0, y: 1 }}
+                              style={homeStyles.recommendedEventOverlay}
+                            >
+                              <View style={homeStyles.recommendedEventOverlayContent}>
+                                <Text style={homeStyles.promotionOverlayTitle} numberOfLines={2}>
+                                  {event.title}
+                                </Text>
+                                <View style={homeStyles.recommendedEventMetaRow}>
+                                  <Feather name="calendar" size={10} color="rgba(255,255,255,0.92)" />
+                                  <Text style={homeStyles.promotionOverlayMetaText}>
+                                    {formatDateTimeShort(event.date, event.time)}
+                                  </Text>
+                                </View>
+                              </View>
+                            </LinearGradient>
+                          </View>
+                        </SafeTouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </SafeTouchableOpacity>
+              )}
+            </View>
           )}
 
           <View style={homeStyles.featuredEventsSection}>

@@ -380,6 +380,7 @@ export default function UpdateProfileScreen({ navigation }) {
             />
           </View>
 
+          {/* Website */}
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Website</Text>
             <TextInput
@@ -393,10 +394,74 @@ export default function UpdateProfileScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Location Information */}
+        {/* Social Media */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location Information</Text>
-          
+          <Text style={styles.sectionTitle}>Social Media</Text>
+          <View style={styles.socialMediaContainer}>
+            <View style={styles.socialMediaRow}>
+              <View style={styles.socialMediaInputContainer}>
+                <Text style={styles.socialMediaLabel}>Facebook</Text>
+                <TextInput
+                  style={styles.socialMediaInput}
+                  value={profileData.facebook || ''}
+                  onChangeText={(text) => setProfileData({...profileData, facebook: text})}
+                  placeholder="https://facebook.com/yourprofile"
+                  placeholderTextColor="#94A3B8"
+                  autoCapitalize="none"
+                  keyboardType="url"
+                />
+              </View>
+            </View>
+            
+            <View style={styles.socialMediaRow}>
+              <View style={styles.socialMediaInputContainer}>
+                <Text style={styles.socialMediaLabel}>Instagram</Text>
+                <TextInput
+                  style={styles.socialMediaInput}
+                  value={profileData.instagram || ''}
+                  onChangeText={(text) => setProfileData({...profileData, instagram: text})}
+                  placeholder="https://instagram.com/yourprofile"
+                  placeholderTextColor="#94A3B8"
+                  autoCapitalize="none"
+                  keyboardType="url"
+                />
+              </View>
+            </View>
+            
+            <View style={styles.socialMediaRow}>
+              <View style={styles.socialMediaInputContainer}>
+                <Text style={styles.socialMediaLabel}>Telegram</Text>
+                <TextInput
+                  style={styles.socialMediaInput}
+                  value={profileData.telegram || ''}
+                  onChangeText={(text) => setProfileData({...profileData, telegram: text})}
+                  placeholder="https://t.me/yourprofile"
+                  placeholderTextColor="#94A3B8"
+                  autoCapitalize="none"
+                  keyboardType="url"
+                />
+              </View>
+            </View>
+            
+            <View style={styles.socialMediaRow}>
+              <View style={styles.socialMediaInputContainer}>
+                <Text style={styles.socialMediaLabel}>TikTok</Text>
+                <TextInput
+                  style={styles.socialMediaInput}
+                  value={profileData.tiktok || ''}
+                  onChangeText={(text) => setProfileData({...profileData, tiktok: text})}
+                  placeholder="https://tiktok.com/@yourprofile"
+                  placeholderTextColor="#94A3B8"
+                  autoCapitalize="none"
+                  keyboardType="url"
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Address */}
+        <View style={styles.section}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Address</Text>
             <TextInput
@@ -430,34 +495,7 @@ export default function UpdateProfileScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Appearance / Theme Toggle */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Appearance</Text>
-          <View style={styles.themeToggleContainer}>
-            <TouchableOpacity
-              style={[styles.themeOption, mode === 'system' && styles.themeOptionActive]}
-              onPress={() => setThemeMode('system')}
-            >
-              <Feather name="smartphone" size={18} color={mode === 'system' ? '#FFFFFF' : '#64748B'} />
-              <Text style={[styles.themeOptionText, mode === 'system' && styles.themeOptionTextActive]}>System</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.themeOption, mode === 'light' && styles.themeOptionActive]}
-              onPress={() => setThemeMode('light')}
-            >
-              <Feather name="sun" size={18} color={mode === 'light' ? '#FFFFFF' : '#64748B'} />
-              <Text style={[styles.themeOptionText, mode === 'light' && styles.themeOptionTextActive]}>Light</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.themeOption, mode === 'dark' && styles.themeOptionActive]}
-              onPress={() => setThemeMode('dark')}
-            >
-              <Feather name="moon" size={18} color={mode === 'dark' ? '#FFFFFF' : '#64748B'} />
-              <Text style={[styles.themeOptionText, mode === 'dark' && styles.themeOptionTextActive]}>Dark</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
+        
         {/* Account Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Actions</Text>
@@ -532,7 +570,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   saveButton: {
-    backgroundColor: '#0277BD',
+    backgroundColor: '#000000',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -643,43 +681,91 @@ const styles = StyleSheet.create({
   formGroup: {
     marginBottom: 16,
   },
-  formGroupHalf: {
-    flex: 1,
-    marginBottom: 16,
+  formLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+    fontFamily: 'System',
+  },
+  formInput: {
+    fontSize: 16,
+    color: '#1F2937',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    fontFamily: 'System',
+  },
+  disabledInput: {
+    fontSize: 16,
+    color: '#94A3B8',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    fontFamily: 'System',
+  },
+  formNote: {
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'System',
+    marginTop: 4,
   },
   formRow: {
     flexDirection: 'row',
     gap: 12,
   },
-  formLabel: {
+  formGroupHalf: {
+    flex: 1,
+  },
+  socialMediaContainer: {
+    marginBottom: 24,
+  },
+  socialMediaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  socialMediaInputContainer: {
+    flex: 1,
+  },
+  socialMediaLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 8,
+    fontFamily: 'System',
+    width: 80,
   },
-  formInput: {
-    borderWidth: 1.5,
-    borderColor: '#E0E7FF',
-    borderRadius: 12,
-    padding: 14,
+  socialMediaInput: {
+    flex: 1,
     fontSize: 14,
     color: '#1F2937',
     backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    fontFamily: 'System',
   },
-  disabledInput: {
-    backgroundColor: '#F8FAFC',
-    color: '#64748B',
-    borderColor: '#E2E8F0',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  formNote: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 4,
-    fontStyle: 'italic',
+  socialMediaBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   actionButton: {
     flexDirection: 'row',
@@ -720,7 +806,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   saveButtonLarge: {
-    backgroundColor: '#0277BD',
+    backgroundColor: '#000000',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',

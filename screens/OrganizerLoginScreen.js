@@ -350,11 +350,37 @@ const handleForgotPassword = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Benefits Section */}
-        <View style={styles.benefitsSection}>
-          <Text style={styles.benefitsTitle}>Start Your Event Journey</Text>
-          <Text style={styles.benefitsSubtitle}>Join thousands of successful event organizers</Text>
+        {/* Why Choose Eventopia Section */}
+        <View style={styles.whyChooseSection}>
+          <Text style={styles.whyChooseTitle}>Why Choose Eventopia?</Text>
           
+          <View style={styles.whyChooseGrid}>
+            <View style={styles.whyChooseItem}>
+              <Feather name="shield" size={32} color="#0277BD" />
+              <Text style={styles.whyChooseTitleText}>Event Management Platform</Text>
+              <Text style={styles.whyChooseDesc}>Create and manage your events with ease</Text>
+            </View>
+            
+            <View style={styles.whyChooseItem}>
+              <Feather name="users" size={32} color="#0277BD" />
+              <Text style={styles.whyChooseTitleText}>Large Audience</Text>
+              <Text style={styles.whyChooseDesc}>Reach thousands of event-goers</Text>
+            </View>
+            
+            <View style={styles.whyChooseItem}>
+              <Feather name="trending-up" size={32} color="#0277BD" />
+              <Text style={styles.whyChooseTitleText}>Growth Tools</Text>
+              <Text style={styles.whyChooseDesc}>Analytics to grow your events</Text>
+            </View>
+            
+            <View style={styles.whyChooseItem}>
+              <Feather name="headphones" size={32} color="#0277BD" />
+              <Text style={styles.whyChooseTitleText}>24/7 Support</Text>
+              <Text style={styles.whyChooseDesc}>We're here to help you succeed</Text>
+            </View>
+          </View>
+
+          {/* Stats */}
           <View style={styles.benefitsGrid}>
             <View style={styles.benefitCard}>
               <View style={styles.benefitDepthLayer} pointerEvents="none">
@@ -747,6 +773,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     zIndex: 1,
+  },
+  // Why Choose Eventopia Section
+  whyChooseSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    marginBottom: -30,
+  },
+  whyChooseTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1F2937',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  whyChooseGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  whyChooseItem: {
+    width: '48%',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  whyChooseTitleText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  whyChooseDesc: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 6,
   },
   // Quick Links Section
   quickLinksSection: {

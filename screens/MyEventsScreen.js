@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
@@ -244,59 +243,93 @@ function MyEventsScreen({ navigation }) {
       ? categoryIconMap[normalizedCategory]
       : 'calendar';
 
+    const locationLabel = (() => {
+      if (!event?.location) return 'Location TBA';
+      if (typeof event.location === 'string') return event.location;
+      return event.location?.venue || event.location?.name || event.location?.address || event.location?.formattedAddress || event.location?.city || 'Location TBA';
+    })();
+
     return (
       <SafeTouchableOpacity
-        style={styles.dashboardEventCard}
+        style={localStyles.eventCard}
         onPress={() => handleEventPress(event)}
         activeOpacity={0.95}
       >
-        <View style={styles.dashboardEventHeader}>
-          <View style={styles.dashboardEventInfo}>
-            <View style={styles.dashboardEventIconContainer}>
-              <Feather name={iconName} size={18} color="#0277BD" />
+        <View style={localStyles.eventBody}>
+          <View style={localStyles.eventTopRow}>
+            <View style={localStyles.eventIconChip}>
+              <Feather name={iconName} size={16} color="#0277BD" />
             </View>
-            <View style={styles.dashboardEventDetails}>
-              <Text style={styles.dashboardEventTitle} numberOfLines={1}>{event.title}</Text>
-              <Text style={styles.dashboardEventDate}>
-                {formatDate(event.date)}{event.time ? ` • ${event.time}` : ''}
-              </Text>
-              <View style={styles.dashboardEventMeta}>
-                <View style={styles.dashboardEventStatusWrapper}>
-                  <View style={[
-                    styles.dashboardEventStatus,
-                    event.status === 'Upcoming' || event.status === 'This Week' ? styles.statusUpcoming :
-                    event.status === 'Today' ? styles.statusOngoing : styles.statusEnded
-                  ]}>
-                    <Text style={styles.dashboardEventStatusText}>{event.status}</Text>
-                  </View>
-                </View>
-                <View style={styles.dashboardEventMetaItem}>
-                  <Feather name="eye" size={14} color="#64748B" />
-                  <Text style={styles.dashboardEventMetaValue}>{event.views || 0}</Text>
-                </View>
-                <View style={styles.dashboardEventMetaItem}>
-                  <Feather name="heart" size={14} color="#EF4444" />
-                  <Text style={[styles.dashboardEventMetaValue, styles.dashboardEventFavoritesValue]}>{event.likes || 0}</Text>
-                </View>
+
+            <View style={localStyles.eventBadgesInline}>
+              <View style={[
+                localStyles.eventBadge,
+                event.status === 'Upcoming' || event.status === 'This Week' ? localStyles.badgeUpcoming :
+                event.status === 'Today' ? localStyles.badgeToday : localStyles.badgeEnded,
+              ]}>
+                <Text style={localStyles.eventBadgeText}>{event.status}</Text>
               </View>
+
+              {!!event.featured && (
+                <View style={[localStyles.eventBadge, localStyles.badgeFeatured]}>
+                  <Feather name="star" size={12} color="#0F172A" />
+                  <Text style={[localStyles.eventBadgeText, localStyles.eventBadgeTextDark]}>Featured</Text>
+                </View>
+              )}
             </View>
           </View>
 
-          <View style={styles.dashboardEventActions}>
-            <SafeTouchableOpacity
-              style={[styles.dashboardActionButton, styles.editButton]}
-              onPress={() => handleEditEvent(event)}
-              activeOpacity={0.7}
-            >
-              <Feather name="edit-3" size={16} color="#1E293B" />
-            </SafeTouchableOpacity>
-            <SafeTouchableOpacity
-              style={[styles.dashboardActionButton, styles.deleteButton]}
-              onPress={() => handleDeleteEvent(event.id)}
-              activeOpacity={0.7}
-            >
-              <Feather name="trash-2" size={16} color="#1E293B" />
-            </SafeTouchableOpacity>
+          <View style={localStyles.eventTitleRow}>
+            <Text style={localStyles.eventTitle} numberOfLines={1}>{event.title}</Text>
+            <View style={localStyles.eventActionsInline}>
+              <SafeTouchableOpacity
+                style={[localStyles.iconActionButton, localStyles.iconActionEdit]}
+                onPress={() => handleEditEvent(event)}
+                activeOpacity={0.7}
+              >
+                <Feather name="edit-3" size={16} color="#1E293B" />
+              </SafeTouchableOpacity>
+              <SafeTouchableOpacity
+                style={[localStyles.iconActionButton, localStyles.iconActionDelete]}
+                onPress={() => handleDeleteEvent(event.id)}
+                activeOpacity={0.7}
+              >
+                <Feather name="trash-2" size={16} color="#1E293B" />
+              </SafeTouchableOpacity>
+            </View>
+          </View>
+
+          <View style={localStyles.eventSubRow}>
+            <Feather name="clock" size={13} color="#64748B" />
+            <Text style={localStyles.eventSubText} numberOfLines={1}>
+              {formatDate(event.date)}{event.time ? ` • ${event.time}` : ''}
+            </Text>
+          </View>
+          <View style={localStyles.eventSubRow}>
+            <Feather name="map-pin" size={13} color="#64748B" />
+            <Text style={localStyles.eventSubText} numberOfLines={1}>{locationLabel}</Text>
+          </View>
+
+          <View style={localStyles.eventFooterRow}>
+            <View style={localStyles.eventPricePill}>
+              <Feather name="tag" size={13} color="#0277BD" />
+              <Text style={localStyles.eventPriceText}>{formatPrice(event.price, event.currency || 'ETB')}</Text>
+            </View>
+
+            <View style={localStyles.eventStatsRow}>
+              <View style={localStyles.eventStat}>
+                <Feather name="users" size={13} color="#64748B" />
+                <Text style={localStyles.eventStatText}>{event.attendees || 0}</Text>
+              </View>
+              <View style={localStyles.eventStat}>
+                <Feather name="eye" size={13} color="#64748B" />
+                <Text style={localStyles.eventStatText}>{event.views || 0}</Text>
+              </View>
+              <View style={localStyles.eventStat}>
+                <Feather name="heart" size={13} color="#EF4444" />
+                <Text style={[localStyles.eventStatText, localStyles.eventStatTextHeart]}>{event.likes || 0}</Text>
+              </View>
+            </View>
           </View>
         </View>
       </SafeTouchableOpacity>
@@ -349,6 +382,17 @@ function MyEventsScreen({ navigation }) {
               </Text>
             </View>
           </View>
+
+          <SafeTouchableOpacity
+            style={localStyles.homeHeaderPrimaryAction}
+            onPress={() => navigation.navigate('CreateEvent')}
+            activeOpacity={0.9}
+          >
+            <View style={localStyles.homeHeaderPrimaryActionInner}>
+              <Feather name="plus" size={16} color="#0F172A" />
+              <Text style={localStyles.homeHeaderPrimaryActionText}>New</Text>
+            </View>
+          </SafeTouchableOpacity>
         </View>
 
         <View style={localStyles.homeHeaderMetaRow}>
@@ -358,6 +402,13 @@ function MyEventsScreen({ navigation }) {
           <Text style={localStyles.homeHeaderMetaSeparator}>|</Text>
           <Text style={localStyles.homeHeaderMetaText}>Grow Audience</Text>
         </View>
+
+        {isFromCache && (
+          <View style={localStyles.cacheNotice}>
+            <Feather name="wifi-off" size={14} color="#92400E" />
+            <Text style={localStyles.cacheNoticeText}>Showing cached events</Text>
+          </View>
+        )}
       </LinearGradient>
     </View>
   );
@@ -621,6 +672,183 @@ const localStyles = StyleSheet.create({
   eventsList: {
     paddingHorizontal: 16,
     paddingBottom: 24,
+  },
+  eventCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  eventBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15, 23, 42, 0.70)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  eventBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'System',
+  },
+  eventBadgeTextDark: {
+    color: '#0F172A',
+  },
+  badgeUpcoming: {
+    backgroundColor: 'rgba(16, 185, 129, 0.90)',
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  badgeToday: {
+    backgroundColor: 'rgba(245, 158, 11, 0.92)',
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  badgeEnded: {
+    backgroundColor: 'rgba(100, 116, 139, 0.86)',
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  badgeFeatured: {
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderColor: 'rgba(15, 23, 42, 0.10)',
+  },
+  eventBody: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  eventTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 10,
+  },
+  eventIconChip: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(2, 119, 189, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(2, 119, 189, 0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventBadgesInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  eventTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  eventTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: 0.2,
+    fontFamily: 'System',
+  },
+  eventActionsInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  iconActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconActionEdit: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+  },
+  iconActionDelete: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+  },
+  eventSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  eventSubText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    fontFamily: 'System',
+  },
+  eventFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  eventPricePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  eventStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  eventStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  eventStatTextHeart: {
+    color: '#EF4444',
+  },
+  homeHeaderPrimaryAction: {
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.86)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 23, 42, 0.08)',
+  },
+  homeHeaderPrimaryActionInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  homeHeaderPrimaryActionText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: 0.2,
+    fontFamily: 'System',
   },
   eventSeparator: {
     height: 12,

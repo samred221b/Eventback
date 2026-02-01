@@ -859,66 +859,77 @@ function Organprofilescreenforusers({ route, navigation }) {
                 marginTop: 12,
                 gap: 12
               }}>
-                <TouchableOpacity
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#F3F4F6',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: '#E5E7EB'
-                  }}
-                  onPress={() => organizer.facebook ? Linking.openURL(organizer.facebook) : null}
-                >
-                  <MaterialIcons name="facebook" size={20} color="#1877F2" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#F3F4F6',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: '#E5E7EB'
-                  }}
-                  onPress={() => organizer.instagram ? Linking.openURL(organizer.instagram) : null}
-                >
-                  <MaterialIcons name="photo-camera" size={20} color="#E4405F" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#F3F4F6',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: '#E5E7EB'
-                  }}
-                  onPress={() => organizer.tiktok ? Linking.openURL(organizer.tiktok) : null}
-                >
-                  <MaterialIcons name="music-note" size={20} color="#000000" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#F3F4F6',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: '#E5E7EB'
-                  }}
-                  onPress={() => organizer.twitter ? Linking.openURL(organizer.twitter) : null}
-                >
-                  <MaterialIcons name="alternate-email" size={20} color="#1DA1F2" />
-                </TouchableOpacity>
+                {organizer.socialLinks?.facebook && (
+                  <TouchableOpacity
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: '#F3F4F6',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB'
+                    }}
+                    onPress={() => Linking.openURL(organizer.socialLinks.facebook)}
+                  >
+                    <MaterialIcons name="facebook" size={20} color="#1877F2" />
+                  </TouchableOpacity>
+                )}
+                
+                {organizer.socialLinks?.instagram && (
+                  <TouchableOpacity
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: '#F3F4F6',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB'
+                    }}
+                    onPress={() => Linking.openURL(organizer.socialLinks.instagram)}
+                  >
+                    <MaterialIcons name="photo-camera" size={20} color="#E4405F" />
+                  </TouchableOpacity>
+                )}
+                
+                {organizer.socialLinks?.telegram && (
+                  <TouchableOpacity
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: '#F3F4F6',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB'
+                    }}
+                    onPress={() => Linking.openURL(organizer.socialLinks.telegram)}
+                  >
+                    <MaterialIcons name="send" size={20} color="#0088CC" />
+                  </TouchableOpacity>
+                )}
+                
+                {organizer.socialLinks?.tiktok && (
+                  <TouchableOpacity
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: '#F3F4F6',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB'
+                    }}
+                    onPress={() => Linking.openURL(organizer.socialLinks.tiktok)}
+                  >
+                    <MaterialIcons name="music-note" size={20} color="#000000" />
+                  </TouchableOpacity>
+                )}
               </View>
                   </>
                 );
@@ -927,7 +938,7 @@ function Organprofilescreenforusers({ route, navigation }) {
           </View>
 
           {/* Events Section */}
-          <View style={homeStyles.featuredEventsSection}>
+          <View style={[homeStyles.featuredEventsSection, { marginTop: 16 }]}>
             <View style={homeStyles.featuredEventsHeader}>
               <View style={homeStyles.trendingTitleContainer}>
                 <Feather name="calendar" size={20} color="#000000" />

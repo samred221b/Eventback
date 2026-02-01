@@ -156,6 +156,22 @@ export default function TermsPrivacyScreen({ navigation }) {
             🏢 Address: Addis Ababa, Ethiopia{'\n'}
             🌐 Website: www.eventopia.com
           </Text>
+
+          {/* Social Media Icons */}
+          <View style={styles.socialMediaContainer}>
+            <TouchableOpacity style={styles.socialMediaIcon} onPress={() => Linking.openURL('https://facebook.com/eventopia')}>
+              <Feather name="facebook" size={20} color="#0277BD" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialMediaIcon} onPress={() => Linking.openURL('https://instagram.com/eventopia')}>
+              <Feather name="instagram" size={20} color="#0277BD" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialMediaIcon} onPress={() => Linking.openURL('https://twitter.com/eventopia')}>
+              <Feather name="twitter" size={20} color="#0277BD" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialMediaIcon} onPress={() => Linking.openURL('https://tiktok.com/@eventopia')}>
+              <Feather name="video" size={20} color="#0277BD" />
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -171,6 +187,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    paddingBottom: 40,
   },
   section: {
     backgroundColor: '#ffffff',
@@ -201,6 +218,21 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     lineHeight: 22,
     marginBottom: 12,
+  },
+  socialMediaContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 20,
+  },
+  socialMediaIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(2, 119, 189, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(2, 119, 189, 0.2)',
   },
   footer: {
     backgroundColor: '#f3f4f6',

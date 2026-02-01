@@ -126,17 +126,28 @@ export default function OrganizerMessageInbox({ navigation }) {
           </View>
         </View>
         
-        <Text style={[styles.messageTitle, !item.read && styles.unreadMessageTitle]}>
-          {item.title || 'Admin Message'}
-        </Text>
+        <View style={styles.messageTitleRow}>
+          <Text style={[styles.messageTitle, !item.read && styles.unreadMessageTitle]}>
+            {item.title || 'Admin Message'}
+          </Text>
+          {!item.read && (
+            <View style={styles.messageBadge}>
+              <Text style={styles.messageBadgeText}>New</Text>
+            </View>
+          )}
+        </View>
+        
         <Text style={styles.messagePreview} numberOfLines={2}>
           {item.message}
         </Text>
         
         <View style={styles.messageFooter}>
-          <Text style={styles.messageType}>
-            📧 Message
-          </Text>
+          <View style={styles.messageFooterLeft}>
+            <View style={styles.messageTypeBadge}>
+              <Feather name="mail" size={12} color="#64748B" />
+              <Text style={styles.messageTypeText}>Message</Text>
+            </View>
+          </View>
           <Text style={styles.messageTimeAgo}>
             {getTimeAgo(item.createdAt)}
           </Text>
@@ -163,7 +174,7 @@ export default function OrganizerMessageInbox({ navigation }) {
   const MessagesHeader = () => (
     <View style={[styles.messagesHeaderContainer, { paddingTop: insets.top }]}>
       <LinearGradient
-        colors={['#0277BD', '#01579B']}
+        colors={['#0B3A67', '#01579B', '#0277BD']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.messagesHeaderCard}
@@ -188,6 +199,9 @@ export default function OrganizerMessageInbox({ navigation }) {
               <Text style={styles.messagesHeaderCountText}>{messages.length} {messages.length === 1 ? 'Message' : 'Messages'}</Text>
             </View>
           </View>
+          <TouchableOpacity style={styles.messagesRefreshButton} onPress={onRefresh} activeOpacity={0.8}>
+            <Feather name="refresh-cw" size={16} color="#0F172A" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.messagesHeaderMetaRow}>
@@ -250,7 +264,7 @@ export default function OrganizerMessageInbox({ navigation }) {
         <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           {/* Modal Header */}
           <LinearGradient
-            colors={['#0277BD', '#01579B', '#004D8C']}
+            colors={['#0B3A67', '#01579B', '#0277BD']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.modalHeader}
@@ -316,33 +330,59 @@ export default function OrganizerMessageInbox({ navigation }) {
 
                 {/* Message Title */}
                 <View style={styles.titleSection}>
-                  <Text style={styles.messageDetailTitle}>
-                    {selectedMessage.title || 'Admin Message'}
-                  </Text>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.messageDetailTitle}>
+                      {selectedMessage.title || 'Admin Message'}
+                    </Text>
+                    <View style={[styles.priorityBadge, { backgroundColor: selectedMessage.read ? '#10B981' : '#F59E0B' }]}>
+                      <Feather name={selectedMessage.read ? 'check-circle' : 'alert-circle'} size={12} color="#FFFFFF" />
+                      <Text style={styles.priorityBadgeText}>{selectedMessage.read ? 'Read' : 'Unread'}</Text>
+                    </View>
+                  </View>
                   <View style={styles.titleUnderline} />
                 </View>
 
                 {/* Message Content */}
                 <View style={styles.messageDetailContent}>
+                  <View style={styles.contentHeader}>
+                    <Feather name="file-text" size={16} color="#64748B" />
+                    <Text style={styles.contentHeaderText}>Message Body</Text>
+                  </View>
                   <Text style={styles.messageDetailText}>
                     {selectedMessage.message}
                   </Text>
                 </View>
 
+                {/* Quick Actions */}
+                <View style={styles.quickActions}>
+                  <TouchableOpacity style={styles.actionButton} onPress={shareMessage} activeOpacity={0.8}>
+                    <Feather name="share-2" size={16} color="#0277BD" />
+                    <Text style={styles.actionButtonText}>Share</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionButton, styles.actionButtonSecondary]} onPress={() => {}} activeOpacity={0.8}>
+                    <Feather name="copy" size={16} color="#64748B" />
+                    <Text style={[styles.actionButtonText, styles.actionButtonTextSecondary]}>Copy</Text>
+                  </TouchableOpacity>
+                </View>
+
                 {/* Message Footer */}
                 <View style={styles.messageDetailFooter}>
                   <View style={styles.footerLeft}>
-                    <Text style={styles.messageDetailType}>
-                      📧 Administrative Message
-                    </Text>
+                    <View style={styles.footerMetaRow}>
+                      <Text style={styles.messageDetailType}>
+                        📧 Administrative Message
+                      </Text>
+                      <View style={styles.securityBadge}>
+                        <Feather name="lock" size={10} color="#059669" />
+                        <Text style={styles.securityBadgeText}>Secure</Text>
+                      </View>
+                    </View>
                     <Text style={styles.messageDetailStatus}>
-                      {selectedMessage.read ? '✅ Read' : '🔵 Unread'}
+                      {selectedMessage.read ? '✅ Marked as read' : '🔵 Unread'}
                     </Text>
                   </View>
                   <View style={styles.footerRight}>
-                    <Text style={styles.securityBadge}>
-                      🔒 Secure
-                    </Text>
+                    <Text style={styles.messageId}>ID: {selectedMessage.id?.slice(-8).toUpperCase()}</Text>
                   </View>
                 </View>
               </View>
@@ -415,7 +455,7 @@ const styles = StyleSheet.create({
   messagesHeaderTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
   },
   messagesHeaderLeftRow: {
     flexDirection: 'row',
@@ -423,6 +463,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     flex: 1,
     gap: 12,
+  },
+  messagesRefreshButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   messagesBackButton: {
     width: 40,
@@ -485,15 +533,15 @@ const styles = StyleSheet.create({
   },
   messageItem: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
   },
   unreadMessage: {
@@ -540,10 +588,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#0277BD',
   },
   messageTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 4,
+    lineHeight: 24,
+    flex: 1,
+  },
+  messageTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  messageBadge: {
+    backgroundColor: '#0277BD',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  messageBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'System',
   },
   messagePreview: {
     fontSize: 14,
@@ -555,10 +622,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 12,
   },
-  messageType: {
-    fontSize: 12,
-    color: '#6B7280',
+  messageFooterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  messageTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  messageTypeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    fontFamily: 'System',
   },
   messageTimeAgo: {
     fontSize: 12,
@@ -655,15 +738,15 @@ const styles = StyleSheet.create({
   messageDetailContainer: {
     backgroundColor: '#FFFFFF',
     margin: 16,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
   },
   messageDetailHeader: {
     flexDirection: 'row',
@@ -703,7 +786,27 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   titleSection: {
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  priorityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  priorityBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'System',
   },
   messageDetailTitle: {
     fontSize: 22,
@@ -719,12 +822,24 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   messageDetailContent: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
+  },
+  contentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  contentHeaderText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+    fontFamily: 'System',
   },
   messageDetailText: {
     fontSize: 16,
@@ -732,12 +847,9 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   messageDetailFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 16,
+    paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: '#E2E8F0',
   },
   footerLeft: {
     flex: 1,
@@ -745,23 +857,74 @@ const styles = StyleSheet.create({
   footerRight: {
     alignItems: 'flex-end',
   },
+  footerMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
   messageDetailType: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 4,
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '600',
+    fontFamily: 'System',
   },
   messageDetailStatus: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: 13,
+    color: '#64748B',
     fontWeight: '500',
+    fontFamily: 'System',
   },
   securityBadge: {
-    fontSize: 12,
-    color: '#059669',
-    fontWeight: '600',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: '#ECFDF5',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+  },
+  securityBadgeText: {
+    fontSize: 11,
+    color: '#059669',
+    fontWeight: '700',
+    fontFamily: 'System',
+  },
+  messageId: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '600',
+    fontFamily: 'System',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  actionButtonSecondary: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0277BD',
+    fontFamily: 'System',
+  },
+  actionButtonTextSecondary: {
+    color: '#64748B',
   },
 });

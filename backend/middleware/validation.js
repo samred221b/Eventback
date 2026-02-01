@@ -136,6 +136,7 @@ const eventSchemas = {
     onDoorPrice: Joi.number().min(0).optional(),
     earlyBirdPrice: Joi.number().min(0).optional(),
     organizerName: Joi.string().min(2).max(100).optional(),
+    status: Joi.string().valid('draft', 'published', 'cancelled', 'completed').optional(),
     importantInfo: Joi.string().max(500).optional(),
     ticketsAvailableAt: Joi.string().max(200).optional(),
     tags: Joi.array().items(Joi.string().max(30)).max(10).optional()

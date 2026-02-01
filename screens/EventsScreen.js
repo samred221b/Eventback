@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Image,
   FlatList,
+  Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -93,6 +94,20 @@ const EventsScreen = ({ navigation, route }) => {
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all'); // New smart filter state
+
+  // Next event state
+  const [nextEvent, setNextEvent] = useState(null);
+  const [hotEvent, setHotEvent] = useState(null);
+  const [culturalEvent, setCulturalEvent] = useState(null);
+  const [nextCountdown, setNextCountdown] = useState('');
+  const [hotCountdown, setHotCountdown] = useState('');
+  const [culturalCountdown, setCulturalCountdown] = useState('');
+  const countdownRotateAnim = useRef(new Animated.Value(0)).current;
+  const countdownPulseAnim = useRef(new Animated.Value(1)).current;
+  const [eventSpotlightWidth, setEventSpotlightWidth] = useState(0);
+  const [eventSpotlightIndex, setEventSpotlightIndex] = useState(0);
+  const eventSpotlightIndexRef = useRef(0);
+  const eventSpotlightTranslateX = useRef(new Animated.Value(0)).current;
 
   const categories = [
     { key: 'all', icon: 'grid', label: 'All' },
@@ -300,9 +315,112 @@ const EventsScreen = ({ navigation, route }) => {
     // Apply smart filters
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
     
     switch (smartFilter) {
+      // Date Range Filters
+      case 'all_dates':
+        // No date filtering
+        break;
+      case 'today':
+        filtered = filtered.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate >= today && eventDate < tomorrow;
+        });
+        break;
+      case 'tomorrow':
+        filtered = filtered.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate >= tomorrow && eventDate < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
+        });
+        break;
+      case 'thisWeek':
+        filtered = filtered.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate >= today && eventDate <= weekFromNow;
+        });
+        break;
+      case 'thisMonth':
+        filtered = filtered.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate >= today && eventDate <= thisMonthEnd;
+        });
+        break;
+      case 'nextMonth':
+        filtered = filtered.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate >= nextMonthStart && eventDate <= nextMonthEnd;
+        });
+        break;
+      
+      // Price Range Filters
+      case 'all_prices':
+        // No price filtering
+        break;
+      case 'free':
+        filtered = filtered.filter(event => event.price === 0 || event.price === '0');
+        break;
+      case 'under100':
+        filtered = filtered.filter(event => {
+          const price = parseFloat(event.price) || 0;
+          return price > 0 && price < 100;
+        });
+        break;
+      case '100to500':
+        filtered = filtered.filter(event => {
+          const price = parseFloat(event.price) || 0;
+          return price >= 100 && price <= 500;
+        });
+        break;
+      case '500to1000':
+        filtered = filtered.filter(event => {
+          const price = parseFloat(event.price) || 0;
+          return price >= 500 && price <= 1000;
+        });
+        break;
+      case 'over1000':
+        filtered = filtered.filter(event => {
+          const price = parseFloat(event.price) || 0;
+          return price > 1000;
+        });
+        break;
+      
+      // Event Mode Filters
+      case 'all_modes':
+        // No mode filtering
+        break;
+      case 'online':
+        filtered = filtered.filter(event => event.mode === 'Online');
+        break;
+      case 'inperson':
+        filtered = filtered.filter(event => event.mode === 'In-person');
+        break;
+      case 'hybrid':
+        filtered = filtered.filter(event => event.mode === 'Hybrid');
+        break;
+      
+      // Other Filters
+      case 'all':
+        // No additional filtering
+        break;
+      case 'featured':
+        filtered = filtered.filter(event => event.featured === true);
+        break;
+      case 'favorites':
+        filtered = filtered.filter(event => favorites.some(fav => fav.id === event._id || fav.id === event.id));
+        break;
+      case 'upcoming':
+        filtered = filtered.filter(event => new Date(event.date) >= now);
+        break;
+      case 'past':
+        filtered = filtered.filter(event => new Date(event.date) < now);
+        break;
+      
+      // Legacy filters for backward compatibility
       case 'thisWeek':
         filtered = filtered.filter(event => {
           const eventDate = new Date(event.date);
@@ -321,7 +439,6 @@ const EventsScreen = ({ navigation, route }) => {
       case 'favorites':
         filtered = filtered.filter(event => favorites.some(fav => fav.id === event._id || fav.id === event.id));
         break;
-      case 'all':
       default:
         // No additional filtering
         break;
@@ -452,6 +569,180 @@ const EventsScreen = ({ navigation, route }) => {
     return favorites.some(fav => fav.id === eventId || fav._id === eventId);
   };
 
+  // Find next upcoming event
+  useEffect(() => {
+    const sourceEvents = (allEvents && allEvents.length > 0) ? allEvents : events;
+    if (!sourceEvents || sourceEvents.length === 0) return;
+
+    const now = new Date();
+    const upcomingEvents = sourceEvents
+      .filter(event => new Date(event.date) > now)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const upcoming = upcomingEvents[0] || null;
+    setNextEvent(upcoming);
+
+    const hotSorted = [...upcomingEvents].sort((a, b) => {
+      const scoreA =
+        (a.featured ? 1000000 : 0) +
+        ((a.likeCount || 0) * 1000) +
+        ((a.attendeeCount || 0) * 50) +
+        (a.views || 0);
+      const scoreB =
+        (b.featured ? 1000000 : 0) +
+        ((b.likeCount || 0) * 1000) +
+        ((b.attendeeCount || 0) * 50) +
+        (b.views || 0);
+      return scoreB - scoreA;
+    });
+
+    const nextId = upcoming?._id || upcoming?.id;
+    const hotCandidate = hotSorted.find(e => (e?._id || e?.id) !== nextId) || null;
+    setHotEvent(hotCandidate);
+
+    const hotId = hotCandidate?._id || hotCandidate?.id;
+    const thirdCandidates = upcomingEvents.filter((e) => {
+      const id = e?._id || e?.id;
+      if (nextId && id === nextId) return false;
+      if (hotId && id === hotId) return false;
+      return true;
+    });
+
+    const randomPick = thirdCandidates.length
+      ? thirdCandidates[Math.floor(Math.random() * thirdCandidates.length)]
+      : null;
+    setCulturalEvent(randomPick);
+  }, [allEvents, events]);
+
+  useEffect(() => {
+    if (hotEvent || culturalEvent) return;
+    eventSpotlightIndexRef.current = 0;
+    setEventSpotlightIndex(0);
+    if (eventSpotlightWidth) {
+      eventSpotlightTranslateX.setValue(0);
+    }
+  }, [culturalEvent, hotEvent, eventSpotlightTranslateX, eventSpotlightWidth]);
+
+  const computeCountdownText = (dateValue) => {
+    const now = new Date();
+    const eventTime = new Date(dateValue);
+    const diff = eventTime - now;
+
+    if (diff <= 0) return 'Started';
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+    return `${minutes}m ${seconds}s`;
+  };
+
+  // Countdown timer for next event
+  useEffect(() => {
+    if (!nextEvent) return;
+
+    const updateCountdown = () => {
+      setNextCountdown(computeCountdownText(nextEvent.date));
+    };
+
+    const interval = setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    return () => clearInterval(interval);
+  }, [nextEvent]);
+
+  // Countdown timer for hot event
+  useEffect(() => {
+    if (!hotEvent) return;
+
+    const updateCountdown = () => {
+      setHotCountdown(computeCountdownText(hotEvent.date));
+    };
+
+    const interval = setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    return () => clearInterval(interval);
+  }, [hotEvent]);
+
+  // Countdown timer for cultural event
+  useEffect(() => {
+    if (!culturalEvent) return;
+
+    const updateCountdown = () => {
+      setCulturalCountdown(computeCountdownText(culturalEvent.date));
+    };
+
+    const interval = setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    return () => clearInterval(interval);
+  }, [culturalEvent]);
+
+  // Countdown rotation animation
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(countdownRotateAnim, {
+        toValue: 1,
+        duration: 10000,
+        easing: (t) => t,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, [countdownRotateAnim]);
+
+  // Countdown pulse animation
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(countdownPulseAnim, {
+          toValue: 1.05,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(countdownPulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [countdownPulseAnim]);
+
+  // Spotlight carousel: slide between Next and Hot (fixed size)
+  useEffect(() => {
+    if (!nextEvent) return;
+    if (!eventSpotlightWidth) return;
+
+    const slideCount = 1 + (hotEvent ? 1 : 0) + (culturalEvent ? 1 : 0);
+    if (slideCount < 2) {
+      eventSpotlightIndexRef.current = 0;
+      setEventSpotlightIndex(0);
+      eventSpotlightTranslateX.setValue(0);
+      return;
+    }
+
+    eventSpotlightTranslateX.setValue(-eventSpotlightIndexRef.current * eventSpotlightWidth);
+
+    const interval = setInterval(() => {
+      const nextIndex = (eventSpotlightIndexRef.current + 1) % slideCount;
+      Animated.timing(eventSpotlightTranslateX, {
+        toValue: -nextIndex * eventSpotlightWidth,
+        duration: 520,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (!finished) return;
+        eventSpotlightIndexRef.current = nextIndex;
+        setEventSpotlightIndex(nextIndex);
+      });
+    }, 6500);
+
+    return () => clearInterval(interval);
+  }, [culturalEvent, nextEvent, hotEvent, eventSpotlightTranslateX, eventSpotlightWidth]);
+
   const renderEventCard = (event) => (
     <View key={event._id} style={styles.eventCard}>
       {/* Cover Image */}
@@ -474,7 +765,7 @@ const EventsScreen = ({ navigation, route }) => {
         {event.featured && (
           <View style={styles.featuredBadgeContainer}>
             <LinearGradient
-              colors={['#FFD700', '#FFA500']}
+              colors={['#0277BD', '#01579B']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.featuredBadge}
@@ -587,12 +878,6 @@ const EventsScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['top']}>
-      <View pointerEvents="none" style={styles.pageBackground}>
-        <View style={styles.backgroundOrbOne} />
-        <View style={styles.backgroundOrbTwo} />
-        <View style={styles.backgroundOrbThree} />
-        <View style={styles.backgroundOrbFour} />
-      </View>
       {/* Home-style Header */}
       <View style={[homeStyles.homeHeaderContainer, { marginTop: 0 }]} > 
           <LinearGradient
@@ -616,13 +901,6 @@ const EventsScreen = ({ navigation, route }) => {
                   activeOpacity={0.7}
                 >
                   <Feather name="search" size={20} color="rgba(255, 255, 255, 1)" />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={homeStyles.homeHeaderIconButton}
-                  onPress={handleRefresh}
-                  activeOpacity={0.7}
-                >
-                  <Feather name="refresh-cw" size={20} color="rgba(255, 255, 255, 1)" />
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={homeStyles.homeHeaderIconButton}
@@ -658,9 +936,131 @@ const EventsScreen = ({ navigation, route }) => {
 
         {/* Filter Sections - Show when secondary filters toggled */}
         {showSecondaryFilters && (
-          <View>
-            {/* Smart Filter Chips */}
-            <View style={styles.filterChipsContainer}>
+          <View style={styles.filterSectionsContainer}>
+            {/* Date Range Filters */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Date Range</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterChipsScroll}
+              >
+                {[
+                  { key: 'all_dates', label: 'All Dates', icon: 'calendar' },
+                  { key: 'today', label: 'Today', icon: 'clock' },
+                  { key: 'tomorrow', label: 'Tomorrow', icon: 'sunrise' },
+                  { key: 'thisWeek', label: 'This Week', icon: 'calendar' },
+                  { key: 'thisMonth', label: 'This Month', icon: 'calendar' },
+                  { key: 'nextMonth', label: 'Next Month', icon: 'calendar' },
+                ].map((filter) => (
+                  <TouchableOpacity
+                    key={filter.key}
+                    style={[
+                      styles.filterChip,
+                      activeFilter === filter.key && styles.filterChipActive
+                    ]}
+                    onPress={() => setActiveFilter(filter.key)}
+                    activeOpacity={0.8}
+                  >
+                    <Feather 
+                      name={filter.icon} 
+                      size={14} 
+                      color={activeFilter === filter.key ? '#FFFFFF' : '#6B7280'} 
+                    />
+                    <Text style={[
+                      styles.filterChipText,
+                      activeFilter === filter.key && styles.filterChipTextActive
+                    ]}>
+                      {filter.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Price Range Filters */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Price Range</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterChipsScroll}
+              >
+                {[
+                  { key: 'all_prices', label: 'All Prices', icon: 'dollar-sign' },
+                  { key: 'free', label: 'Free', icon: 'tag' },
+                  { key: 'under100', label: 'Under 100 ETB', icon: 'arrow-down' },
+                  { key: '100to500', label: '100-500 ETB', icon: 'arrow-right' },
+                  { key: '500to1000', label: '500-1000 ETB', icon: 'arrow-right' },
+                  { key: 'over1000', label: 'Over 1000 ETB', icon: 'arrow-up' },
+                ].map((filter) => (
+                  <TouchableOpacity
+                    key={filter.key}
+                    style={[
+                      styles.filterChip,
+                      activeFilter === filter.key && styles.filterChipActive
+                    ]}
+                    onPress={() => setActiveFilter(filter.key)}
+                    activeOpacity={0.8}
+                  >
+                    <Feather 
+                      name={filter.icon} 
+                      size={14} 
+                      color={activeFilter === filter.key ? '#FFFFFF' : '#6B7280'} 
+                    />
+                    <Text style={[
+                      styles.filterChipText,
+                      activeFilter === filter.key && styles.filterChipTextActive
+                    ]}>
+                      {filter.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Event Mode Filters */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Event Mode</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterChipsScroll}
+              >
+                {[
+                  { key: 'all_modes', label: 'All Modes', icon: 'grid' },
+                  { key: 'online', label: 'Online', icon: 'wifi' },
+                  { key: 'inperson', label: 'In-person', icon: 'users' },
+                  { key: 'hybrid', label: 'Hybrid', icon: 'layers' },
+                ].map((filter) => (
+                  <TouchableOpacity
+                    key={filter.key}
+                    style={[
+                      styles.filterChip,
+                      activeFilter === filter.key && styles.filterChipActive
+                    ]}
+                    onPress={() => setActiveFilter(filter.key)}
+                    activeOpacity={0.8}
+                  >
+                    <Feather 
+                      name={filter.icon} 
+                      size={14} 
+                      color={activeFilter === filter.key ? '#FFFFFF' : '#6B7280'} 
+                    />
+                    <Text style={[
+                      styles.filterChipText,
+                      activeFilter === filter.key && styles.filterChipTextActive
+                    ]}>
+                      {filter.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Other Filters */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Other Filters</Text>
               <ScrollView 
                 horizontal 
                 showsHorizontalScrollIndicator={false}
@@ -668,11 +1068,10 @@ const EventsScreen = ({ navigation, route }) => {
               >
                 {[
                   { key: 'all', label: 'All', icon: 'grid' },
-                  { key: 'thisWeek', label: 'This Week', icon: 'calendar' },
-                  { key: 'free', label: 'Free', icon: 'tag' },
-                  { key: 'online', label: 'Online', icon: 'wifi' },
-                  { key: 'inperson', label: 'In-person', icon: 'users' },
-                  { key: 'favorites', label: 'Favorites', icon: 'heart' }
+                  { key: 'featured', label: 'Featured', icon: 'star' },
+                  { key: 'favorites', label: 'Favorites', icon: 'heart' },
+                  { key: 'upcoming', label: 'Upcoming', icon: 'clock' },
+                  { key: 'past', label: 'Past Events', icon: 'archive' },
                 ].map((filter) => (
                   <TouchableOpacity
                     key={filter.key}
@@ -743,6 +1142,234 @@ const EventsScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        {/* Next/Hot Event Spotlight */}
+        {nextEvent && (
+          <View style={homeStyles.countdownInlineContainer}>
+            <View style={homeStyles.countdownInlineDepthLayer} pointerEvents="none">
+              <View style={homeStyles.countdownInlineGlowOrbOne} />
+              <View style={homeStyles.countdownInlineGlowOrbTwo} />
+              <View style={homeStyles.countdownInlineHighlight} />
+            </View>
+
+            <View
+              style={homeStyles.countdownInlineCarouselViewport}
+              onLayout={(e) => {
+                const w = Math.round(e.nativeEvent.layout.width);
+                if (!w) return;
+                if (w === eventSpotlightWidth) return;
+                setEventSpotlightWidth(w);
+                eventSpotlightTranslateX.setValue(-eventSpotlightIndexRef.current * w);
+              }}
+            >
+              <Animated.View
+                style={[
+                  homeStyles.countdownInlineCarouselTrack,
+                  { transform: [{ translateX: eventSpotlightTranslateX }] },
+                ]}
+              >
+                <TouchableOpacity
+                  onPress={() => handleEventPress(nextEvent)}
+                  activeOpacity={0.85}
+                  style={[homeStyles.countdownInlineCarouselSlide, { width: eventSpotlightWidth || undefined }]}
+                >
+                  <View style={homeStyles.countdownInlineContent}>
+                    <View style={homeStyles.countdownInlineLeft}>
+                      <Animated.View
+                        style={[
+                          homeStyles.countdownEventImageWrapper,
+                          {
+                            transform: [
+                              {
+                                rotate: countdownRotateAnim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: ['0deg', '360deg'],
+                                }),
+                              },
+                            ],
+                          },
+                        ]}
+                      >
+                        {nextEvent.imageUrl || nextEvent.image ? (
+                          <Image
+                            source={{ uri: nextEvent.imageUrl || nextEvent.image }}
+                            style={homeStyles.countdownEventImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <LinearGradient
+                            colors={['#0277BD', '#01579B']}
+                            style={homeStyles.countdownEventImage}
+                          >
+                            <Feather name="calendar" size={24} color="#FFFFFF" />
+                          </LinearGradient>
+                        )}
+                      </Animated.View>
+
+                      <View style={homeStyles.countdownInlineTextWrap}>
+                        <Text style={homeStyles.countdownLabel}>Next Event</Text>
+                        <Text style={homeStyles.countdownEventTitle} numberOfLines={1}>
+                          {nextEvent.title}
+                        </Text>
+                      </View>
+                    </View>
+                    <Animated.View
+                      style={[
+                        homeStyles.countdownInlineTimerPill,
+                        {
+                          transform: [
+                            {
+                              scale: countdownPulseAnim.interpolate({
+                                inputRange: [1, 1.05],
+                                outputRange: [1, 1.05],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
+                    >
+                      <Text style={homeStyles.countdownTimer}>{nextCountdown}</Text>
+                    </Animated.View>
+                  </View>
+                </TouchableOpacity>
+
+                {hotEvent && (
+                  <TouchableOpacity
+                    onPress={() => handleEventPress(hotEvent)}
+                    activeOpacity={0.85}
+                    style={[homeStyles.countdownInlineCarouselSlide, { width: eventSpotlightWidth || undefined }]}
+                  >
+                    <View style={homeStyles.countdownInlineContent}>
+                      <View style={homeStyles.countdownInlineLeft}>
+                        <Animated.View
+                          style={[
+                            homeStyles.countdownEventImageWrapper,
+                            {
+                              transform: [
+                                {
+                                  rotate: countdownRotateAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: ['0deg', '360deg'],
+                                  }),
+                                },
+                              ],
+                            },
+                          ]}
+                        >
+                          {hotEvent.imageUrl || hotEvent.image ? (
+                            <Image
+                              source={{ uri: hotEvent.imageUrl || hotEvent.image }}
+                              style={homeStyles.countdownEventImage}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <LinearGradient
+                              colors={['#EF4444', '#F97316']}
+                              style={homeStyles.countdownEventImage}
+                            >
+                              <Feather name="trending-up" size={24} color="#FFFFFF" />
+                            </LinearGradient>
+                          )}
+                        </Animated.View>
+
+                        <View style={homeStyles.countdownInlineTextWrap}>
+                          <Text style={homeStyles.countdownLabel}>Hot Event</Text>
+                          <Text style={homeStyles.countdownEventTitle} numberOfLines={1}>
+                            {hotEvent.title}
+                          </Text>
+                        </View>
+                      </View>
+                      <Animated.View
+                        style={[
+                          homeStyles.countdownInlineTimerPill,
+                          {
+                            transform: [
+                              {
+                                scale: countdownPulseAnim.interpolate({
+                                  inputRange: [1, 1.05],
+                                  outputRange: [1, 1.05],
+                                }),
+                              },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={homeStyles.countdownTimer}>{hotCountdown}</Text>
+                      </Animated.View>
+                    </View>
+                  </TouchableOpacity>
+                )}
+
+                {culturalEvent && (
+                  <TouchableOpacity
+                    onPress={() => handleEventPress(culturalEvent)}
+                    activeOpacity={0.85}
+                    style={[homeStyles.countdownInlineCarouselSlide, { width: eventSpotlightWidth || undefined }]}
+                  >
+                    <View style={homeStyles.countdownInlineContent}>
+                      <View style={homeStyles.countdownInlineLeft}>
+                        <Animated.View
+                          style={[
+                            homeStyles.countdownEventImageWrapper,
+                            {
+                              transform: [
+                                {
+                                  rotate: countdownRotateAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: ['0deg', '360deg'],
+                                  }),
+                                },
+                              ],
+                            },
+                          ]}
+                        >
+                          {culturalEvent.imageUrl || culturalEvent.image ? (
+                            <Image
+                              source={{ uri: culturalEvent.imageUrl || culturalEvent.image }}
+                              style={homeStyles.countdownEventImage}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <LinearGradient
+                              colors={['#8B5CF6', '#EC4899']}
+                              style={homeStyles.countdownEventImage}
+                            >
+                              <Feather name="award" size={24} color="#FFFFFF" />
+                            </LinearGradient>
+                          )}
+                        </Animated.View>
+
+                        <View style={homeStyles.countdownInlineTextWrap}>
+                          <Text style={homeStyles.countdownLabel}>Spotlight Event</Text>
+                          <Text style={homeStyles.countdownEventTitle} numberOfLines={1}>
+                            {culturalEvent.title}
+                          </Text>
+                        </View>
+                      </View>
+                      <Animated.View
+                        style={[
+                          homeStyles.countdownInlineTimerPill,
+                          {
+                            transform: [
+                              {
+                                scale: countdownPulseAnim.interpolate({
+                                  inputRange: [1, 1.05],
+                                  outputRange: [1, 1.05],
+                                }),
+                              },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={homeStyles.countdownTimer}>{culturalCountdown}</Text>
+                      </Animated.View>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </Animated.View>
+            </View>
+          </View>
+        )}
 
         {/* Sort Menu - Show when sort toggled */}
         {showSortMenu && (
@@ -879,23 +1506,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
+  filterSectionsContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  filterSection: {
+    marginBottom: 16,
+  },
+  filterSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  filterChipsScroll: {
+    paddingHorizontal: 0,
+  },
   categoriesContainer: {
     backgroundColor: 'transparent',
-    marginHorizontal: 16,
     marginBottom: 12,
+    marginTop: 16,
     maxHeight: 50,
   },
   categoriesContent: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
     paddingVertical: 4,
     gap: 6,
   },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: '#060B14',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.10)',
@@ -905,8 +1551,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
-    gap: 3,
-    maxWidth: 120,
+    gap: 4,
+    maxWidth: 100,
     maxHeight: 30,
     overflow: 'hidden',
   },
@@ -1193,24 +1839,6 @@ const styles = StyleSheet.create({
   sortOptionTextActive: {
     color: '#0277BD',
     fontWeight: '600',
-  },
-  decorativeShape1: {
-    position: 'absolute',
-    top: '20%',
-    left: '-25%',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(2, 132, 199, 0.08)',
-  },
-  decorativeShape2: {
-    position: 'absolute',
-    bottom: '15%',
-    right: '-30%',
-    width: 400,
-    height: 400,
-    borderRadius: 200,
-    backgroundColor: 'rgba(2, 132, 199, 0.1)',
   },
   // Filter Chips Styles
   filterChipsContainer: {

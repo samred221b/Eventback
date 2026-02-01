@@ -688,6 +688,17 @@ export default function OrganizerDashboard({ navigation, route }) {
     );
   };
 
+  const recentOrganizerEvents = [...organizerEvents]
+    .sort((a, b) => {
+      const dateA = new Date(a?.date).getTime();
+      const dateB = new Date(b?.date).getTime();
+      if (Number.isNaN(dateA) && Number.isNaN(dateB)) return 0;
+      if (Number.isNaN(dateA)) return 1;
+      if (Number.isNaN(dateB)) return -1;
+      return dateB - dateA;
+    })
+    .slice(0, 3);
+
   return (
     <SafeScrollView 
       style={styles.modernDashboardContainer}
@@ -833,7 +844,7 @@ export default function OrganizerDashboard({ navigation, route }) {
           </View>
         ) : (
           <View>
-            {organizerEvents.map(renderEventCard)}
+            {recentOrganizerEvents.map(renderEventCard)}
           </View>
         )}
       </View>
