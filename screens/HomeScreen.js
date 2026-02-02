@@ -689,14 +689,6 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
-      {/* Background Decoratives */}
-      <View style={homeStyles.backgroundDecorative} />
-      <View style={homeStyles.backgroundOrbOne} />
-      <View style={homeStyles.backgroundOrbTwo} />
-      <View style={homeStyles.backgroundOrbThree} />
-      <View style={homeStyles.backgroundPatternOne} />
-      <View style={homeStyles.backgroundPatternTwo} />
-
       <Modal
         visible={showNotificationDetailModal}
         transparent
@@ -948,20 +940,6 @@ export default function HomeScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
       >
         <View style={{ flex: 1 }}>
-          {/* Background Decorative Elements */}
-          <View style={homeStyles.backgroundDecorative}>
-            <View style={homeStyles.backgroundOrbOne} />
-            <View style={homeStyles.backgroundOrbFour} />
-            <View style={homeStyles.backgroundOrbSix} />
-            <View style={homeStyles.backgroundOrbEight} />
-            <View style={homeStyles.backgroundOrbNine} />
-            <View style={homeStyles.backgroundOrbEleven} />
-            <View style={homeStyles.backgroundOrbTwelve} />
-            <View style={homeStyles.creativeBlobBlue} />
-            <View style={homeStyles.creativeBlobGreen} />
-            <View style={homeStyles.creativeBlobYellow} />
-          </View>
-          
           <AppErrorBanner
             error={error}
             onRetry={handleRetry}
@@ -1065,8 +1043,6 @@ export default function HomeScreen({ navigation }) {
               style={homeStyles.homeHeaderCard}
             >
               <View style={homeStyles.homeHeaderBg} pointerEvents="none">
-                <View style={homeStyles.homeHeaderOrbOne} />
-                <View style={homeStyles.homeHeaderOrbTwo} />
               </View>
               <View style={homeStyles.homeHeaderTopRow}>
                 <View style={homeStyles.modernDashboardProfile}>
@@ -1146,8 +1122,6 @@ export default function HomeScreen({ navigation }) {
                   activeOpacity={0.7}
                 >
                   <View style={homeStyles.categoryDepthLayer} pointerEvents="none">
-                    <View style={homeStyles.categoryGlowOrbOne} />
-                    <View style={homeStyles.categoryGlowOrbTwo} />
                     <View style={homeStyles.categoryHighlight} />
                   </View>
                   <Feather
@@ -1193,9 +1167,6 @@ export default function HomeScreen({ navigation }) {
                       onPress={() => handleEventPress(event)}
                       activeOpacity={0.95}
                     >
-                      <View style={homeStyles.trendingEventCardOrbOne} />
-                      <View style={homeStyles.trendingEventCardOrbTwo} />
-                      <View style={homeStyles.trendingEventCardOrbThree} />
                       <View style={homeStyles.trendingEventImageContainer}>
                         {event.imageUrl ? (
                           <Image
