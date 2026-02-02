@@ -31,7 +31,7 @@ const darkColors = {
 
 export function ThemeProvider({ children }) {
   const systemScheme = useColorScheme();
-  const [mode, setMode] = useState('system');
+  const [mode, setMode] = useState('light');
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -41,9 +41,14 @@ export function ThemeProvider({ children }) {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (!mounted) return;
-        if (stored === 'light' || stored === 'dark' || stored === 'system') {
-          setMode(stored);
+        if (stored !== 'light') {
+          try {
+            await AsyncStorage.setItem(STORAGE_KEY, 'light');
+          } catch (e) {
+            // Silent fail
+          }
         }
+        setMode('light');
       } catch (e) {
         // Silent fail
       } finally {
@@ -58,22 +63,22 @@ export function ThemeProvider({ children }) {
     };
   }, []);
 
-  const scheme = mode === 'system' ? (systemScheme || 'light') : mode;
-  const isDark = scheme === 'dark';
+  const scheme = 'light';
+  const isDark = false;
 
-  const colors = isDark ? darkColors : lightColors;
+  const colors = lightColors;
 
   const setThemeMode = useCallback(async (nextMode) => {
-    setMode(nextMode);
+    setMode('light');
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, nextMode);
+      await AsyncStorage.setItem(STORAGE_KEY, 'light');
     } catch (e) {
       // Silent fail
     }
   }, []);
 
   const navigationTheme = useMemo(() => {
-    const baseTheme = isDark ? DarkTheme : DefaultTheme;
+    const baseTheme = DefaultTheme;
     return {
       ...baseTheme,
       dark: isDark,

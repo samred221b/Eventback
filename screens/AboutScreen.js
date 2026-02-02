@@ -337,7 +337,8 @@ export default function AboutScreen({ navigation }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.themeOption, mode === 'dark' && styles.themeOptionActive]}
-                onPress={() => setThemeMode('dark')}
+                onPress={() => setThemeMode('light')}
+                disabled
               >
                 <Feather name="moon" size={18} color={mode === 'dark' ? '#FFFFFF' : '#64748B'} />
                 <Text style={[styles.themeOptionText, mode === 'dark' && styles.themeOptionTextActive]}>Dark</Text>
